@@ -9,6 +9,7 @@ from .reportes import router as reportes_router
 from .websocket_manager import manager
 from .asistente import generar_respuesta
 from .cargar_datos import cargar_datos
+from .admin_routes import router as admin_router
 from pydantic import BaseModel
 import json
 
@@ -23,7 +24,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="GASGUARIBE API",
     version="2.0",
-    description="Sistema de gestión y reparto de gas doméstico con asistente IA"
+    description="Sistema de gestión y reparto de gas doméstico con asistente IA y panel de administración"
 )
 
 # --- CARGAR DATOS DE PRUEBA AUTOMÁTICAMENTE (SOLO SI LA BASE ESTÁ VACÍA) ---
@@ -48,6 +49,7 @@ templates = Jinja2Templates(directory="templates")
 app.include_router(auth_router)
 app.include_router(pedidos_router)
 app.include_router(reportes_router)
+app.include_router(admin_router)  # <-- NUEVO: Panel de administración
 
 # --- WEB SOCKET PARA SEGUIMIENTO EN VIVO (ESTILO UBER) ---
 @app.websocket("/ws/{user_id}")
@@ -77,6 +79,7 @@ def api_root():
         "mensaje": "Bienvenido a GASGUARIBE API",
         "documentacion": "/docs",
         "asistente": "/admin",
+        "panel_administracion": "/admin/panel",
         "version": "2.0"
     }
 
@@ -104,5 +107,6 @@ def status():
         "estado": "online",
         "servicio": "GASGUARIBE",
         "version": "2.0",
-        "base_datos": "SQLite (datos cargados automáticamente)"
+        "base_datos": "SQLite (datos cargados automáticamente)",
+        "panel_admin": "/admin/panel"
     }
