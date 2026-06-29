@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuevo Costo - GASGUARIBE</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .form-container {
+            background: #1e293b;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 550px;
+            width: 100%;
+            border: 1px solid #334155;
+        }
+        .form-container h1 {
+            color: #fbbf24;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .form-container .sub {
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        label {
+            color: #e2e8f0;
+            display: block;
+            margin: 18px 0 5px;
+            font-weight: 500;
+        }
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+        select:focus, input:focus { border-color: #fbbf24; }
+        .btn-submit {
+            background: #fbbf24;
+            color: #0f172a;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            width: 100%;
+            margin-top: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover { background: #f59e0b; transform: scale(1.02); }
+        .btn-back {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #94a3b8;
+            text-decoration: none;
+        }
+        .btn-back:hover { color: #fbbf24; }
+        .sugerencia {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 10px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            border: 1px dashed #475569;
+        }
+        .sugerencia strong { color: #fbbf24; }
+        .row { display: flex; gap: 15px; }
+        .row > * { flex: 1; }
+        @media (max-width: 500px) { .row { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>💰 Registrar Costo</h1>
+        <p class="sub">Gasto operativo de la empresa</p>
+
+        <form method="post" action="/admin/costo">
+            <label for="tipo">📂 Tipo de costo</label>
+            <select name="tipo" id="tipo" required>
+                <option value="Logístico">🚚 Logístico (combustible, mantenimiento, peajes)</option>
+                <option value="Administrativo">🏢 Administrativo (salarios, oficina, servicios)</option>
+                <option value="Otro">📌 Otro</option>
+            </select>
+
+            <label for="descripcion">📝 Descripción</label>
+            <input type="text" name="descripcion" id="descripcion" placeholder="Ej: Combustible flota" required>
+
+            <label for="monto">💵 Monto (Bs)</label>
+            <input type="number" step="0.01" name="monto" id="monto" placeholder="50.00" required>
+
+            <label for="fecha">📅 Fecha del gasto</label>
+            <input type="date" name="fecha" id="fecha" required>
+
+            <div class="sugerencia">
+                💡 Gastos comunes: <strong id="sugerenciaTexto">Combustible: $50 · Mantenimiento: $30 · Salarios: $100</strong>
+            </div>
+
+            <button type="submit" class="btn-submit">✅ Registrar Costo</button>
+        </form>
+
+        <a href="/admin/panel" class="btn-back">← Volver al panel</a>
+    </div>
+
+    <script>
+        // --- FECHA AUTOMÁTICA ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha').value = hoy;
+        });
+
+        // --- SUGERENCIAS POR TIPO DE COSTO ---
+        document.getElementById('tipo').addEventListener('change', function() {
+            const tipo = this.value;
+            const sugerencias = {
+                'Logístico': 'Combustible: $50 · Mantenimiento: $30 · Peajes: $10',
+                'Administrativo': 'Salarios: $100 · Alquiler: $50 · Servicios: $25',
+                'Otro': 'Gastos varios: $20 · Insumos: $15'
+            };
+            document.getElementById('sugerenciaTexto').textContent = sugerencias[tipo] || 'Ingresa el monto correspondiente';
+        });
+    </script>
+</body>
+</html>
