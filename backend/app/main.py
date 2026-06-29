@@ -7,7 +7,7 @@ from .auth import router as auth_router
 from .pedidos import router as pedidos_router
 from .reportes import router as reportes_router
 from .websocket_manager import manager
-from .asistente import generar_respuesta
+from app.asistente import generar_respuesta
 from pydantic import BaseModel
 import json
 
