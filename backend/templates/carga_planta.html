@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Carga - GASGUARIBE</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .form-container {
+            background: #1e293b;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid #334155;
+        }
+        .form-container h1 {
+            color: #fbbf24;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .form-container .sub {
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        label {
+            color: #e2e8f0;
+            display: block;
+            margin: 18px 0 5px;
+            font-weight: 500;
+        }
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+        select:focus, input:focus { border-color: #fbbf24; }
+        .counter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #0f172a;
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid #475569;
+        }
+        .counter-group .size-label {
+            flex: 1;
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+        .counter-group .size-label small {
+            color: #94a3b8;
+            font-weight: normal;
+        }
+        .counter-btn {
+            background: #334155;
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .counter-btn:hover {
+            background: #fbbf24;
+            color: #0f172a;
+        }
+        .counter-btn.minus { background: #7f1d1d; }
+        .counter-btn.minus:hover { background: #dc2626; }
+        .counter-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #fbbf24;
+            min-width: 40px;
+            text-align: center;
+        }
+        .btn-submit {
+            background: #fbbf24;
+            color: #0f172a;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            width: 100%;
+            margin-top: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover { background: #f59e0b; transform: scale(1.02); }
+        .btn-back {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #94a3b8;
+            text-decoration: none;
+        }
+        .btn-back:hover { color: #fbbf24; }
+        .precio-sugerido {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 10px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            border: 1px dashed #475569;
+        }
+        .precio-sugerido strong { color: #fbbf24; }
+        .row { display: flex; gap: 15px; }
+        .row > * { flex: 1; }
+        @media (max-width: 500px) { .row { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>📦 Registrar Carga</h1>
+        <p class="sub">Ingreso de cilindros a planta</p>
+
+        <form method="post" action="/admin/carga-planta" id="cargaForm">
+            <!-- Planta -->
+            <label for="planta_id">📍 Planta de destino</label>
+            <select name="planta_id" id="planta_id" required>
+                <option value="">-- Selecciona una planta --</option>
+                {% for planta in plantas %}
+                <option value="{{ planta.id }}" {% if loop.first %}selected{% endif %}>{{ planta.nombre }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Fecha (precargada con hoy) -->
+            <label for="fecha">📅 Fecha de carga</label>
+            <input type="date" name="fecha" id="fecha" required>
+
+            <!-- Contadores por tamaño -->
+            <label>📏 Cantidad por tamaño</label>
+            <div class="counter-group">
+                <span class="size-label">Pequeño <small>(5kg)</small></span>
+                <button type="button" class="counter-btn minus" onclick="updateCounter('P', -1)">−</button>
+                <span class="counter-value" id="countP">0</span>
+                <button type="button" class="counter-btn" onclick="updateCounter('P', 1)">+</button>
+            </div>
+            <div class="counter-group" style="margin-top: 8px;">
+                <span class="size-label">Mediano <small>(15kg)</small></span>
+                <button type="button" class="counter-btn minus" onclick="updateCounter('M', -1)">−</button>
+                <span class="counter-value" id="countM">0</span>
+                <button type="button" class="counter-btn" onclick="updateCounter('M', 1)">+</button>
+            </div>
+            <div class="counter-group" style="margin-top: 8px;">
+                <span class="size-label">Grande <small>(45kg)</small></span>
+                <button type="button" class="counter-btn minus" onclick="updateCounter('G', -1)">−</button>
+                <span class="counter-value" id="countG">0</span>
+                <button type="button" class="counter-btn" onclick="updateCounter('G', 1)">+</button>
+            </div>
+            <div id="totalCilindrosMsg" style="margin-top: 10px; color: #94a3b8; font-size: 0.9rem;">Total: <strong id="totalCount">0</strong> cilindros</div>
+
+            <!-- Precios (con sugerencias) -->
+            <div class="row" style="margin-top: 15px;">
+                <div>
+                    <label for="costo_unitario">💰 Costo de compra (Bs)</label>
+                    <input type="number" step="0.01" name="costo_unitario" id="costo_unitario" placeholder="10.00" required>
+                </div>
+                <div>
+                    <label for="precio_venta">💵 Precio de venta (Bs)</label>
+                    <input type="number" step="0.01" name="precio_venta" id="precio_venta" placeholder="15.00" required>
+                </div>
+            </div>
+            <div class="precio-sugerido">
+                💡 Sugerencia: Costo promedio histórico <strong id="sugerenciaCosto">$10.50</strong> · Precio de venta sugerido <strong id="sugerenciaVenta">$15.75</strong>
+            </div>
+
+            <!-- Campos ocultos para enviar los contadores -->
+            <input type="hidden" name="cantidad" id="cantidadInput" value="0">
+
+            <button type="submit" class="btn-submit">✅ Registrar Carga</button>
+        </form>
+
+        <a href="/admin/panel" class="btn-back">← Volver al panel</a>
+    </div>
+
+    <script>
+        // --- CONTADORES INTELIGENTES ---
+        let counts = { P: 0, M: 0, G: 0 };
+
+        function updateCounter(tam, delta) {
+            const newVal = Math.max(0, (counts[tam] || 0) + delta);
+            counts[tam] = newVal;
+            document.getElementById('count' + tam).textContent = newVal;
+            // Actualizar total
+            const total = counts.P + counts.M + counts.G;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('cantidadInput').value = total;
+        }
+
+        // --- FECHA AUTOMÁTICA ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha').value = hoy;
+        });
+
+        // --- VALIDACIÓN ANTES DE ENVIAR ---
+        document.getElementById('cargaForm').addEventListener('submit', function(e) {
+            const total = counts.P + counts.M + counts.G;
+            if (total === 0) {
+                e.preventDefault();
+                alert('⚠️ Debes ingresar al menos un cilindro.');
+                return false;
+            }
+            // Si hay más de un tamaño, preguntamos cuál es el precio principal (por simplicidad)
+            // En la versión avanzada, se pueden poner precios por tamaño
+            return true;
+        });
+    </script>
+</body>
+</html>
