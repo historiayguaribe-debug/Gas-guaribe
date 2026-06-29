@@ -1,16 +1,21 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 from .database import engine, Base
 from .auth import router as auth_router
 from .pedidos import router as pedidos_router
 from .reportes import router as reportes_router
 from .websocket_manager import manager
 import json
+import os
 
+# Crear las tablas en la base de datos (si no existen)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GASGUARIBE API", version="1.0")
 
+# Configurar CORS para permitir conexiones desde el móvil o navegador
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,10 +24,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configurar la carpeta donde están las plantillas HTML
+templates = Jinja2Templates(directory="app/templates")
+
+# Incluir las rutas de los módulos
 app.include_router(auth_router)
 app.include_router(pedidos_router)
 app.include_router(reportes_router)
 
+# --- WebSocket para seguimiento en vivo ---
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
     await manager.connect(user_id, websocket)
@@ -37,6 +47,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     except WebSocketDisconnect:
         manager.disconnect(user_id)
 
-@app.get("/")
-def root():
-    return {"mensaje": "Bienvenido a GASGUARIBE API. Ve a /docs para probar los endpoints."}
+# --- PÁGINA PRINCIPAL BONITA EN ESPAÑOL ---
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})ra probar los endpoints."}
