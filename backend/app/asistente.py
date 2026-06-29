@@ -1,78 +1,177 @@
 import os
-import json
-from datetime import datetime
 from groq import Groq
-from sqlalchemy import func
 from .database import SessionLocal
-from .models import Pedido, Cliente, Planta, Cilindro
+from .models import Pedido, Cliente, Planta, Cilindro, DetallePedido
+from sqlalchemy import func, and_
+import json
+from datetime import datetime, timedelta
 
-# Inicializar el cliente de Groq con la llave desde variables de entorno
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-if not GROQ_API_KEY:
-    raise ValueError("La variable de entorno GROQ_API_KEY no está configurada")
+# Inicializar el cliente de Groq
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-client = Groq(api_key=GROQ_API_KEY)
-
-def get_estadisticas():
+def get_estadisticas_completas():
     """
-    Obtiene datos actuales de la base de datos para dárselos a la IA.
+    Recopila TODOS los datos relevantes del negocio para que la IA pueda
+    generar reportes y responder preguntas complejas.
     """
     db = SessionLocal()
     try:
         hoy = datetime.now().date()
-        pedidos_hoy = db.query(Pedido).filter(func.date(Pedido.fecha_creacion) == hoy).count()
+        inicio_mes = hoy.replace(day=1)
+        semana_pasada = hoy - timedelta(days=7)
+
+        # --- 1. PEDIDOS ---
         total_pedidos = db.query(Pedido).count()
+        pedidos_hoy = db.query(Pedido).filter(func.date(Pedido.fecha_creacion) == hoy).count()
+        pedidos_mes = db.query(Pedido).filter(func.date(Pedido.fecha_creacion) >= inicio_mes).count()
+        pedidos_semana = db.query(Pedido).filter(func.date(Pedido.fecha_creacion) >= semana_pasada).count()
+        
+        # Por estado
+        pendientes = db.query(Pedido).filter(Pedido.estado == "pendiente").count()
+        en_ruta = db.query(Pedido).filter(Pedido.estado == "en_ruta").count()
+        entregados = db.query(Pedido).filter(Pedido.estado == "entregado").count()
+        cancelados = db.query(Pedido).filter(Pedido.estado == "cancelado").count()
+
+        # --- 2. INGRESOS Y COSTOS ---
+        pedidos_entregados = db.query(Pedido).filter(Pedido.estado == "entregado").all()
+        ingreso_total = sum(float(p.monto_total) for p in pedidos_entregados)
+        costo_logistico_total = sum(float(p.costo_logistico) for p in pedidos_entregados)
+        costo_admin_total = sum(float(p.costo_administrativo) for p in pedidos_entregados)
+        utilidad_bruta = ingreso_total - costo_logistico_total
+        utilidad_neta = utilidad_bruta - costo_admin_total
+
+        # --- 3. CILINDROS ---
+        total_cilindros = db.query(Cilindro).count()
+        disponibles = db.query(Cilindro).filter(Cilindro.estado == "disponible").count()
+        en_ruta_cil = db.query(Cilindro).filter(Cilindro.estado == "en_ruta").count()
+        vacios = db.query(Cilindro).filter(Cilindro.estado == "vacio").count()
+        
+        # Por tamaño
+        cilindros_por_tamano = {}
+        for tam in ["P", "M", "G"]:
+            count = db.query(Cilindro).filter(Cilindro.tamanio == tam).count()
+            cilindros_por_tamano[tam] = count
+
+        # --- 4. DETALLE DE PEDIDOS (qué se vendió) ---
+        detalles = db.query(DetallePedido).all()
+        ventas_por_tamano = {"P": 0, "M": 0, "G": 0}
+        exonerados_total = 0
+        valor_exoneraciones = 0
+        for d in detalles:
+            if d.cilindro:
+                tam = d.cilindro.tamanio.value if hasattr(d.cilindro.tamanio, 'value') else str(d.cilindro.tamanio)
+                ventas_por_tamano[tam] = ventas_por_tamano.get(tam, 0) + d.cantidad
+                if d.exonerado:
+                    exonerados_total += d.cantidad
+                    valor_exoneraciones += float(d.precio_unitario) * d.cantidad
+
+        # --- 5. PLANTAS ---
+        plantas = db.query(Planta).all()
+        datos_plantas = []
+        for p in plantas:
+            pedidos_planta = db.query(Pedido).filter(Pedido.planta_asignada_id == p.id).count()
+            ingresos_planta = sum(float(ped.monto_total) for ped in db.query(Pedido).filter(
+                Pedido.planta_asignada_id == p.id, Pedido.estado == "entregado"
+            ).all())
+            datos_plantas.append({
+                "nombre": p.nombre,
+                "pedidos": pedidos_planta,
+                "ingresos": round(ingresos_planta, 2)
+            })
+
+        # --- 6. REPARTIDORES ---
+        repartidores_activos = db.query(Pedido.repartidor_id).distinct().count()
+        pedidos_por_repartidor = {}
+        # (Simplificado: podemos contar los pedidos asignados a cada repartidor)
+
+        # --- 7. CLIENTES ---
         total_clientes = db.query(Cliente).count()
-        total_plantas = db.query(Planta).count()
-        pedidos_pendientes = db.query(Pedido).filter(Pedido.estado == "pendiente").count()
-        pedidos_entregados = db.query(Pedido).filter(Pedido.estado == "entregado").count()
-        cilindros_disponibles = db.query(Cilindro).filter(Cilindro.estado == "disponible").count()
+        clientes_exonerados = db.query(Cliente).filter(Cliente.exonerado == True).count()
+
+        # --- 8. EXONERACIONES (resumen) ---
+        exoneraciones_mes = db.query(DetallePedido).filter(
+            DetallePedido.exonerado == True,
+            DetallePedido.pedido.has(Pedido.fecha_creacion >= inicio_mes)
+        ).count()
 
         return {
-            "pedidos_hoy": pedidos_hoy,
-            "total_pedidos": total_pedidos,
-            "total_clientes": total_clientes,
-            "total_plantas": total_plantas,
-            "pedidos_pendientes": pedidos_pendientes,
-            "pedidos_entregados": pedidos_entregados,
-            "cilindros_disponibles": cilindros_disponibles,
+            "fecha_actual": str(hoy),
+            "pedidos": {
+                "total": total_pedidos,
+                "hoy": pedidos_hoy,
+                "esta_semana": pedidos_semana,
+                "este_mes": pedidos_mes,
+                "pendientes": pendientes,
+                "en_ruta": en_ruta,
+                "entregados": entregados,
+                "cancelados": cancelados,
+            },
+            "finanzas": {
+                "ingreso_total": round(ingreso_total, 2),
+                "costo_logistico": round(costo_logistico_total, 2),
+                "costo_administrativo": round(costo_admin_total, 2),
+                "utilidad_bruta": round(utilidad_bruta, 2),
+                "utilidad_neta": round(utilidad_neta, 2),
+            },
+            "cilindros": {
+                "total": total_cilindros,
+                "disponibles": disponibles,
+                "en_ruta": en_ruta_cil,
+                "vacios": vacios,
+                "por_tamano": cilindros_por_tamano,
+                "ventas_por_tamano": ventas_por_tamano,
+            },
+            "exoneraciones": {
+                "total_cilindros": exonerados_total,
+                "valor_monetario": round(valor_exoneraciones, 2),
+                "este_mes": exoneraciones_mes,
+            },
+            "plantas": datos_plantas,
+            "clientes": {
+                "total": total_clientes,
+                "exonerados": clientes_exonerados,
+            },
+            "repartidores": {
+                "activos": repartidores_activos,
+            }
         }
     finally:
         db.close()
 
-def generar_respuesta(pregunta_usuario: str) -> str:
-    """
-    Toma una pregunta del usuario, consulta a Groq con los datos del sistema,
-    y devuelve la respuesta en lenguaje natural.
-    """
-    # 1. Obtener los datos actuales
-    datos = get_estadisticas()
-
-    # 2. Construir el mensaje para el sistema (el prompt)
-    mensaje_sistema = f"""
-    Eres el asistente virtual de 'GASGUARIBE', un sistema de gestión de gas doméstico para el municipio Guaribe.
-    Ayudas al administrador respondiendo preguntas sobre el negocio.
-    Aquí tienes los datos actuales del sistema en formato JSON. Úsalos para responder las preguntas del usuario:
-    {json.dumps(datos, indent=2, default=str)}
-
-    Responde siempre en español, de forma clara, amigable y útil.
-    Si el usuario pide un reporte, ofrécete a generarlo.
-    Si la pregunta no está relacionada con los datos, indícalo y sugiere qué puede hacer.
-    """
-
+def generar_respuesta(pregunta_usuario: str):
+    """Genera una respuesta usando Groq con todos los datos del negocio."""
+    datos = get_estadisticas_completas()
+    
     mensajes = [
-        {"role": "system", "content": mensaje_sistema},
-        {"role": "user", "content": pregunta_usuario}
+        {
+            "role": "system",
+            "content": f"""
+            Eres el asistente virtual de 'GASGUARIBE', una empresa de distribución de gas doméstico en el municipio Guaribe.
+            Tu tarea es ayudar al administrador respondiendo preguntas sobre el negocio.
+            Aquí tienes los datos actuales del sistema en formato JSON. Úsalos para responder las preguntas del usuario:
+            {json.dumps(datos, indent=2, default=str)}
+            
+            Instrucciones importantes:
+            - Responde siempre en español, de forma clara, amigable y profesional.
+            - Si el usuario pide un reporte, ofrécete a generarlo.
+            - Si el usuario pregunta algo que no está en los datos, indícalo y sugiere qué puede hacer.
+            - Puedes hacer cálculos simples con los datos (ej: "¿cuánto es el ingreso por cilindro grande?").
+            - Si el usuario pregunta por tendencias, puedes comparar con períodos anteriores si los datos están disponibles.
+            """
+        },
+        {
+            "role": "user",
+            "content": pregunta_usuario
+        }
     ]
 
     try:
-        respuesta = client.chat.completions.create(
+        chat_completion = client.chat.completions.create(
             messages=mensajes,
             model="llama-3.3-70b-versatile",
-            temperature=0.7,
-            max_tokens=1024,
+            temperature=0.5,
+            max_tokens=1500,
         )
-        return respuesta.choices[0].message.content
+        return chat_completion.choices[0].message.content
     except Exception as e:
-        # Captura errores de red, autenticación, etc.
-        return f"Lo siento, ocurrió un error al consultar la IA: {str(e)}"
+        return f"Lo siento, tuve un problema al procesar tu solicitud: {e}"
