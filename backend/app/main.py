@@ -25,7 +25,8 @@ app.add_middleware(
 )
 
 # Configurar la carpeta donde están las plantillas HTML
-templates = Jinja2Templates(directory="app/templates")
+# Ahora busca "templates" en la raíz del contenedor (donde el Dockerfile la copió)
+templates = Jinja2Templates(directory="templates")
 
 # Incluir las rutas de los módulos (autenticación, pedidos, reportes)
 app.include_router(auth_router)
