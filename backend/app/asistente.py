@@ -1,18 +1,28 @@
 import os
 from groq import Groq
 from .database import SessionLocal
-from .models import Pedido, Cliente, Planta, Cilindro, DetallePedido
+from .models import (
+    Pedido, Cliente, Planta, Cilindro, DetallePedido, CostoOperativo
+)
 from sqlalchemy import func, and_
 import json
 from datetime import datetime, timedelta
 
-# Inicializar el cliente de Groq
+# Inicializar el cliente de Groq con la llave API
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 def get_estadisticas_completas():
     """
     Recopila TODOS los datos relevantes del negocio para que la IA pueda
-    generar reportes y responder preguntas complejas.
+    generar reportes y responder preguntas complejas sobre:
+    - Pedidos (totales, por día, semana, mes, por estado)
+    - Finanzas (ingresos, costos logísticos, administrativos, utilidades)
+    - Cilindros (totales, disponibles, por tamaño, ventas por tamaño)
+    - Exoneraciones (cantidad de cilindros, valor monetario)
+    - Plantas (pedidos por planta, ingresos por planta)
+    - Clientes (totales, exonerados)
+    - Repartidores (activos)
+    - Costos operativos (logísticos, administrativos)
     """
     db = SessionLocal()
     try:
@@ -70,9 +80,11 @@ def get_estadisticas_completas():
         datos_plantas = []
         for p in plantas:
             pedidos_planta = db.query(Pedido).filter(Pedido.planta_asignada_id == p.id).count()
-            ingresos_planta = sum(float(ped.monto_total) for ped in db.query(Pedido).filter(
-                Pedido.planta_asignada_id == p.id, Pedido.estado == "entregado"
-            ).all())
+            ingresos_planta = sum(
+                float(ped.monto_total) for ped in db.query(Pedido).filter(
+                    Pedido.planta_asignada_id == p.id, Pedido.estado == "entregado"
+                ).all()
+            )
             datos_plantas.append({
                 "nombre": p.nombre,
                 "pedidos": pedidos_planta,
@@ -81,8 +93,6 @@ def get_estadisticas_completas():
 
         # --- 6. REPARTIDORES ---
         repartidores_activos = db.query(Pedido.repartidor_id).distinct().count()
-        pedidos_por_repartidor = {}
-        # (Simplificado: podemos contar los pedidos asignados a cada repartidor)
 
         # --- 7. CLIENTES ---
         total_clientes = db.query(Cliente).count()
@@ -93,6 +103,12 @@ def get_estadisticas_completas():
             DetallePedido.exonerado == True,
             DetallePedido.pedido.has(Pedido.fecha_creacion >= inicio_mes)
         ).count()
+
+        # --- 9. COSTOS OPERATIVOS ---
+        costos_logisticos = db.query(CostoOperativo).filter(CostoOperativo.tipo == "Logístico").all()
+        costos_admin = db.query(CostoOperativo).filter(CostoOperativo.tipo == "Administrativo").all()
+        total_logistico = sum(float(c.monto) for c in costos_logisticos)
+        total_admin = sum(float(c.monto) for c in costos_admin)
 
         return {
             "fecha_actual": str(hoy),
@@ -133,15 +149,28 @@ def get_estadisticas_completas():
             },
             "repartidores": {
                 "activos": repartidores_activos,
+            },
+            "costos": {
+                "logistico": round(total_logistico, 2),
+                "administrativo": round(total_admin, 2),
+                "detalle": [
+                    {"descripcion": c.descripcion, "monto": float(c.monto), "fecha": str(c.fecha)}
+                    for c in costos_logisticos + costos_admin
+                ]
             }
         }
     finally:
         db.close()
 
 def generar_respuesta(pregunta_usuario: str):
-    """Genera una respuesta usando Groq con todos los datos del negocio."""
+    """
+    Función principal que recibe una pregunta del administrador,
+    consulta a la IA de Groq y devuelve una respuesta en lenguaje natural.
+    """
+    # 1. Obtener los datos actuales de la base de datos
     datos = get_estadisticas_completas()
     
+    # 2. Crear el mensaje para Groq, dándole contexto y los datos
     mensajes = [
         {
             "role": "system",
@@ -157,6 +186,7 @@ def generar_respuesta(pregunta_usuario: str):
             - Si el usuario pregunta algo que no está en los datos, indícalo y sugiere qué puede hacer.
             - Puedes hacer cálculos simples con los datos (ej: "¿cuánto es el ingreso por cilindro grande?").
             - Si el usuario pregunta por tendencias, puedes comparar con períodos anteriores si los datos están disponibles.
+            - Sé conciso pero completo en tus respuestas.
             """
         },
         {
@@ -168,7 +198,7 @@ def generar_respuesta(pregunta_usuario: str):
     try:
         chat_completion = client.chat.completions.create(
             messages=mensajes,
-            model="llama-3.3-70b-versatile",
+            model="llama-3.3-70b-versatile",  # Modelo gratuito de Groq
             temperature=0.5,
             max_tokens=1500,
         )
