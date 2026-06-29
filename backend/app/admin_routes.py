@@ -11,19 +11,18 @@ import random
 router = APIRouter(prefix="/admin", tags=["Administración"])
 templates = Jinja2Templates(directory="templates")
 
-# --- PÁGINA PRINCIPAL DEL PANEL ---
+# --- PANEL PRINCIPAL ---
 @router.get("/panel", response_class=HTMLResponse)
 async def panel_administracion(request: Request, user=Depends(get_current_user)):
-    """Panel principal con enlaces a todas las opciones."""
     return templates.TemplateResponse("admin_panel.html", {"request": request})
 
-# --- FORMULARIO PARA REGISTRAR CARGA A PLANTA ---
+# --- CARGA A PLANTA (GET) ---
 @router.get("/carga-planta", response_class=HTMLResponse)
 async def formulario_carga_planta(request: Request, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """Muestra el formulario para registrar una carga de cilindros a una planta."""
     plantas = db.query(Planta).all()
     return templates.TemplateResponse("carga_planta.html", {"request": request, "plantas": plantas})
 
+# --- CARGA A PLANTA (POST) ---
 @router.post("/carga-planta")
 async def registrar_carga_planta(
     request: Request,
@@ -36,7 +35,6 @@ async def registrar_carga_planta(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    """Guarda una carga de cilindros en la base de datos."""
     planta = db.query(Planta).filter(Planta.id == planta_id).first()
     if not planta:
         raise HTTPException(status_code=404, detail="Planta no encontrada")
@@ -57,14 +55,14 @@ async def registrar_carga_planta(
     db.commit()
     return RedirectResponse(url="/admin/panel", status_code=303)
 
-# --- FORMULARIO PARA REGISTRAR VENTA ---
+# --- VENTA (GET) ---
 @router.get("/venta", response_class=HTMLResponse)
 async def formulario_venta(request: Request, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """Muestra el formulario para registrar una venta de cilindros."""
     clientes = db.query(Cliente).all()
     plantas = db.query(Planta).all()
     return templates.TemplateResponse("venta_cilindro.html", {"request": request, "clientes": clientes, "plantas": plantas})
 
+# --- VENTA (POST) ---
 @router.post("/venta")
 async def registrar_venta(
     request: Request,
@@ -76,7 +74,6 @@ async def registrar_venta(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    """Guarda una venta de cilindros en la base de datos."""
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
@@ -130,12 +127,12 @@ async def registrar_venta(
     db.commit()
     return RedirectResponse(url="/admin/panel", status_code=303)
 
-# --- FORMULARIO PARA REGISTRAR COSTO OPERATIVO ---
+# --- COSTO OPERATIVO (GET) ---
 @router.get("/costo", response_class=HTMLResponse)
 async def formulario_costo(request: Request, user=Depends(get_current_user)):
-    """Muestra el formulario para registrar un costo operativo."""
     return templates.TemplateResponse("costo_operativo.html", {"request": request})
 
+# --- COSTO OPERATIVO (POST) ---
 @router.post("/costo")
 async def registrar_costo(
     request: Request,
@@ -146,7 +143,6 @@ async def registrar_costo(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    """Guarda un costo operativo en la base de datos."""
     fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
     costo = CostoOperativo(
         tipo=tipo,
