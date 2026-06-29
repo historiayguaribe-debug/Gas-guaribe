@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente GASGUARIBE</title>
+    <style>
+        /* --- ESTILOS PARA EL CHAT --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .chat-container {
+            width: 600px;
+            max-width: 100%;
+            background: #1e293b;
+            border-radius: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 650px;
+            border: 1px solid #334155;
+        }
+        .chat-header {
+            background: #0f172a;
+            color: #fbbf24;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: bold;
+            border-bottom: 1px solid #334155;
+        }
+        .chat-header small {
+            display: block;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: normal;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+        .user-message {
+            background: #fbbf24;
+            color: #0f172a;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bot-message {
+            background: #334155;
+            color: #e2e8f0;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .bot-message strong {
+            color: #fbbf24;
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 15px;
+            background: #0f172a;
+            border-top: 1px solid #334155;
+            gap: 10px;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid #475569;
+            border-radius: 30px;
+            outline: none;
+            font-size: 1rem;
+            background: #1e293b;
+            color: white;
+        }
+        .chat-input:focus {
+            border-color: #fbbf24;
+        }
+        .chat-input::placeholder {
+            color: #94a3b8;
+        }
+        .send-button {
+            background: #fbbf24;
+            color: #0f172a;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        .send-button:hover {
+            background: #f59e0b;
+            transform: scale(1.03);
+        }
+        .loading {
+            text-align: center;
+            color: #94a3b8;
+            font-style: italic;
+            padding: 10px;
+            align-self: center;
+        }
+        .error-message {
+            background: #7f1d1d;
+            color: #fca5a5;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 5px 0;
+            align-self: center;
+            font-size: 0.9rem;
+            border: 1px solid #991b1b;
+        }
+        .footer-chat {
+            text-align: center;
+            color: #475569;
+            font-size: 0.7rem;
+            padding: 10px;
+            border-top: 1px solid #1e293b;
+            background: #0f172a;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            🤖 Asistente GASGUARIBE
+            <small>Administración inteligente del gas</small>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-message">
+                <strong>👋 ¡Hola, administrador!</strong><br>
+                Soy tu asistente virtual. Pregúntame sobre estadísticas, costos, pedidos o exoneraciones.
+                <br><em>Ejemplo: "¿Cuántos pedidos se hicieron hoy?"</em>
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="questionInput" class="chat-input" placeholder="Escribe tu pregunta aquí...">
+            <button class="send-button" onclick="sendQuestion()">Enviar</button>
+        </div>
+        <div class="footer-chat">
+            ⚡ Conectado a Groq IA · Gas Guaribe 2026
+        </div>
+    </div>
+
+    <script>
+        // --- FUNCIÓN PARA ENVIAR LA PREGUNTA AL ASISTENTE ---
+        async function sendQuestion() {
+            const input = document.getElementById('questionInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Agregar mensaje del usuario al chat
+            const messagesDiv = document.getElementById('chatMessages');
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = 'message user-message';
+            userMsgDiv.textContent = message;
+            messagesDiv.appendChild(userMsgDiv);
+            input.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Mostrar indicador de carga
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            loadingDiv.id = 'loadingIndicator';
+            loadingDiv.textContent = '🤔 Pensando...';
+            messagesDiv.appendChild(loadingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            try {
+                // Llamar al endpoint del asistente
+                const response = await fetch('/asistente/preguntar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pregunta: message })
+                });
+
+                // Quitar indicador de carga
+                const loadingElem = document.getElementById('loadingIndicator');
+                if (loadingElem) loadingElem.remove();
+
+                if (!response.ok) {
+                    // Si el servidor devuelve error (500, 404, etc.)
+                    const errorText = await response.text();
+                    throw new Error(`Error ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                // Mostrar respuesta del bot
+                const botMsgDiv = document.createElement('div');
+                botMsgDiv.className = 'message bot-message';
+                // Convertir saltos de línea a <br> para mejor formato
+                botMsgDiv.innerHTML = data.respuesta.replace(/\n/g, '<br>');
+                messagesDiv.appendChild(botMsgDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            } catch (error) {
+                // Quitar indicador de carga si existe
+                const loadingElem = document.getElementById('loadingIndicator');
+                if (loadingElem) loadingElem.remove();
+
+                // Mostrar mensaje de error amigable
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = `❌ Error: ${error.message || 'No pude conectar con el asistente. Intenta de nuevo.'}`;
+                messagesDiv.appendChild(errorDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                console.error('Error en el chat:', error);
+            }
+        }
+
+        // --- PERMITIR ENVIAR CON LA TECLA ENTER ---
+        document.getElementById('questionInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendQuestion();
+            }
+        });
+
+        // --- ENFOQUE AUTOMÁTICO AL CARGAR ---
+        window.onload = function() {
+            document.getElementById('questionInput').focus();
+        };
+    </script>
+</body>
+</html>
