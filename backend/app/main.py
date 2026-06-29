@@ -8,14 +8,14 @@ from .pedidos import router as pedidos_router
 from .reportes import router as reportes_router
 from .websocket_manager import manager
 import json
-import os
 
 # Crear las tablas en la base de datos (si no existen)
 Base.metadata.create_all(bind=engine)
 
+# Inicializar la aplicación
 app = FastAPI(title="GASGUARIBE API", version="1.0")
 
-# Configurar CORS para permitir conexiones desde el móvil o navegador
+# Configurar CORS para permitir conexiones desde cualquier origen (útil para pruebas)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,12 +27,12 @@ app.add_middleware(
 # Configurar la carpeta donde están las plantillas HTML
 templates = Jinja2Templates(directory="app/templates")
 
-# Incluir las rutas de los módulos
+# Incluir las rutas de los módulos (autenticación, pedidos, reportes)
 app.include_router(auth_router)
 app.include_router(pedidos_router)
 app.include_router(reportes_router)
 
-# --- WebSocket para seguimiento en vivo ---
+# --- WebSocket para seguimiento en vivo (estilo Uber) ---
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
     await manager.connect(user_id, websocket)
@@ -43,11 +43,17 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
             if json_data.get("type") == "location":
                 lat = json_data.get("lat")
                 lng = json_data.get("lng")
+                # Aquí iría la lógica para notificar al cliente
                 await websocket.send_text(json.dumps({"status": "ubicacion_recibida"}))
     except WebSocketDisconnect:
         manager.disconnect(user_id)
 
-# --- PÁGINA PRINCIPAL BONITA EN ESPAÑOL ---
+# --- Página principal (interfaz bonita en español) ---
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})ra probar los endpoints."}
+    return templates.TemplateResponse("index.html", {"request": request})
+
+# --- Endpoint de bienvenida (por si acaso) ---
+@app.get("/api")
+def api_root():
+    return {"mensaje": "Bienvenido a GASGUARIBE API. Ve a /docs para probar los endpoints."}
