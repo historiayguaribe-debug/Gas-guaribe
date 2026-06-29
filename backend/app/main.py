@@ -7,7 +7,8 @@ from .auth import router as auth_router
 from .pedidos import router as pedidos_router
 from .reportes import router as reportes_router
 from .websocket_manager import manager
-from app.asistente import generar_respuesta
+from .asistente import generar_respuesta
+from .cargar_datos import cargar_datos
 from pydantic import BaseModel
 import json
 
@@ -19,12 +20,22 @@ class Pregunta(BaseModel):
 Base.metadata.create_all(bind=engine)
 
 # --- INICIALIZAR LA APLICACIÓN ---
-app = FastAPI(title="GASGUARIBE API", version="1.0")
+app = FastAPI(
+    title="GASGUARIBE API",
+    version="2.0",
+    description="Sistema de gestión y reparto de gas doméstico con asistente IA"
+)
+
+# --- CARGAR DATOS DE PRUEBA AUTOMÁTICAMENTE (SOLO SI LA BASE ESTÁ VACÍA) ---
+try:
+    cargar_datos()
+except Exception as e:
+    print(f"⚠️ No se pudieron cargar los datos de prueba: {e}")
 
 # --- CONFIGURAR CORS (para permitir peticiones desde el móvil o navegador) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # En producción, cambiar por la URL del frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,7 +49,7 @@ app.include_router(auth_router)
 app.include_router(pedidos_router)
 app.include_router(reportes_router)
 
-# --- WEB SOCKET PARA SEGUIMIENTO EN VIVO ---
+# --- WEB SOCKET PARA SEGUIMIENTO EN VIVO (ESTILO UBER) ---
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
     await manager.connect(user_id, websocket)
@@ -54,17 +65,22 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     except WebSocketDisconnect:
         manager.disconnect(user_id)
 
-# --- PÁGINA PRINCIPAL (interfaz bonita en español) ---
+# --- PÁGINA PRINCIPAL (INTERFAZ BONITA EN ESPAÑOL) ---
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# --- ENDPOINT DE BIENVENIDA (para probar que la API funciona) ---
+# --- ENDPOINT DE BIENVENIDA (PARA PROBAR QUE LA API FUNCIONA) ---
 @app.get("/api")
 def api_root():
-    return {"mensaje": "Bienvenido a GASGUARIBE API. Ve a /docs para probar los endpoints."}
+    return {
+        "mensaje": "Bienvenido a GASGUARIBE API",
+        "documentacion": "/docs",
+        "asistente": "/admin",
+        "version": "2.0"
+    }
 
-# --- NUEVO: ASISTENTE INTELIGENTE (CHAT CON GROQ) ---
+# --- ASISTENTE INTELIGENTE (CHAT CON GROQ) ---
 @app.post("/asistente/preguntar")
 async def preguntar_asistente(pregunta: Pregunta):
     """
@@ -73,10 +89,20 @@ async def preguntar_asistente(pregunta: Pregunta):
     respuesta = generar_respuesta(pregunta.pregunta)
     return {"respuesta": respuesta}
 
-# --- NUEVO: PÁGINA DE CHAT DEL ADMINISTRADOR ---
+# --- PÁGINA DE CHAT DEL ADMINISTRADOR ---
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_chat(request: Request):
     """
     Página con la interfaz de chat para que el administrador hable con el asistente IA.
     """
     return templates.TemplateResponse("admin_chat.html", {"request": request})
+
+# --- ENDPOINT DE ESTADO DEL SISTEMA (PARA MONITOREO) ---
+@app.get("/status")
+def status():
+    return {
+        "estado": "online",
+        "servicio": "GASGUARIBE",
+        "version": "2.0",
+        "base_datos": "SQLite (datos cargados automáticamente)"
+    }
