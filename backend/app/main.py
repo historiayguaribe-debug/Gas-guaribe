@@ -7,15 +7,21 @@ from .auth import router as auth_router
 from .pedidos import router as pedidos_router
 from .reportes import router as reportes_router
 from .websocket_manager import manager
+from .asistente import generar_respuesta
+from pydantic import BaseModel
 import json
 
-# Crear las tablas en la base de datos (si no existen)
+# --- MODELO PARA LAS PREGUNTAS DEL ASISTENTE ---
+class Pregunta(BaseModel):
+    pregunta: str
+
+# --- CREAR LAS TABLAS EN LA BASE DE DATOS ---
 Base.metadata.create_all(bind=engine)
 
-# Inicializar la aplicación
+# --- INICIALIZAR LA APLICACIÓN ---
 app = FastAPI(title="GASGUARIBE API", version="1.0")
 
-# Configurar CORS para permitir conexiones desde cualquier origen (útil para pruebas)
+# --- CONFIGURAR CORS (para permitir peticiones desde el móvil o navegador) ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,16 +30,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configurar la carpeta donde están las plantillas HTML
-# Ahora busca "templates" en la raíz del contenedor (donde el Dockerfile la copió)
+# --- CONFIGURAR LA CARPETA DE PLANTILLAS HTML ---
 templates = Jinja2Templates(directory="templates")
 
-# Incluir las rutas de los módulos (autenticación, pedidos, reportes)
+# --- INCLUIR LAS RUTAS DE LOS MÓDULOS ---
 app.include_router(auth_router)
 app.include_router(pedidos_router)
 app.include_router(reportes_router)
 
-# --- WebSocket para seguimiento en vivo (estilo Uber) ---
+# --- WEB SOCKET PARA SEGUIMIENTO EN VIVO ---
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
     await manager.connect(user_id, websocket)
@@ -49,12 +54,29 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     except WebSocketDisconnect:
         manager.disconnect(user_id)
 
-# --- Página principal (interfaz bonita en español) ---
+# --- PÁGINA PRINCIPAL (interfaz bonita en español) ---
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# --- Endpoint de bienvenida (por si acaso) ---
+# --- ENDPOINT DE BIENVENIDA (para probar que la API funciona) ---
 @app.get("/api")
 def api_root():
     return {"mensaje": "Bienvenido a GASGUARIBE API. Ve a /docs para probar los endpoints."}
+
+# --- NUEVO: ASISTENTE INTELIGENTE (CHAT CON GROQ) ---
+@app.post("/asistente/preguntar")
+async def preguntar_asistente(pregunta: Pregunta):
+    """
+    Endpoint que recibe una pregunta del usuario, consulta a Groq y devuelve la respuesta.
+    """
+    respuesta = generar_respuesta(pregunta.pregunta)
+    return {"respuesta": respuesta}
+
+# --- NUEVO: PÁGINA DE CHAT DEL ADMINISTRADOR ---
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_chat(request: Request):
+    """
+    Página con la interfaz de chat para que el administrador hable con el asistente IA.
+    """
+    return templates.TemplateResponse("admin_chat.html", {"request": request})
