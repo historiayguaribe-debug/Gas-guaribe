@@ -1,0 +1,171 @@
+{% extends "admin_base.html" %}
+
+{% block ventas_active %}active{% endblock %}
+{% block page_title %}Gestión de Ventas{% endblock %}
+{% block breadcrumb %}Administración / Ventas{% endblock %}
+
+{% block content %}
+
+<div class="grid-2">
+    <!-- Formulario de venta -->
+    <div class="card">
+        <div class="card-title">🛒 Nueva Venta</div>
+        <form id="ventaForm" onsubmit="event.preventDefault(); registrarVenta();">
+            <div class="form-group">
+                <label for="cliente">Cliente</label>
+                <select id="cliente" required>
+                    <option value="">Seleccionar cliente</option>
+                    <option value="1">Juan Pérez (Normal)</option>
+                    <option value="2">Escuela Bolivariana (Exonerado)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="plantaVenta">Planta de origen</label>
+                <select id="plantaVenta" required>
+                    <option value="1">Altagracia de Orituco</option>
+                    <option value="2">Valle de la Pascua</option>
+                    <option value="3">Puerto La Cruz</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tamaño</label>
+                <div style="display:flex; gap:10px;">
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:5px;">
+                        <input type="radio" name="tamanio" value="P" checked> Pequeño
+                    </label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:5px;">
+                        <input type="radio" name="tamanio" value="M"> Mediano
+                    </label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:5px;">
+                        <input type="radio" name="tamanio" value="G"> Grande
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="cantidadVenta">Cantidad</label>
+                <input type="number" id="cantidadVenta" min="1" value="1" required>
+            </div>
+            <div class="form-group">
+                <label for="fechaVenta">Fecha de venta</label>
+                <input type="date" id="fechaVenta" required>
+            </div>
+            <div class="form-group">
+                <label for="precioVenta">Precio unitario (Bs)</label>
+                <input type="number" id="precioVenta" step="0.01" placeholder="15.00" required>
+            </div>
+            <button type="submit" class="btn">✅ Registrar Venta</button>
+        </form>
+        <div id="ventaMessage" style="margin-top:10px; font-weight:600;"></div>
+    </div>
+
+    <!-- Listado de ventas recientes -->
+    <div class="card">
+        <div class="card-title">📋 Últimas Ventas</div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Cilindros</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="listaVentas">
+                    <tr>
+                        <td colspan="5" style="text-align:center; color:#94a3b8;">Cargando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('fechaVenta').value = new Date().toISOString().split('T')[0];
+        cargarVentas();
+    });
+
+    async function registrarVenta() {
+        const cliente = document.getElementById('cliente').value;
+        const planta = document.getElementById('plantaVenta').value;
+        const tamanio = document.querySelector('input[name="tamanio"]:checked').value;
+        const cantidad = document.getElementById('cantidadVenta').value;
+        const fecha = document.getElementById('fechaVenta').value;
+        const precio = document.getElementById('precioVenta').value;
+
+        if (!cliente) {
+            document.getElementById('ventaMessage').innerHTML = '<span style="color:#ef4444;">❌ Selecciona un cliente.</span>';
+            return;
+        }
+
+        const data = {
+            cliente_id: parseInt(cliente),
+            planta_id: parseInt(planta),
+            tamanio: tamanio,
+            cantidad: parseInt(cantidad),
+            fecha: fecha,
+            precio_unitario: parseFloat(precio)
+        };
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/admin/venta', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                document.getElementById('ventaMessage').innerHTML = '<span style="color:#22c55e;">✅ Venta registrada exitosamente.</span>';
+                document.getElementById('ventaForm').reset();
+                document.getElementById('fechaVenta').value = new Date().toISOString().split('T')[0];
+                cargarVentas();
+            } else {
+                const error = await response.json();
+                document.getElementById('ventaMessage').innerHTML = `<span style="color:#ef4444;">❌ Error: ${error.detail || 'No se pudo registrar'}</span>`;
+            }
+        } catch (error) {
+            document.getElementById('ventaMessage').innerHTML = `<span style="color:#ef4444;">❌ Error de conexión: ${error.message}</span>`;
+        }
+    }
+
+    async function cargarVentas() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/pedidos/mis-pedidos/1', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (response.ok) {
+                const pedidos = await response.json();
+                const tbody = document.getElementById('listaVentas');
+                if (pedidos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No hay ventas registradas</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = pedidos.slice(0, 5).map(p => {
+                    const estadoClass = {
+                        'entregado': 'badge-success',
+                        'en_ruta': 'badge-warning',
+                        'pendiente': 'badge-info',
+                        'cancelado': 'badge-danger'
+                    }[p.estado] || 'badge-info';
+                    return `<tr>
+                        <td>${new Date(p.fecha_creacion).toLocaleDateString()}</td>
+                        <td>Cliente ${p.cliente_id}</td>
+                        <td>${p.detalles ? p.detalles.reduce((sum, d) => sum + d.cantidad, 0) : 0} cil.</td>
+                        <td>$${p.monto_total || 0}</td>
+                        <td><span class="badge ${estadoClass}">${p.estado}</span></td>
+                    </tr>`;
+                }).join('');
+            }
+        } catch (error) {
+            console.error('Error al cargar ventas:', error);
+        }
+    }
+</script>
+{% endblock %}
