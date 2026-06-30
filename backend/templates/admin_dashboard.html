@@ -1,0 +1,205 @@
+{% extends "admin_base.html" %}
+
+{% block dashboard_active %}active{% endblock %}
+{% block page_title %}Resumen del Día{% endblock %}
+{% block breadcrumb %}Inicio / Resumen{% endblock %}
+
+{% block content %}
+
+<!-- Tarjetas de estadísticas -->
+<div class="grid-4">
+    <div class="stat-card">
+        <div class="icon"><i class="fas fa-gas-pump"></i></div>
+        <div class="number" id="totalCilindros">0</div>
+        <div class="label">Cilindros Disponibles</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon"><i class="fas fa-truck"></i></div>
+        <div class="number" id="pedidosHoy">0</div>
+        <div class="label">Pedidos Hoy</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
+        <div class="number" id="ingresosHoy">$0</div>
+        <div class="label">Ingresos Hoy</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon"><i class="fas fa-school"></i></div>
+        <div class="number" id="exoneradosHoy">0</div>
+        <div class="label">Cilindros Exonerados</div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="grid-2">
+    <div class="card">
+        <div class="card-title">📊 Ventas por Tamaño de Cilindro</div>
+        <div class="chart-container">
+            <canvas id="ventasChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title">📈 Ingresos y Utilidad (últimos 7 días)</div>
+        <div class="chart-container">
+            <canvas id="utilidadChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de pedidos recientes -->
+<div class="card">
+    <div class="card-title">📋 Pedidos Recientes</div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Cliente</th>
+                    <th>Cilindros</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody id="recentOrders">
+                <tr>
+                    <td colspan="6" style="text-align:center; color:#94a3b8;">Cargando pedidos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // --- OBTENER ESTADÍSTICAS ---
+    async function cargarEstadisticas() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/reportes/resumen-diario', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('totalCilindros').textContent = data.total_cilindros || 0;
+                document.getElementById('pedidosHoy').textContent = data.pedidos_hoy || 0;
+                document.getElementById('ingresosHoy').textContent = '$' + (data.ingresos_hoy || 0);
+                document.getElementById('exoneradosHoy').textContent = data.exonerados_hoy || 0;
+            }
+        } catch (error) {
+            console.error('Error al cargar estadísticas:', error);
+        }
+    }
+
+    // --- CARGAR GRÁFICOS ---
+    async function cargarGraficos() {
+        try {
+            const token = localStorage.getItem('access_token');
+            // 1. Ventas por tamaño (datos de ejemplo, luego se conectan a la API)
+            const ctx1 = document.getElementById('ventasChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pequeños (5kg)', 'Medianos (15kg)', 'Grandes (45kg)'],
+                    datasets: [{
+                        data: [30, 45, 25],
+                        backgroundColor: ['#fbbf24', '#3b82f6', '#22c55e'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 2. Utilidad última semana (datos de ejemplo)
+            const ctx2 = document.getElementById('utilidadChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+                    datasets: [
+                        {
+                            label: 'Ingresos',
+                            data: [1200, 1350, 1100, 1500, 1800, 1600, 1400],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Utilidad Neta',
+                            data: [300, 400, 250, 450, 550, 480, 400],
+                            borderColor: '#22c55e',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: function(value) { return '$' + value; } }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error al cargar gráficos:', error);
+        }
+    }
+
+    // --- CARGAR PEDIDOS RECIENTES ---
+    async function cargarPedidosRecientes() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/pedidos/mis-pedidos/1', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (response.ok) {
+                const pedidos = await response.json();
+                const tbody = document.getElementById('recentOrders');
+                if (pedidos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No hay pedidos recientes</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = pedidos.slice(0, 5).map(p => {
+                    const estadoClass = {
+                        'entregado': 'badge-success',
+                        'en_ruta': 'badge-warning',
+                        'pendiente': 'badge-info',
+                        'cancelado': 'badge-danger'
+                    }[p.estado] || 'badge-info';
+                    return `<tr>
+                        <td>#${p.id}</td>
+                        <td>Cliente ${p.cliente_id}</td>
+                        <td>${p.detalles ? p.detalles.reduce((sum, d) => sum + d.cantidad, 0) : 0} cil.</td>
+                        <td>$${p.monto_total || 0}</td>
+                        <td><span class="badge ${estadoClass}">${p.estado}</span></td>
+                        <td>${new Date(p.fecha_creacion).toLocaleDateString()}</td>
+                    </tr>`;
+                }).join('');
+            }
+        } catch (error) {
+            console.error('Error al cargar pedidos:', error);
+        }
+    }
+
+    // --- EJECUTAR AL CARGAR ---
+    window.onload = function() {
+        cargarEstadisticas();
+        cargarGraficos();
+        cargarPedidosRecientes();
+    };
+</script>
+{% endblock %}
