@@ -1,31 +1,87 @@
 from sqlalchemy.orm import Session
-from .models import (Usuario, Proveedor, Circuito, Comunidad, Cliente, Cilindro, 
-                     Carga, Venta, GastoOperativo, Pedido)
+from .models import (
+    Usuario, Proveedor, Circuito, Comunidad, Cliente, Cilindro,
+    Carga, Venta, GastoOperativo, Pedido
+)
 from .auth import get_password_hash
 from .utils import generar_codigo_qr
 from datetime import datetime, timedelta
 import random
 
+
 def cargar_datos_iniciales(db: Session):
+    """
+    Carga datos de prueba en la base de datos si está vacía.
+    """
+    # Si ya hay usuarios, asumimos que la base de datos ya fue inicializada
     if db.query(Usuario).count() > 0:
         return
 
-    # Usuarios
+    # ---------- USUARIOS ----------
     usuarios = [
-        Usuario(username="admin", hashed_password=get_password_hash("admin123"), role="admin", nombre_completo="Administrador Principal"),
-        Usuario(username="oper1", hashed_password=get_password_hash("1234"), role="operativo", nombre_completo="Operativo 1"),
-        Usuario(username="oper2", hashed_password=get_password_hash("1234"), role="operativo", nombre_completo="Operativo 2"),
-        Usuario(username="auditor1", hashed_password=get_password_hash("1234"), role="auditor", nombre_completo="Auditor 1"),
-        Usuario(username="auditor2", hashed_password=get_password_hash("1234"), role="auditor", nombre_completo="Auditor 2"),
+        Usuario(
+            username="admin",
+            hashed_password=get_password_hash("admin.gas2026"),
+            role="admin",
+            nombre_completo="Administrador Principal"
+        ),
+        Usuario(
+            username="oper1",
+            hashed_password=get_password_hash("1234"),
+            role="operativo",
+            nombre_completo="Operativo 1"
+        ),
+        Usuario(
+            username="oper2",
+            hashed_password=get_password_hash("1234"),
+            role="operativo",
+            nombre_completo="Operativo 2"
+        ),
+        Usuario(
+            username="auditor1",
+            hashed_password=get_password_hash("1234"),
+            role="auditor",
+            nombre_completo="Auditor 1"
+        ),
+        Usuario(
+            username="auditor2",
+            hashed_password=get_password_hash("1234"),
+            role="auditor",
+            nombre_completo="Auditor 2"
+        ),
     ]
     db.add_all(usuarios)
     db.commit()
 
-    # Proveedores
+    # ---------- PROVEEDORES ----------
     proveedores_data = [
-        {"nombre": "Planta Altagracia de Orituco", "direccion": "Av. Principal, Altagracia", "contacto": "Juan Pérez", "telefono": "0412-1234567", "precio_P": 15.0, "precio_M": 25.0, "precio_G": 35.0},
-        {"nombre": "Planta Valle de la Pascua", "direccion": "Calle 5, Valle de la Pascua", "contacto": "María Gómez", "telefono": "0416-7654321", "precio_P": 14.5, "precio_M": 24.0, "precio_G": 34.0},
-        {"nombre": "Planta Puerto La Cruz", "direccion": "Av. Municipal, Puerto La Cruz", "contacto": "Carlos López", "telefono": "0424-9876543", "precio_P": 16.0, "precio_M": 26.0, "precio_G": 36.0},
+        {
+            "nombre": "Planta Altagracia de Orituco",
+            "direccion": "Av. Principal, Altagracia",
+            "contacto": "Juan Pérez",
+            "telefono": "0412-1234567",
+            "precio_P": 15.0,
+            "precio_M": 25.0,
+            "precio_G": 35.0
+        },
+        {
+            "nombre": "Planta Valle de la Pascua",
+            "direccion": "Calle 5, Valle de la Pascua",
+            "contacto": "María Gómez",
+            "telefono": "0416-7654321",
+            "precio_P": 14.5,
+            "precio_M": 24.0,
+            "precio_G": 34.0
+        },
+        {
+            "nombre": "Planta Puerto La Cruz",
+            "direccion": "Av. Municipal, Puerto La Cruz",
+            "contacto": "Carlos López",
+            "telefono": "0424-9876543",
+            "precio_P": 16.0,
+            "precio_M": 26.0,
+            "precio_G": 36.0
+        },
     ]
     proveedores = []
     for p in proveedores_data:
@@ -34,25 +90,35 @@ def cargar_datos_iniciales(db: Session):
         proveedores.append(prov)
     db.commit()
 
-    # Circuitos (I al IX)
-    circuitos_nombres = ["Circuito I", "Circuito II", "Circuito III", "Circuito IV", "Circuito V", "Circuito VI", "Circuito VII", "Circuito VIII", "Circuito IX"]
+    # ---------- CIRCUITOS (I al IX) ----------
+    circuitos_nombres = [
+        "Circuito I", "Circuito II", "Circuito III", "Circuito IV",
+        "Circuito V", "Circuito VI", "Circuito VII", "Circuito VIII",
+        "Circuito IX"
+    ]
     circuitos = []
     for i, nombre in enumerate(circuitos_nombres, start=1):
-        c = Circuito(numero=i, nombre=nombre, descripcion=f"Circuito comunal {i}")
+        c = Circuito(
+            numero=i,
+            nombre=nombre,
+            descripcion=f"Circuito comunal {i}"
+        )
         db.add(c)
         circuitos.append(c)
     db.commit()
 
-    # Comunidades (40 ejemplos)
+    # ---------- COMUNIDADES (40 ejemplos) ----------
     comunidades_nombres = [
-        "Barrio Bella Vista", "Urbanización Los Robles", "Sector El Carmen", "La Floresta", "Los Pinos",
-        "El Mango", "Las Acacias", "Santa Rosa", "Villa Olímpica", "Los Sauces",
-        "El Paraíso", "La Loma", "Las Brisas", "El Valle", "Las Mercedes",
-        "Los Almendros", "El Cují", "La Morita", "San José", "Los Jardines",
-        "El Prado", "Las Palmas", "La Campiña", "Los Rosales", "El Manantial",
-        "La Hacienda", "Los Angeles", "San Miguel", "El Rosario", "La Aurora",
-        "El Horizonte", "Las Flores", "Los Olivos", "El Sol", "Las Dunas",
-        "Los Cerezos", "El Mirador", "La Esperanza", "Los Nogales", "El Remanso"
+        "Barrio Bella Vista", "Urbanización Los Robles", "Sector El Carmen",
+        "La Floresta", "Los Pinos", "El Mango", "Las Acacias", "Santa Rosa",
+        "Villa Olímpica", "Los Sauces", "El Paraíso", "La Loma",
+        "Las Brisas", "El Valle", "Las Mercedes", "Los Almendros",
+        "El Cují", "La Morita", "San José", "Los Jardines",
+        "El Prado", "Las Palmas", "La Campiña", "Los Rosales",
+        "El Manantial", "La Hacienda", "Los Angeles", "San Miguel",
+        "El Rosario", "La Aurora", "El Horizonte", "Las Flores",
+        "Los Olivos", "El Sol", "Las Dunas", "Los Cerezos",
+        "El Mirador", "La Esperanza", "Los Nogales", "El Remanso"
     ]
     for nombre in comunidades_nombres[:40]:
         circuito = random.choice(circuitos)
@@ -62,7 +128,7 @@ def cargar_datos_iniciales(db: Session):
 
     comunidades = db.query(Comunidad).all()
 
-    # Cliente de prueba para usuario cliente
+    # ---------- CLIENTE DE PRUEBA (para el usuario cliente) ----------
     cliente_prueba = Cliente(
         nombre="Cliente Prueba",
         cedula_rif="V-1234567",
@@ -74,7 +140,7 @@ def cargar_datos_iniciales(db: Session):
     db.add(cliente_prueba)
     db.commit()
 
-    # Usuario cliente asociado
+    # Usuario cliente asociado a ese cliente
     user_cliente = Usuario(
         username="V-1234567",
         hashed_password=get_password_hash("cliente123"),
@@ -84,7 +150,7 @@ def cargar_datos_iniciales(db: Session):
     db.add(user_cliente)
     db.commit()
 
-    # Más clientes (10 total incluyendo el de prueba)
+    # ---------- MÁS CLIENTES (9 adicionales) ----------
     for i in range(9):
         cliente = Cliente(
             nombre=f"Cliente {i+2}",
@@ -97,7 +163,7 @@ def cargar_datos_iniciales(db: Session):
         db.add(cliente)
     db.commit()
 
-    # Cilindros (20)
+    # ---------- CILINDROS (20) ----------
     tamano_opciones = ["P", "M", "G"]
     for _ in range(20):
         tam = random.choice(tamano_opciones)
@@ -114,13 +180,17 @@ def cargar_datos_iniciales(db: Session):
         db.add(cil)
     db.commit()
 
-    # Cargas (3)
+    # ---------- CARGAS (3) ----------
     for _ in range(3):
         prov = random.choice(proveedores)
         cant_P = random.randint(5, 15)
         cant_M = random.randint(3, 10)
         cant_G = random.randint(2, 8)
-        costo = cant_P * prov.precio_P + cant_M * prov.precio_M + cant_G * prov.precio_G
+        costo = (
+            cant_P * prov.precio_P +
+            cant_M * prov.precio_M +
+            cant_G * prov.precio_G
+        )
         carga = Carga(
             fecha=datetime.utcnow() - timedelta(days=random.randint(0, 10)),
             proveedor_id=prov.id,
@@ -134,7 +204,7 @@ def cargar_datos_iniciales(db: Session):
         db.add(carga)
     db.commit()
 
-    # Ventas (10)
+    # ---------- VENTAS (10) ----------
     clientes = db.query(Cliente).all()
     for _ in range(10):
         cliente = random.choice(clientes)
@@ -154,7 +224,7 @@ def cargar_datos_iniciales(db: Session):
         db.add(venta)
     db.commit()
 
-    # Pedidos (5)
+    # ---------- PEDIDOS (5) ----------
     for _ in range(5):
         cl = random.choice(clientes)
         tam = random.choice(["P", "M", "G"])
@@ -171,13 +241,18 @@ def cargar_datos_iniciales(db: Session):
         db.add(ped)
     db.commit()
 
-    # Gastos operativos (3)
+    # ---------- GASTOS OPERATIVOS (3) ----------
     gastos_data = [
         {"tipo": "Logístico", "descripcion": "Combustible para transporte", "monto": 150.0},
         {"tipo": "Administrativo", "descripcion": "Pago de salarios", "monto": 800.0},
         {"tipo": "Logístico", "descripcion": "Mantenimiento de vehículos", "monto": 200.0},
     ]
     for g in gastos_data:
-        gasto = GastoOperativo(**g, fecha=datetime.utcnow() - timedelta(days=random.randint(0, 3)))
+        gasto = GastoOperativo(
+            tipo=g["tipo"],
+            descripcion=g["descripcion"],
+            monto=g["monto"],
+            fecha=datetime.utcnow() - timedelta(days=random.randint(0, 3))
+        )
         db.add(gasto)
     db.commit()
