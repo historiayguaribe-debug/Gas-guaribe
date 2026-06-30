@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - GASGUARIBE</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
         body {
             background: #0f172a;
             min-height: 100vh;
@@ -78,6 +83,11 @@
             background: #f59e0b;
             transform: scale(1.02);
         }
+        .login-container .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
         .login-container .error-msg {
             background: #7f1d1d;
             color: #fca5a5;
@@ -103,6 +113,12 @@
             margin-top: 10px;
             color: #94a3b8;
         }
+        .login-container .version {
+            text-align: center;
+            color: #334155;
+            font-size: 0.7rem;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -111,7 +127,7 @@
         <h1>GASGUARIBE</h1>
         <p class="sub">Inicia sesión para administrar tu negocio</p>
 
-        <form id="loginForm" onsubmit="return login(event)">
+        <form id="loginForm" onsubmit="event.preventDefault(); login();">
             <label for="email">📧 Correo electrónico</label>
             <input type="email" id="email" placeholder="ejemplo@correo.com" required value="admin@test.com">
 
@@ -127,18 +143,18 @@
         <div class="info">
             💡 Usuario de prueba: <strong>admin@test.com</strong> / <strong>1234</strong>
         </div>
+        <div class="version">GASGUARIBE v2.0 · Panel de Administración</div>
     </div>
 
     <script>
-        async function login(event) {
-            event.preventDefault();
-
+        async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
             const spinner = document.getElementById('spinner');
             const loginBtn = document.getElementById('loginBtn');
 
+            // Limpiar mensajes previos
             errorMsg.style.display = 'none';
             errorMsg.textContent = '';
             spinner.style.display = 'block';
@@ -148,8 +164,8 @@
             try {
                 const response = await fetch('/auth/login', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/x-www-form-urlencoded' 
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: new URLSearchParams({
                         'username': email,
@@ -169,11 +185,14 @@
                     return;
                 }
 
+                // Guardar token y datos del usuario en el almacenamiento local
                 localStorage.setItem('access_token', data.access_token);
                 localStorage.setItem('user_rol', data.rol);
                 localStorage.setItem('user_nombre', data.nombre);
+                localStorage.setItem('user_id', data.usuario_id);
 
-                window.location.href = '/admin/panel?token=' + data.access_token;
+                // Redirigir al panel de administración (dashboard)
+                window.location.href = '/admin/dashboard?token=' + data.access_token;
 
             } catch (error) {
                 spinner.style.display = 'none';
@@ -185,12 +204,13 @@
             }
         }
 
+        // Si ya hay un token guardado, redirigir directamente al dashboard
         window.onload = function() {
             const token = localStorage.getItem('access_token');
             if (token) {
-                window.location.href = '/admin/panel?token=' + token;
+                window.location.href = '/admin/dashboard?token=' + token;
             }
-        }
+        };
     </script>
 </body>
 </html>
