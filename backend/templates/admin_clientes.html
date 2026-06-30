@@ -1,89 +1,72 @@
 {% extends "admin_base.html" %}
-
-{% block clientes_active %}active{% endblock %}
-{% block page_title %}Gestión de Clientes{% endblock %}
-{% block breadcrumb %}Administración / Clientes{% endblock %}
-
+{% block title %}Clientes{% endblock %}
 {% block content %}
-<div class="grid-2">
-    <div class="card">
-        <div class="card-title">👤 Nuevo Cliente</div>
-        <form id="clienteForm">
-            <div class="form-group">
-                <label>Nombre completo</label>
-                <input type="text" id="nomCliente" required>
+<h2><i class="fas fa-users"></i> Clientes</h2>
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post" action="/clientes/crear">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" name="nombre" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Cédula/RIF</label>
+                    <input type="text" name="cedula_rif" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Teléfono</label>
+                    <input type="text" name="telefono" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Dirección</label>
+                    <input type="text" name="direccion" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Comunidad</label>
+                    <select name="comunidad_id" class="form-select" required>
+                        {% for com in comunidades %}
+                        <option value="{{ com.id }}">{{ com.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Tipo</label>
+                    <select name="tipo" class="form-select">
+                        <option value="Normal">Normal</option>
+                        <option value="Institución Exonerada">Institución Exonerada</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Agregar Cliente</button>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="emailCliente" required>
-            </div>
-            <div class="form-group">
-                <label>Teléfono</label>
-                <input type="text" id="telCliente" required>
-            </div>
-            <div class="form-group">
-                <label>Dirección</label>
-                <input type="text" id="dirCliente" required>
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="exoneradoCliente"> 🏫 Institución exonerada</label>
-            </div>
-            <button type="submit" class="btn">✅ Registrar</button>
         </form>
-        <div id="msg" style="margin-top:10px; font-weight:600;"></div>
-    </div>
-
-    <div class="card">
-        <div class="card-title">📋 Clientes Registrados</div>
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Nombre</th><th>Teléfono</th><th>Exonerado</th></tr></thead>
-                <tbody id="listaClientes">
-                    {% for c in clientes %}
-                    <tr>
-                        <td>{{ c.usuario.nombre if c.usuario else 'N/A' }}</td>
-                        <td>{{ c.usuario.telefono if c.usuario else 'N/A' }}</td>
-                        <td>{% if c.exonerado %}✅{% else %}❌{% endif %}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
-
-<script>
-    document.getElementById('clienteForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const msg = document.getElementById('msg');
-        msg.innerHTML = '';
-
-        const data = {
-            nombre: document.getElementById('nomCliente').value,
-            email: document.getElementById('emailCliente').value,
-            telefono: document.getElementById('telCliente').value,
-            direccion: document.getElementById('dirCliente').value,
-            exonerado: document.getElementById('exoneradoCliente').checked
-        };
-
-        try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch('/admin/clientes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if (response.ok) {
-                msg.innerHTML = `<span style="color:#22c55e;">✅ ${result.mensaje}</span>`;
-                document.getElementById('clienteForm').reset();
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                msg.innerHTML = `<span style="color:#ef4444;">❌ Error: ${result.detail || 'No se pudo registrar'}</span>`;
-            }
-        } catch (error) {
-            msg.innerHTML = `<span style="color:#ef4444;">❌ Error de conexión: ${error.message}</span>`;
-        }
-    });
-</script>
+<h3>Listado de Clientes</h3>
+<div class="table-responsive">
+    <table class="table table-dark table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Teléfono</th>
+                <th>Comunidad</th>
+                <th>Tipo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cl in clientes %}
+            <tr>
+                <td>{{ cl.nombre }}</td>
+                <td>{{ cl.cedula_rif }}</td>
+                <td>{{ cl.telefono }}</td>
+                <td>{{ cl.comunidad.nombre if cl.comunidad else 'N/A' }}</td>
+                <td>{{ cl.tipo }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
