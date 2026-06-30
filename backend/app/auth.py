@@ -1,115 +1,64 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from jose import JWTError, jwt
 from datetime import datetime, timedelta
-from .database import get_db
-from .models import Usuario, Cliente
-from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from typing import Optional
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from fastapi import HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from .database import SessionLocal
+from .models import Usuario
+from .config import SECRET_KEY
 
-router = APIRouter(prefix="/auth", tags=["Autenticación"])
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 día
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password[:72])
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password[:72], hashed_password)
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
-def create_access_token(data: dict) -> str:
+def authenticate_user(db: Session, username: str, password: str):
+    user = db.query(Usuario).filter(Usuario.username == username).first()
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
+        detail="No se pudo validar las credenciales",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get("sub")
-        if email is None:
+        username: str = payload.get("sub")
+        if username is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = db.query(Usuario).filter(Usuario.email == email).first()
+    db = SessionLocal()
+    user = db.query(Usuario).filter(Usuario.username == username).first()
+    db.close()
     if user is None:
         raise credentials_exception
     return user
 
-@router.post("/registro")
-def registro(
-    email: str,
-    password: str,
-    nombre: str,
-    telefono: str,
-    rol: str,
-    db: Session = Depends(get_db)
-):
-    existe = db.query(Usuario).filter(Usuario.email == email).first()
-    if existe:
-        raise HTTPException(status_code=400, detail="El email ya está registrado")
-    
-    nuevo_usuario = Usuario(
-        email=email,
-        hashed_password=hash_password(password),
-        nombre=nombre,
-        telefono=telefono,
-        rol=rol
-    )
-    db.add(nuevo_usuario)
-    db.commit()
-    db.refresh(nuevo_usuario)
-
-    if rol == "cliente":
-        nuevo_cliente = Cliente(
-            usuario_id=nuevo_usuario.id,
-            direccion="Pendiente",
-            lat=10.0,
-            lng=-66.0,
-            es_institucion=False,
-            exonerado=False
-        )
-        db.add(nuevo_cliente)
-        db.commit()
-    
-    return {"mensaje": "Usuario creado", "usuario_id": nuevo_usuario.id}
-
-@router.post("/login")
-def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
-):
-    usuario = db.query(Usuario).filter(Usuario.email == form_data.username).first()
-    
-    if not usuario or not verify_password(form_data.password, usuario.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email o contraseña incorrectos",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    token = create_access_token(data={"sub": usuario.email, "rol": usuario.rol})
-    
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "rol": usuario.rol,
-        "usuario_id": usuario.id,
-        "nombre": usuario.nombre
-    }
-
-@router.get("/me")
-def get_me(current_user: Usuario = Depends(get_current_user)):
-    return {
-        "id": current_user.id,
-        "email": current_user.email,
-        "nombre": current_user.nombre,
-        "telefono": current_user.telefono,
-        "rol": current_user.rol
-    }
+def verificar_rol(user, roles_permitidos):
+    if user.role not in roles_permitidos:
+        raise HTTPException(status_code=403, detail="No autorizado")
