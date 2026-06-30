@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - GASGUARIBE</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body {
             background: #0f172a;
             min-height: 100vh;
@@ -28,11 +23,7 @@
             border: 1px solid #334155;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
         }
-        .login-container .logo {
-            text-align: center;
-            font-size: 3rem;
-            margin-bottom: 5px;
-        }
+        .login-container .logo { text-align: center; font-size: 3rem; margin-bottom: 5px; }
         .login-container h1 {
             color: #fbbf24;
             text-align: center;
@@ -50,7 +41,6 @@
             display: block;
             margin: 15px 0 5px;
             font-weight: 500;
-            font-size: 0.95rem;
         }
         .login-container input {
             width: 100%;
@@ -61,11 +51,8 @@
             color: white;
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.3s;
         }
-        .login-container input:focus {
-            border-color: #fbbf24;
-        }
+        .login-container input:focus { border-color: #fbbf24; }
         .login-container .btn-login {
             background: #fbbf24;
             color: #0f172a;
@@ -79,15 +66,8 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .login-container .btn-login:hover {
-            background: #f59e0b;
-            transform: scale(1.02);
-        }
-        .login-container .btn-login:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
+        .login-container .btn-login:hover { background: #f59e0b; transform: scale(1.02); }
+        .login-container .btn-login:disabled { opacity: 0.7; cursor: not-allowed; }
         .login-container .error-msg {
             background: #7f1d1d;
             color: #fca5a5;
@@ -104,20 +84,12 @@
             margin-top: 20px;
             font-size: 0.8rem;
         }
-        .login-container .info strong {
-            color: #fbbf24;
-        }
+        .login-container .info strong { color: #fbbf24; }
         .spinner {
             display: none;
             text-align: center;
             margin-top: 10px;
             color: #94a3b8;
-        }
-        .login-container .version {
-            text-align: center;
-            color: #334155;
-            font-size: 0.7rem;
-            margin-top: 20px;
         }
     </style>
 </head>
@@ -143,7 +115,6 @@
         <div class="info">
             💡 Usuario de prueba: <strong>admin@test.com</strong> / <strong>1234</strong>
         </div>
-        <div class="version">GASGUARIBE v2.0 · Panel de Administración</div>
     </div>
 
     <script>
@@ -154,7 +125,6 @@
             const spinner = document.getElementById('spinner');
             const loginBtn = document.getElementById('loginBtn');
 
-            // Limpiar mensajes previos
             errorMsg.style.display = 'none';
             errorMsg.textContent = '';
             spinner.style.display = 'block';
@@ -164,15 +134,9 @@
             try {
                 const response = await fetch('/auth/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: new URLSearchParams({
-                        'username': email,
-                        'password': password
-                    })
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ 'username': email, 'password': password })
                 });
-
                 const data = await response.json();
 
                 spinner.style.display = 'none';
@@ -185,14 +149,12 @@
                     return;
                 }
 
-                // Guardar token y datos del usuario en el almacenamiento local
                 localStorage.setItem('access_token', data.access_token);
                 localStorage.setItem('user_rol', data.rol);
                 localStorage.setItem('user_nombre', data.nombre);
                 localStorage.setItem('user_id', data.usuario_id);
 
-                // Redirigir al panel de administración (dashboard)
-                window.location.href = '/admin/dashboard?token=' + data.access_token;
+                window.location.href = '/admin/dashboard';
 
             } catch (error) {
                 spinner.style.display = 'none';
@@ -204,11 +166,10 @@
             }
         }
 
-        // Si ya hay un token guardado, redirigir directamente al dashboard
         window.onload = function() {
             const token = localStorage.getItem('access_token');
             if (token) {
-                window.location.href = '/admin/dashboard?token=' + token;
+                window.location.href = '/admin/dashboard';
             }
         };
     </script>
