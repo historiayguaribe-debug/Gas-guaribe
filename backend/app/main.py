@@ -66,7 +66,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     except WebSocketDisconnect:
         manager.disconnect(user_id)
 
-# --- PÁGINA PRINCIPAL (BONITA) ---
+# --- PÁGINA PRINCIPAL ---
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -76,7 +76,7 @@ async def root(request: Request):
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
-# --- ENDPOINT DE BIENVENIDA (API) ---
+# --- ENDPOINT DE BIENVENIDA ---
 @app.get("/api")
 def api_root():
     return {
@@ -87,13 +87,13 @@ def api_root():
         "version": "2.0"
     }
 
-# --- ASISTENTE INTELIGENTE (ENDPOINT PARA EL CHAT) ---
+# --- ASISTENTE INTELIGENTE ---
 @app.post("/asistente/preguntar")
 async def preguntar_asistente(pregunta: Pregunta):
     respuesta = generar_respuesta(pregunta.pregunta)
     return {"respuesta": respuesta}
 
-# --- PÁGINA DE CHAT DEL ADMINISTRADOR (MANTENIDA POR COMPATIBILIDAD) ---
+# --- PÁGINA DE CHAT DEL ADMINISTRADOR (COMPATIBILIDAD) ---
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_chat(request: Request):
     return templates.TemplateResponse("admin_chat.html", {"request": request})
