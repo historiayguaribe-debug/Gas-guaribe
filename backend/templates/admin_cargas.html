@@ -1,98 +1,91 @@
 {% extends "admin_base.html" %}
-
-{% block cargas_active %}active{% endblock %}
-{% block page_title %}Registrar Carga{% endblock %}
-{% block breadcrumb %}Administración / Cargas{% endblock %}
-
+{% block title %}Cargas{% endblock %}
 {% block content %}
-<div class="grid-2">
-    <div class="card">
-        <div class="card-title">📦 Nueva Carga</div>
-        <form id="cargaForm">
-            <div class="form-group">
-                <label for="planta">Planta</label>
-                <select id="planta" required>
-                    <option value="">Seleccionar</option>
-                    {% for p in plantas %}
-                    <option value="{{ p.id }}">{{ p.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Cantidades</label>
-                <div style="display:flex; gap:15px; flex-wrap:wrap;">
-                    <div><label style="font-weight:normal;">Pequeño (5kg)</label><input type="number" id="cantP" value="0" min="0" style="width:80px; padding:8px; border-radius:8px; border:1px solid #e2e8f0;"></div>
-                    <div><label style="font-weight:normal;">Mediano (15kg)</label><input type="number" id="cantM" value="0" min="0" style="width:80px; padding:8px; border-radius:8px; border:1px solid #e2e8f0;"></div>
-                    <div><label style="font-weight:normal;">Grande (45kg)</label><input type="number" id="cantG" value="0" min="0" style="width:80px; padding:8px; border-radius:8px; border:1px solid #e2e8f0;"></div>
+<h2><i class="fas fa-truck"></i> Cargas a Planta</h2>
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post" action="/cargas/crear">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Proveedor</label>
+                    <select name="proveedor_id" class="form-select" required>
+                        {% for p in proveedores %}
+                        <option value="{{ p.id }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cantidad P</label>
+                    <div class="input-group">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cambiarCantidad('P', -1)">-</button>
+                        <input type="number" name="cantidad_P" id="cantP" class="form-control text-center" value="0" min="0">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cambiarCantidad('P', 1)">+</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cantidad M</label>
+                    <div class="input-group">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cambiarCantidad('M', -1)">-</button>
+                        <input type="number" name="cantidad_M" id="cantM" class="form-control text-center" value="0" min="0">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cambiarCantidad('M', 1)">+</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cantidad G</label>
+                    <div class="input-group">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cambiarCantidad('G', -1)">-</button>
+                        <input type="number" name="cantidad_G" id="cantG" class="form-control text-center" value="0" min="0">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cambiarCantidad('G', 1)">+</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Número Factura</label>
+                    <input type="text" name="numero_factura" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Gastos Logísticos (Bs.)</label>
+                    <input type="number" step="0.01" name="gastos_logisticos" class="form-control" value="0">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Guardar Carga</button>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="costoTotal">Costo Total (Bs)</label>
-                <input type="number" id="costoTotal" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label for="factura">Factura</label>
-                <input type="text" id="factura" placeholder="FAC-001" required>
-            </div>
-            <div class="form-group">
-                <label for="fechaCarga">Fecha</label>
-                <input type="date" id="fechaCarga" required>
-            </div>
-            <div class="form-group">
-                <label for="gastosLog">Gastos Logísticos (Bs)</label>
-                <input type="number" id="gastosLog" step="0.01" value="0">
-            </div>
-            <button type="submit" class="btn">✅ Registrar</button>
         </form>
-        <div id="msg" style="margin-top:10px; font-weight:600;"></div>
     </div>
 </div>
-
+<h3>Historial de Cargas</h3>
+<div class="table-responsive">
+    <table class="table table-dark table-striped">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Proveedor</th>
+                <th>P</th><th>M</th><th>G</th>
+                <th>Costo Total</th>
+                <th>Factura</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in cargas %}
+            <tr>
+                <td>{{ c.fecha.strftime('%d/%m/%Y') }}</td>
+                <td>{{ c.proveedor.nombre }}</td>
+                <td>{{ c.cantidad_P }}</td>
+                <td>{{ c.cantidad_M }}</td>
+                <td>{{ c.cantidad_G }}</td>
+                <td>${{ "%.2f"|format(c.costo_total) }}</td>
+                <td>{{ c.numero_factura }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 <script>
-    document.getElementById('fechaCarga').value = new Date().toISOString().split('T')[0];
-
-    document.getElementById('cargaForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const msg = document.getElementById('msg');
-        msg.innerHTML = '';
-
-        const planta = document.getElementById('planta').value;
-        const cantP = parseInt(document.getElementById('cantP').value) || 0;
-        const cantM = parseInt(document.getElementById('cantM').value) || 0;
-        const cantG = parseInt(document.getElementById('cantG').value) || 0;
-        const cantidades = { P: cantP, M: cantM, G: cantG };
-        if (cantP + cantM + cantG === 0) {
-            msg.innerHTML = '<span style="color:#ef4444;">❌ Debes ingresar al menos un cilindro.</span>';
-            return;
-        }
-
-        const data = {
-            planta_id: parseInt(planta),
-            fecha: document.getElementById('fechaCarga').value,
-            cantidades: cantidades,
-            costo_total: parseFloat(document.getElementById('costoTotal').value),
-            factura: document.getElementById('factura').value,
-            gastos_logisticos: parseFloat(document.getElementById('gastosLog').value) || 0
-        };
-
-        try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch('/admin/cargas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if (response.ok) {
-                msg.innerHTML = `<span style="color:#22c55e;">✅ ${result.mensaje} (${result.total_cilindros} cilindros)</span>`;
-                document.getElementById('cargaForm').reset();
-                document.getElementById('fechaCarga').value = new Date().toISOString().split('T')[0];
-            } else {
-                msg.innerHTML = `<span style="color:#ef4444;">❌ Error: ${result.detail || 'No se pudo registrar'}</span>`;
-            }
-        } catch (error) {
-            msg.innerHTML = `<span style="color:#ef4444;">❌ Error de conexión: ${error.message}</span>`;
-        }
-    });
+    function cambiarCantidad(tam, delta) {
+        const input = document.getElementById('cant' + tam);
+        let val = parseInt(input.value) || 0;
+        val = Math.max(0, val + delta);
+        input.value = val;
+    }
 </script>
 {% endblock %}
