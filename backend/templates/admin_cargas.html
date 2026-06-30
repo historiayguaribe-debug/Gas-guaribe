@@ -1,0 +1,170 @@
+{% extends "admin_base.html" %}
+
+{% block cargas_active %}active{% endblock %}
+{% block page_title %}Gestión de Cargas{% endblock %}
+{% block breadcrumb %}Administración / Cargas{% endblock %}
+
+{% block content %}
+
+<div class="grid-2">
+    <!-- Formulario de carga -->
+    <div class="card">
+        <div class="card-title">📦 Nueva Carga a Planta</div>
+        <form id="cargaForm" onsubmit="event.preventDefault(); registrarCarga();">
+            <div class="form-group">
+                <label for="planta">Planta de destino</label>
+                <select id="planta" name="planta_id" required>
+                    <option value="">Seleccionar planta</option>
+                    <option value="1">Altagracia de Orituco</option>
+                    <option value="2">Valle de la Pascua</option>
+                    <option value="3">Puerto La Cruz</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>📏 Cantidad por tamaño</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:80px;">
+                        <label style="font-weight:normal; font-size:0.9rem;">Pequeño (5kg)</label>
+                        <input type="number" id="cantP" value="0" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
+                    </div>
+                    <div style="flex:1; min-width:80px;">
+                        <label style="font-weight:normal; font-size:0.9rem;">Mediano (15kg)</label>
+                        <input type="number" id="cantM" value="0" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
+                    </div>
+                    <div style="flex:1; min-width:80px;">
+                        <label style="font-weight:normal; font-size:0.9rem;">Grande (45kg)</label>
+                        <input type="number" id="cantG" value="0" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="costoTotal">💰 Costo total de la carga (Bs)</label>
+                <input type="number" id="costoTotal" step="0.01" placeholder="350.00" required>
+            </div>
+            <div class="form-group">
+                <label for="factura">📄 Número de factura</label>
+                <input type="text" id="factura" placeholder="FAC-001234" required>
+            </div>
+            <div class="form-group">
+                <label for="fechaCarga">📅 Fecha de carga</label>
+                <input type="date" id="fechaCarga" required>
+            </div>
+            <div class="form-group">
+                <label for="gastosLogisticos">🚚 Gastos logísticos (Bs)</label>
+                <input type="number" id="gastosLogisticos" step="0.01" placeholder="50.00" value="0">
+            </div>
+            <button type="submit" class="btn">✅ Registrar Carga</button>
+        </form>
+        <div id="cargaMessage" style="margin-top:10px; font-weight:600;"></div>
+    </div>
+
+    <!-- Listado de cargas recientes -->
+    <div class="card">
+        <div class="card-title">📋 Últimas Cargas</div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Planta</th>
+                        <th>Cilindros</th>
+                        <th>Costo</th>
+                        <th>Factura</th>
+                    </tr>
+                </thead>
+                <tbody id="listaCargas">
+                    <tr>
+                        <td colspan="5" style="text-align:center; color:#94a3b8;">Cargando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- FECHA AUTOMÁTICA ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('fechaCarga').value = hoy;
+        cargarCargas();
+    });
+
+    // --- REGISTRAR CARGA ---
+    async function registrarCarga() {
+        const planta = document.getElementById('planta').value;
+        const cantP = parseInt(document.getElementById('cantP').value) || 0;
+        const cantM = parseInt(document.getElementById('cantM').value) || 0;
+        const cantG = parseInt(document.getElementById('cantG').value) || 0;
+        const totalCilindros = cantP + cantM + cantG;
+        if (totalCilindros === 0) {
+            document.getElementById('cargaMessage').innerHTML = '<span style="color:#ef4444;">❌ Debes ingresar al menos un cilindro.</span>';
+            return;
+        }
+        const costo = document.getElementById('costoTotal').value;
+        const factura = document.getElementById('factura').value;
+        const fecha = document.getElementById('fechaCarga').value;
+        const gastosLogisticos = document.getElementById('gastosLogisticos').value || 0;
+
+        const data = {
+            planta_id: parseInt(planta),
+            tamanio: 'M', // Por simplicidad, enviamos el tamaño principal
+            cantidad: totalCilindros,
+            costo_unitario: costo / totalCilindros,
+            precio_venta: (costo / totalCilindros) * 1.3, // Margen aproximado
+            fecha: fecha,
+            gastos_logisticos: parseFloat(gastosLogisticos)
+        };
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/admin/carga-planta', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                document.getElementById('cargaMessage').innerHTML = '<span style="color:#22c55e;">✅ Carga registrada exitosamente.</span>';
+                document.getElementById('cargaForm').reset();
+                document.getElementById('fechaCarga').value = new Date().toISOString().split('T')[0];
+                cargarCargas();
+            } else {
+                const error = await response.json();
+                document.getElementById('cargaMessage').innerHTML = `<span style="color:#ef4444;">❌ Error: ${error.detail || 'No se pudo registrar'}</span>`;
+            }
+        } catch (error) {
+            document.getElementById('cargaMessage').innerHTML = `<span style="color:#ef4444;">❌ Error de conexión: ${error.message}</span>`;
+        }
+    }
+
+    // --- CARGAR LISTA DE CARGAS ---
+    async function cargarCargas() {
+        try {
+            const token = localStorage.getItem('access_token');
+            // Por ahora, datos de ejemplo porque aún no tenemos endpoint específico de cargas
+            const tbody = document.getElementById('listaCargas');
+            tbody.innerHTML = `
+                <tr>
+                    <td>2026-06-29</td>
+                    <td>Altagracia</td>
+                    <td>20 P, 15 M, 10 G</td>
+                    <td>$350.00</td>
+                    <td>FAC-001234</td>
+                </tr>
+                <tr>
+                    <td>2026-06-28</td>
+                    <td>Valle de la Pascua</td>
+                    <td>10 P, 8 M, 5 G</td>
+                    <td>$180.00</td>
+                    <td>FAC-001233</td>
+                </tr>
+            `;
+        } catch (error) {
+            console.error('Error al cargar cargas:', error);
+        }
+    }
+</script>
+{% endblock %}
