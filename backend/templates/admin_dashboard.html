@@ -6,8 +6,7 @@
 
 {% block content %}
 
-<!-- Tarjetas de estadísticas -->
-<div class="grid-4">
+<div class="grid-4" id="statsContainer">
     <div class="stat-card">
         <div class="icon"><i class="fas fa-gas-pump"></i></div>
         <div class="number" id="totalCilindros">0</div>
@@ -30,150 +29,78 @@
     </div>
 </div>
 
-<!-- Gráficos -->
 <div class="grid-2">
     <div class="card">
-        <div class="card-title">📊 Ventas por Tamaño de Cilindro</div>
-        <div class="chart-container">
+        <div class="card-title">📊 Ventas por Tamaño</div>
+        <div class="chart-container" style="height:250px;">
             <canvas id="ventasChart"></canvas>
         </div>
     </div>
     <div class="card">
-        <div class="card-title">📈 Ingresos y Utilidad (últimos 7 días)</div>
-        <div class="chart-container">
-            <canvas id="utilidadChart"></canvas>
+        <div class="card-title">📈 Utilidad Acumulada</div>
+        <div id="utilidadData">
+            <p>Ingresos: <strong id="ingresoTotal">$0</strong></p>
+            <p>Costo Logístico: <strong id="costoLog">$0</strong></p>
+            <p>Costo Admin: <strong id="costoAdmin">$0</strong></p>
+            <hr>
+            <p style="font-size:1.2rem;">Utilidad Bruta: <strong id="utilidadBruta" style="color:#22c55e;">$0</strong></p>
+            <p style="font-size:1.2rem;">Utilidad Neta: <strong id="utilidadNeta" style="color:#3b82f6;">$0</strong></p>
         </div>
     </div>
 </div>
 
-<!-- Tabla de pedidos recientes -->
 <div class="card">
     <div class="card-title">📋 Pedidos Recientes</div>
     <div class="table-container">
         <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Cliente</th>
-                    <th>Cilindros</th>
-                    <th>Total</th>
-                    <th>Estado</th>
-                    <th>Fecha</th>
-                </tr>
-            </thead>
+            <thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead>
             <tbody id="recentOrders">
-                <tr>
-                    <td colspan="6" style="text-align:center; color:#94a3b8;">Cargando pedidos...</td>
-                </tr>
+                <tr><td colspan="5" style="text-align:center; color:#94a3b8;">Cargando...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-    // --- OBTENER ESTADÍSTICAS ---
-    async function cargarEstadisticas() {
+    const token = localStorage.getItem('access_token');
+
+    async function cargarDashboard() {
         try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch('/reportes/resumen-diario', {
+            const response = await fetch('/admin/estadisticas', {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
-            if (response.ok) {
-                const data = await response.json();
-                document.getElementById('totalCilindros').textContent = data.total_cilindros || 0;
-                document.getElementById('pedidosHoy').textContent = data.pedidos_hoy || 0;
-                document.getElementById('ingresosHoy').textContent = '$' + (data.ingresos_hoy || 0);
-                document.getElementById('exoneradosHoy').textContent = data.exonerados_hoy || 0;
-            }
-        } catch (error) {
-            console.error('Error al cargar estadísticas:', error);
-        }
-    }
+            if (!response.ok) throw new Error('Error al cargar datos');
+            const data = await response.json();
 
-    // --- CARGAR GRÁFICOS ---
-    async function cargarGraficos() {
-        try {
-            const token = localStorage.getItem('access_token');
-            // 1. Ventas por tamaño (datos de ejemplo, luego se conectan a la API)
-            const ctx1 = document.getElementById('ventasChart').getContext('2d');
-            new Chart(ctx1, {
+            document.getElementById('totalCilindros').textContent = data.total_cilindros || 0;
+            document.getElementById('pedidosHoy').textContent = data.pedidos_hoy || 0;
+            document.getElementById('ingresosHoy').textContent = '$' + (data.ingresos_hoy || 0);
+            document.getElementById('exoneradosHoy').textContent = data.exonerados_hoy || 0;
+
+            const u = data.utilidad || {};
+            document.getElementById('ingresoTotal').textContent = '$' + u.ingreso_total;
+            document.getElementById('costoLog').textContent = '$' + u.costo_logistico;
+            document.getElementById('costoAdmin').textContent = '$' + u.costo_administrativo;
+            document.getElementById('utilidadBruta').textContent = '$' + u.utilidad_bruta;
+            document.getElementById('utilidadNeta').textContent = '$' + u.utilidad_neta;
+
+            const ctx = document.getElementById('ventasChart').getContext('2d');
+            new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Pequeños (5kg)', 'Medianos (15kg)', 'Grandes (45kg)'],
                     datasets: [{
-                        data: [30, 45, 25],
+                        data: [data.ventas_por_tamano.P || 0, data.ventas_por_tamano.M || 0, data.ventas_por_tamano.G || 0],
                         backgroundColor: ['#fbbf24', '#3b82f6', '#22c55e'],
                         borderWidth: 0
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
 
-            // 2. Utilidad última semana (datos de ejemplo)
-            const ctx2 = document.getElementById('utilidadChart').getContext('2d');
-            new Chart(ctx2, {
-                type: 'line',
-                data: {
-                    labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-                    datasets: [
-                        {
-                            label: 'Ingresos',
-                            data: [1200, 1350, 1100, 1500, 1800, 1600, 1400],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Utilidad Neta',
-                            data: [300, 400, 250, 450, 550, 480, 400],
-                            borderColor: '#22c55e',
-                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { callback: function(value) { return '$' + value; } }
-                        }
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Error al cargar gráficos:', error);
-        }
-    }
-
-    // --- CARGAR PEDIDOS RECIENTES ---
-    async function cargarPedidosRecientes() {
-        try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch('/pedidos/mis-pedidos/1', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (response.ok) {
-                const pedidos = await response.json();
-                const tbody = document.getElementById('recentOrders');
-                if (pedidos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No hay pedidos recientes</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = pedidos.slice(0, 5).map(p => {
+            const tbody = document.getElementById('recentOrders');
+            if (data.pedidos_recientes && data.pedidos_recientes.length > 0) {
+                tbody.innerHTML = data.pedidos_recientes.map(p => {
                     const estadoClass = {
                         'entregado': 'badge-success',
                         'en_ruta': 'badge-warning',
@@ -182,24 +109,21 @@
                     }[p.estado] || 'badge-info';
                     return `<tr>
                         <td>#${p.id}</td>
-                        <td>Cliente ${p.cliente_id}</td>
-                        <td>${p.detalles ? p.detalles.reduce((sum, d) => sum + d.cantidad, 0) : 0} cil.</td>
-                        <td>$${p.monto_total || 0}</td>
+                        <td>${p.cliente}</td>
+                        <td>$${p.total}</td>
                         <td><span class="badge ${estadoClass}">${p.estado}</span></td>
-                        <td>${new Date(p.fecha_creacion).toLocaleDateString()}</td>
+                        <td>${p.fecha}</td>
                     </tr>`;
                 }).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No hay pedidos recientes</td></tr>';
             }
         } catch (error) {
-            console.error('Error al cargar pedidos:', error);
+            console.error('Error:', error);
+            document.querySelector('.grid-4').innerHTML = '<div class="card" style="grid-column:1/-1; text-align:center; color:#ef4444;">Error al cargar datos. Verifica tu conexión.</div>';
         }
     }
 
-    // --- EJECUTAR AL CARGAR ---
-    window.onload = function() {
-        cargarEstadisticas();
-        cargarGraficos();
-        cargarPedidosRecientes();
-    };
+    document.addEventListener('DOMContentLoaded', cargarDashboard);
 </script>
 {% endblock %}
