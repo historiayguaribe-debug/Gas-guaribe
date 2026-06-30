@@ -1,0 +1,66 @@
+{% extends "admin_base.html" %}
+{% block title %}Circuitos y Comunidades{% endblock %}
+{% block content %}
+<h2><i class="fas fa-map"></i> Circuitos Comunales</h2>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5>Crear Nuevo Circuito</h5>
+                <form method="post" action="/circuitos/circuito/crear">
+                    <div class="mb-3">
+                        <label class="form-label">Número (I-IX)</label>
+                        <input type="number" name="numero" class="form-control" min="1" max="9" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" name="descripcion" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100"><i class="fas fa-plus"></i> Crear Circuito</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5>Agregar Comunidad</h5>
+                <form method="post" action="/circuitos/comunidad/crear">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de la Comunidad</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Circuito</label>
+                        <select name="circuito_id" class="form-select" required>
+                            {% for c in circuitos %}
+                            <option value="{{ c.id }}">{{ c.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Agregar Comunidad</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<h3 class="mt-4">Circuitos y sus Comunidades</h3>
+{% for c in circuitos %}
+<div class="card mt-3">
+    <div class="card-header bg-secondary">
+        <strong>{{ c.nombre }}</strong> ({{ c.descripcion }})
+    </div>
+    <div class="card-body">
+        <ul class="list-group">
+            {% for com in c.comunidades %}
+            <li class="list-group-item bg-dark text-light">{{ com.nombre }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
