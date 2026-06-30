@@ -1,96 +1,85 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-from .database import engine, Base
-from .auth import router as auth_router
-from .pedidos import router as pedidos_router
-from .reportes import router as reportes_router
-from .websocket_manager import manager
-from .asistente import generar_respuesta
-from .cargar_datos import cargar_datos
-from .admin_routes import router as admin_router
-from pydantic import BaseModel
-import json
-
-class Pregunta(BaseModel):
-    pregunta: str
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from .database import engine, SessionLocal
+from .models import Base
+from .auth import authenticate_user, create_access_token, get_current_user, get_db, oauth2_scheme
+from .cargar_datos import cargar_datos_iniciales
+from .config import SECRET_KEY
+import os
+from datetime import timedelta
+from . import (admin_routes, cargas_routes, ventas_routes, clientes_routes,
+               circuitos_routes, pedidos_routes, reportes_routes, asistente_routes)
+from .templates import templates
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(
-    title="GASGUARIBE API",
-    version="2.0",
-    description="Sistema de gestión y reparto de gas doméstico con asistente IA y panel de administración"
-)
+app = FastAPI(title="GAS GUARIBE")
 
-try:
-    cargar_datos()
-except Exception as e:
-    print(f"⚠️ No se pudieron cargar los datos de prueba: {e}")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Incluir routers
+app.include_router(admin_routes.router, prefix="/admin", tags=["admin"])
+app.include_router(cargas_routes.router, prefix="/cargas", tags=["cargas"])
+app.include_router(ventas_routes.router, prefix="/ventas", tags=["ventas"])
+app.include_router(clientes_routes.router, prefix="/clientes", tags=["clientes"])
+app.include_router(circuitos_routes.router, prefix="/circuitos", tags=["circuitos"])
+app.include_router(pedidos_routes.router, prefix="/pedidos", tags=["pedidos"])
+app.include_router(reportes_routes.router, prefix="/reportes", tags=["reportes"])
+app.include_router(asistente_routes.router, prefix="/asistente", tags=["asistente"])
 
-templates = Jinja2Templates(directory="/app/templates")
-
-app.include_router(auth_router)
-app.include_router(pedidos_router)
-app.include_router(reportes_router)
-app.include_router(admin_router)
-
-@app.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: int):
-    await manager.connect(user_id, websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            json_data = json.loads(data)
-            if json_data.get("type") == "location":
-                lat = json_data.get("lat")
-                lng = json_data.get("lng")
-                await websocket.send_text(json.dumps({"status": "ubicacion_recibida"}))
-    except WebSocketDisconnect:
-        manager.disconnect(user_id)
+@app.on_event("startup")
+def startup():
+    db = SessionLocal()
+    cargar_datos_iniciales(db)
+    db.close()
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def root():
+    return RedirectResponse(url="/login")
 
-# --- REDIRIGIR /login DIRECTAMENTE AL DASHBOARD ---
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("admin_dashboard.html", {"request": request})
+    return templates.TemplateResponse("login.html", {"request": request})
 
-@app.get("/api")
-def api_root():
-    return {
-        "mensaje": "Bienvenido a GASGUARIBE API",
-        "documentacion": "/docs",
-        "panel_administracion": "/admin/dashboard",
-        "version": "2.0"
-    }
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=60*24)
+    access_token = create_access_token(
+        data={"sub": user.username, "role": user.role},
+        expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
 
-@app.post("/asistente/preguntar")
-async def preguntar_asistente(pregunta: Pregunta):
-    respuesta = generar_respuesta(pregunta.pregunta)
-    return {"respuesta": respuesta}
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    user = await get_current_user(token)
+    if user.role == "cliente":
+        return RedirectResponse(url="/pedidos/cliente/dashboard")
+    # Para admin, operativo, auditor
+    from .models import Cilindro, Venta
+    disponibles = db.query(Cilindro).filter(Cilindro.estado == "disponible").count()
+    ventas_hoy = db.query(Venta).filter(Venta.fecha >= datetime.utcnow().date()).all()
+    ingresos_hoy = sum(v.cantidad * v.precio_unitario for v in ventas_hoy)
+    exonerados_hoy = sum(1 for v in ventas_hoy if v.exonerado)
+    return templates.TemplateResponse("admin_dashboard.html", {
+        "request": request,
+        "user": user,
+        "disponibles": disponibles,
+        "ventas_hoy": len(ventas_hoy),
+        "ingresos_hoy": ingresos_hoy,
+        "exonerados_hoy": exonerados_hoy
+    })
 
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_chat(request: Request):
-    return templates.TemplateResponse("admin_chat.html", {"request": request})
-
-@app.get("/status")
-def status():
-    return {
-        "estado": "online",
-        "servicio": "GASGUARIBE",
-        "version": "2.0",
-        "base_datos": "SQLite",
-        "panel_admin": "/admin/dashboard"
-    }
+@app.get("/logout")
+async def logout():
+    return RedirectResponse(url="/login")
