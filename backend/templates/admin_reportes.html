@@ -5,15 +5,15 @@
 {% block breadcrumb %}Administración / Reportes{% endblock %}
 
 {% block content %}
-
 <div class="grid-2">
     <div class="card">
         <div class="card-title">📈 Utilidad Acumulada</div>
-        <div id="utilidadData" style="font-size:1.2rem;">
+        <div id="utilidadData">
             <p>Ingresos totales: <strong id="ingresosTotal">$0</strong></p>
             <p>Costos logísticos: <strong id="costosLogisticos">$0</strong></p>
             <p>Costos administrativos: <strong id="costosAdmin">$0</strong></p>
-            <p style="font-size:1.4rem; margin-top:15px;">Utilidad Bruta: <strong id="utilidadBruta" style="color:#22c55e;">$0</strong></p>
+            <hr>
+            <p style="font-size:1.4rem;">Utilidad Bruta: <strong id="utilidadBruta" style="color:#22c55e;">$0</strong></p>
             <p style="font-size:1.4rem;">Utilidad Neta: <strong id="utilidadNeta" style="color:#3b82f6;">$0</strong></p>
         </div>
         <button class="btn btn-secondary" onclick="cargarUtilidad()">🔄 Actualizar</button>
@@ -39,9 +39,10 @@
 </div>
 
 <script>
+    const token = localStorage.getItem('access_token');
+
     async function cargarUtilidad() {
         try {
-            const token = localStorage.getItem('access_token');
             const response = await fetch('/reportes/utilidad-acumulada', {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
@@ -60,7 +61,6 @@
 
     async function cargarResumen() {
         try {
-            const token = localStorage.getItem('access_token');
             const response = await fetch('/reportes/resumen-diario', {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
@@ -77,10 +77,8 @@
 
     function exportarReporte(tipo) {
         alert(`📄 Funcionalidad de exportación a ${tipo.toUpperCase()} en desarrollo.`);
-        // Aquí se integraría la generación de PDF/Excel
     }
 
-    // Cargar datos al abrir la página
     document.addEventListener('DOMContentLoaded', function() {
         cargarUtilidad();
         cargarResumen();
