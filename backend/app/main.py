@@ -37,7 +37,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# USAR RUTA ABSOLUTA PARA EVITAR PROBLEMAS
 templates = Jinja2Templates(directory="/app/templates")
 
 app.include_router(auth_router)
@@ -63,16 +62,16 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+# --- REDIRIGIR /login DIRECTAMENTE AL DASHBOARD ---
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse("admin_dashboard.html", {"request": request})
 
 @app.get("/api")
 def api_root():
     return {
         "mensaje": "Bienvenido a GASGUARIBE API",
         "documentacion": "/docs",
-        "login": "/login",
         "panel_administracion": "/admin/dashboard",
         "version": "2.0"
     }
@@ -93,6 +92,5 @@ def status():
         "servicio": "GASGUARIBE",
         "version": "2.0",
         "base_datos": "SQLite",
-        "panel_admin": "/admin/dashboard",
-        "login": "/login"
+        "panel_admin": "/admin/dashboard"
     }
