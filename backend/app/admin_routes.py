@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from .database import get_db
-from .models import Planta, Cilindro, Pedido, DetallePedido, Cliente, CostoOperativo, TamanioCilindro
-from .auth import get_current_user
+from .models import Planta, Cilindro, Pedido, DetallePedido, Cliente, CostoOperativo, Usuario
+from .auth import get_current_user, hash_password
 import random
 from pydantic import BaseModel
 from typing import List, Optional
@@ -70,11 +70,9 @@ async def admin_asistente(request: Request, user=Depends(get_current_user)):
 
 @router.get("/estadisticas")
 async def get_estadisticas(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """Devuelve todos los datos para el dashboard: resumen, gráficos, pedidos recientes."""
     hoy = date.today()
     inicio_mes = hoy.replace(day=1)
 
-    # Totales
     total_cilindros = db.query(Cilindro).count()
     pedidos_hoy = db.query(Pedido).filter(Pedido.fecha_creacion >= hoy).count()
     ingresos_hoy = sum(
@@ -103,7 +101,6 @@ async def get_estadisticas(db: Session = Depends(get_db), user=Depends(get_curre
     utilidad_bruta = ingreso_total - costo_logistico
     utilidad_neta = utilidad_bruta - costo_admin
 
-    # Pedidos recientes (últimos 5)
     pedidos_recientes = db.query(Pedido).order_by(Pedido.fecha_creacion.desc()).limit(5).all()
     pedidos_data = []
     for p in pedidos_recientes:
@@ -134,7 +131,6 @@ async def get_estadisticas(db: Session = Depends(get_db), user=Depends(get_curre
 
 @router.post("/cargas")
 async def registrar_carga(data: CargaRequest, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """Registra una carga de cilindros a una planta."""
     planta = db.query(Planta).filter(Planta.id == data.planta_id).first()
     if not planta:
         raise HTTPException(status_code=404, detail="Planta no encontrada")
@@ -145,7 +141,6 @@ async def registrar_carga(data: CargaRequest, db: Session = Depends(get_db), use
     if total_cilindros == 0:
         raise HTTPException(status_code=400, detail="Debe ingresar al menos un cilindro")
 
-    # Precio unitario promedio
     costo_promedio = data.costo_total / total_cilindros
 
     for tam, cantidad in data.cantidades.items():
@@ -159,11 +154,10 @@ async def registrar_carga(data: CargaRequest, db: Session = Depends(get_db), use
                 estado="disponible",
                 planta_id=data.planta_id,
                 costo_compra=costo_promedio,
-                precio_venta=costo_promedio * 1.3  # Margen del 30%
+                precio_venta=costo_promedio * 1.3
             )
             db.add(cilindro)
 
-    # Registrar costo logístico asociado a esta carga (opcional)
     if data.gastos_logisticos > 0:
         costo = CostoOperativo(
             tipo="Logístico",
@@ -178,7 +172,6 @@ async def registrar_carga(data: CargaRequest, db: Session = Depends(get_db), use
 
 @router.post("/ventas")
 async def registrar_venta(data: VentaRequest, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """Registra una venta de cilindros a un cliente."""
     cliente = db.query(Cliente).filter(Cliente.id == data.cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
@@ -187,7 +180,6 @@ async def registrar_venta(data: VentaRequest, db: Session = Depends(get_db), use
     if not planta:
         raise HTTPException(status_code=404, detail="Planta no encontrada")
 
-    # Buscar cilindros disponibles
     cilindros = db.query(Cilindro).filter(
         Cilindro.planta_id == data.planta_id,
         Cilindro.tamanio == data.tamanio,
@@ -199,7 +191,6 @@ async def registrar_venta(data: VentaRequest, db: Session = Depends(get_db), use
 
     fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d")
 
-    # Crear pedido
     pedido = Pedido(
         cliente_id=data.cliente_id,
         planta_asignada_id=data.planta_id,
@@ -207,7 +198,7 @@ async def registrar_venta(data: VentaRequest, db: Session = Depends(get_db), use
         lat_entrega=cliente.lat,
         lng_entrega=cliente.lng,
         estado="entregado",
-        costo_logistico=0.0,  # Se puede calcular después
+        costo_logistico=0.0,
         costo_administrativo=0.0,
         monto_total=0,
         fecha_creacion=fecha_dt,
@@ -217,7 +208,6 @@ async def registrar_venta(data: VentaRequest, db: Session = Depends(get_db), use
     db.commit()
     db.refresh(pedido)
 
-    # Registrar detalles y actualizar cilindros
     total_pedido = 0
     for cil in cilindros:
         precio = data.precio_unitario if not cliente.exonerado else 0
@@ -230,7 +220,7 @@ async def registrar_venta(data: VentaRequest, db: Session = Depends(get_db), use
             exonerado=cliente.exonerado
         )
         db.add(detalle)
-        cil.estado = "vacio"  # El cilindro se considera vacío después de la venta
+        cil.estado = "vacio"
 
     pedido.monto_total = total_pedido
     db.commit()
@@ -238,17 +228,14 @@ async def registrar_venta(data: VentaRequest, db: Session = Depends(get_db), use
 
 @router.post("/clientes")
 async def registrar_cliente(data: ClienteRequest, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """Registra un nuevo cliente (usuario con rol cliente)."""
-    from .auth import hash_password
-    # Verificar si el email ya existe
+    from .models import Usuario
     existe = db.query(Usuario).filter(Usuario.email == data.email).first()
     if existe:
         raise HTTPException(status_code=400, detail="El email ya está registrado")
 
-    # Crear usuario
     nuevo_usuario = Usuario(
         email=data.email,
-        hashed_password=hash_password("1234"),  # Contraseña por defecto
+        hashed_password=hash_password("1234"),
         nombre=data.nombre,
         telefono=data.telefono,
         rol="cliente"
@@ -257,11 +244,10 @@ async def registrar_cliente(data: ClienteRequest, db: Session = Depends(get_db),
     db.commit()
     db.refresh(nuevo_usuario)
 
-    # Crear cliente
     nuevo_cliente = Cliente(
         usuario_id=nuevo_usuario.id,
         direccion=data.direccion,
-        lat=10.0,  # Se puede actualizar después
+        lat=10.0,
         lng=-66.0,
         es_institucion=data.exonerado,
         exonerado=data.exonerado
@@ -270,7 +256,7 @@ async def registrar_cliente(data: ClienteRequest, db: Session = Depends(get_db),
     db.commit()
     return {"mensaje": "Cliente registrado exitosamente", "cliente_id": nuevo_cliente.id}
 
-# --- RUTAS DE COMPATIBILIDAD (para no romper lo anterior) ---
+# --- RUTAS DE COMPATIBILIDAD ---
 @router.get("/panel", response_class=HTMLResponse)
 async def panel_administracion(request: Request, user=Depends(get_current_user)):
     return templates.TemplateResponse("admin_panel.html", {"request": request})
@@ -289,3 +275,4 @@ async def formulario_venta(request: Request, db: Session = Depends(get_db), user
 @router.get("/costo", response_class=HTMLResponse)
 async def formulario_costo(request: Request, user=Depends(get_current_user)):
     return templates.TemplateResponse("costo_operativo.html", {"request": request})
+    
