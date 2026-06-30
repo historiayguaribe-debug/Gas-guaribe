@@ -1,87 +1,74 @@
 {% extends "admin_base.html" %}
-
-{% block reportes_active %}active{% endblock %}
-{% block page_title %}Reportes y Estadísticas{% endblock %}
-{% block breadcrumb %}Administración / Reportes{% endblock %}
-
+{% block title %}Reportes{% endblock %}
 {% block content %}
-<div class="grid-2">
-    <div class="card">
-        <div class="card-title">📈 Utilidad Acumulada</div>
-        <div id="utilidadData">
-            <p>Ingresos totales: <strong id="ingresosTotal">$0</strong></p>
-            <p>Costos logísticos: <strong id="costosLogisticos">$0</strong></p>
-            <p>Costos administrativos: <strong id="costosAdmin">$0</strong></p>
-            <hr>
-            <p style="font-size:1.4rem;">Utilidad Bruta: <strong id="utilidadBruta" style="color:#22c55e;">$0</strong></p>
-            <p style="font-size:1.4rem;">Utilidad Neta: <strong id="utilidadNeta" style="color:#3b82f6;">$0</strong></p>
+<h2><i class="fas fa-chart-bar"></i> Reportes y Estadísticas</h2>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card text-bg-info">
+            <div class="card-body">
+                <h5>Ingresos Totales</h5>
+                <p class="display-6">${{ "%.2f"|format(ingresos) }}</p>
+            </div>
         </div>
-        <button class="btn btn-secondary" onclick="cargarUtilidad()">🔄 Actualizar</button>
     </div>
-
-    <div class="card">
-        <div class="card-title">📊 Resumen Diario</div>
-        <div id="resumenData">
-            <p>Pedidos de hoy: <strong id="resumenPedidos">0</strong></p>
-            <p>Ingresos de hoy: <strong id="resumenIngresos">$0</strong></p>
-            <p>Cilindros exonerados: <strong id="resumenExonerados">0</strong></p>
+    <div class="col-md-6">
+        <div class="card text-bg-warning">
+            <div class="card-body">
+                <h5>Costos Totales</h5>
+                <p class="display-6">${{ "%.2f"|format(costos_compras + gastos_total) }}</p>
+            </div>
         </div>
-        <button class="btn btn-secondary" onclick="cargarResumen()">🔄 Actualizar</button>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-bg-success">
+            <div class="card-body">
+                <h5>Utilidad Neta</h5>
+                <p class="display-6">${{ "%.2f"|format(utilidad) }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-bg-secondary">
+            <div class="card-body">
+                <h5>Exoneraciones</h5>
+                <p class="display-6">{{ exoneraciones }}</p>
+            </div>
+        </div>
     </div>
 </div>
-
-<div class="card">
-    <div class="card-title">📋 Exportar Reportes</div>
-    <div style="display:flex; gap:15px; flex-wrap:wrap;">
-        <button class="btn" onclick="exportarReporte('pdf')"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-        <button class="btn btn-secondary" onclick="exportarReporte('excel')"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+<div class="row mt-4">
+    <div class="col-md-6">
+        <canvas id="ventasCircuito" height="200"></canvas>
+    </div>
+    <div class="col-md-6">
+        <h5>Top 5 Comunidades</h5>
+        <ul class="list-group">
+            {% for com, cant in top_comunidades %}
+            <li class="list-group-item d-flex justify-content-between align-items-center bg-dark text-light">
+                {{ com }}
+                <span class="badge bg-primary rounded-pill">{{ cant }}</span>
+            </li>
+            {% endfor %}
+        </ul>
     </div>
 </div>
-
+<div class="mt-3">
+    <a href="/reportes/exportar/excel" class="btn btn-success"><i class="fas fa-file-excel"></i> Exportar Excel</a>
+</div>
 <script>
-    const token = localStorage.getItem('access_token');
-
-    async function cargarUtilidad() {
-        try {
-            const response = await fetch('/reportes/utilidad-acumulada', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                document.getElementById('ingresosTotal').textContent = '$' + (data.ingresos_totales || 0);
-                document.getElementById('costosLogisticos').textContent = '$' + (data.costos_logisticos || 0);
-                document.getElementById('costosAdmin').textContent = '$' + (data.costos_administrativos || 0);
-                document.getElementById('utilidadBruta').textContent = '$' + (data.utilidad_bruta || 0);
-                document.getElementById('utilidadNeta').textContent = '$' + (data.utilidad_neta || 0);
-            }
-        } catch (error) {
-            console.error('Error al cargar utilidad:', error);
-        }
-    }
-
-    async function cargarResumen() {
-        try {
-            const response = await fetch('/reportes/resumen-diario', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                document.getElementById('resumenPedidos').textContent = data.pedidos_hoy || 0;
-                document.getElementById('resumenIngresos').textContent = '$' + (data.ingresos_hoy || 0);
-                document.getElementById('resumenExonerados').textContent = data.cilindros_exonerados_hoy || 0;
-            }
-        } catch (error) {
-            console.error('Error al cargar resumen:', error);
-        }
-    }
-
-    function exportarReporte(tipo) {
-        alert(`📄 Funcionalidad de exportación a ${tipo.toUpperCase()} en desarrollo.`);
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        cargarUtilidad();
-        cargarResumen();
+    const ctx = document.getElementById('ventasCircuito').getContext('2d');
+    const data = {{ ventas_por_circuito|tojson }};
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                label: 'Ventas por Circuito',
+                data: Object.values(data),
+                backgroundColor: '#fbbf24',
+            }]
+        },
+        options: { responsive: true }
     });
 </script>
 {% endblock %}
