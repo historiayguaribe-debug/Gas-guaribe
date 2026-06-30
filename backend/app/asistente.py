@@ -1,185 +1,288 @@
-import os
-from groq import Groq
-from .database import SessionLocal
-from .models import (
-    Pedido, Cliente, Planta, Cilindro, DetallePedido, CostoOperativo
-)
+from fastapi import APIRouter, Depends, Request, Form, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy.orm import Session
 from sqlalchemy import func
+from .database import SessionLocal
+from .models import Venta, Carga, GastoOperativo, Cliente, Cilindro, Pedido, Proveedor, Comunidad
+from .auth import get_current_user, get_db, oauth2_scheme, verificar_rol
+from .templates import templates
+from .config import GROQ_API_KEY
+from groq import Groq
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-def get_estadisticas_completas():
-    db = SessionLocal()
-    try:
-        hoy = datetime.now().date()
-        inicio_mes = hoy.replace(day=1)
-        semana_pasada = hoy - timedelta(days=7)
+router = APIRouter()
 
-        # --- 1. PEDIDOS ---
-        total_pedidos = db.query(Pedido).count()
-        pedidos_hoy = db.query(Pedido).filter(func.date(Pedido.fecha_creacion) == hoy).count()
-        pedidos_mes = db.query(Pedido).filter(func.date(Pedido.fecha_creacion) >= inicio_mes).count()
-        pedidos_semana = db.query(Pedido).filter(func.date(Pedido.fecha_creacion) >= semana_pasada).count()
-        
-        pendientes = db.query(Pedido).filter(Pedido.estado == "pendiente").count()
-        en_ruta = db.query(Pedido).filter(Pedido.estado == "en_ruta").count()
-        entregados = db.query(Pedido).filter(Pedido.estado == "entregado").count()
-        cancelados = db.query(Pedido).filter(Pedido.estado == "cancelado").count()
-
-        # --- 2. FINANZAS ---
-        pedidos_entregados = db.query(Pedido).filter(Pedido.estado == "entregado").all()
-        ingreso_total = sum(float(p.monto_total) for p in pedidos_entregados)
-        costo_logistico_total = sum(float(p.costo_logistico) for p in pedidos_entregados)
-        costo_admin_total = sum(float(p.costo_administrativo) for p in pedidos_entregados)
-        utilidad_bruta = ingreso_total - costo_logistico_total
-        utilidad_neta = utilidad_bruta - costo_admin_total
-
-        # --- 3. CILINDROS ---
-        total_cilindros = db.query(Cilindro).count()
-        disponibles = db.query(Cilindro).filter(Cilindro.estado == "disponible").count()
-        en_ruta_cil = db.query(Cilindro).filter(Cilindro.estado == "en_ruta").count()
-        vacios = db.query(Cilindro).filter(Cilindro.estado == "vacio").count()
-        
-        cilindros_por_tamano = {}
-        for tam in ["P", "M", "G"]:
-            count = db.query(Cilindro).filter(Cilindro.tamanio == tam).count()
-            cilindros_por_tamano[tam] = count
-
-        # --- 4. VENTAS POR TAMAÑO Y EXONERACIONES ---
-        detalles = db.query(DetallePedido).all()
-        ventas_por_tamano = {"P": 0, "M": 0, "G": 0}
-        exonerados_total = 0
-        valor_exoneraciones = 0
-        for d in detalles:
-            if d.cilindro:
-                tam = d.cilindro.tamanio.value if hasattr(d.cilindro.tamanio, 'value') else str(d.cilindro.tamanio)
-                ventas_por_tamano[tam] = ventas_por_tamano.get(tam, 0) + d.cantidad
-                if d.exonerado:
-                    exonerados_total += d.cantidad
-                    valor_exoneraciones += float(d.precio_unitario) * d.cantidad
-
-        # --- 5. PLANTAS ---
-        plantas = db.query(Planta).all()
-        datos_plantas = []
-        for p in plantas:
-            pedidos_planta = db.query(Pedido).filter(Pedido.planta_asignada_id == p.id).count()
-            ingresos_planta = sum(
-                float(ped.monto_total) for ped in db.query(Pedido).filter(
-                    Pedido.planta_asignada_id == p.id, Pedido.estado == "entregado"
-                ).all()
-            )
-            datos_plantas.append({
-                "nombre": p.nombre,
-                "pedidos": pedidos_planta,
-                "ingresos": round(ingresos_planta, 2)
-            })
-
-        # --- 6. REPARTIDORES ---
-        repartidores_activos = db.query(Pedido.repartidor_id).distinct().count()
-
-        # --- 7. CLIENTES ---
-        total_clientes = db.query(Cliente).count()
-        clientes_exonerados = db.query(Cliente).filter(Cliente.exonerado == True).count()
-
-        # --- 8. EXONERACIONES (mes) ---
-        exoneraciones_mes = db.query(DetallePedido).filter(
-            DetallePedido.exonerado == True,
-            DetallePedido.pedido.has(Pedido.fecha_creacion >= inicio_mes)
-        ).count()
-
-        # --- 9. COSTOS OPERATIVOS ---
-        costos_logisticos = db.query(CostoOperativo).filter(CostoOperativo.tipo == "Logístico").all()
-        costos_admin = db.query(CostoOperativo).filter(CostoOperativo.tipo == "Administrativo").all()
-        total_logistico = sum(float(c.monto) for c in costos_logisticos)
-        total_admin = sum(float(c.monto) for c in costos_admin)
-
-        return {
-            "fecha_actual": str(hoy),
-            "pedidos": {
-                "total": total_pedidos,
-                "hoy": pedidos_hoy,
-                "esta_semana": pedidos_semana,
-                "este_mes": pedidos_mes,
-                "pendientes": pendientes,
-                "en_ruta": en_ruta,
-                "entregados": entregados,
-                "cancelados": cancelados,
-            },
-            "finanzas": {
-                "ingreso_total": round(ingreso_total, 2),
-                "costo_logistico": round(costo_logistico_total, 2),
-                "costo_administrativo": round(costo_admin_total, 2),
-                "utilidad_bruta": round(utilidad_bruta, 2),
-                "utilidad_neta": round(utilidad_neta, 2),
-            },
-            "cilindros": {
-                "total": total_cilindros,
-                "disponibles": disponibles,
-                "en_ruta": en_ruta_cil,
-                "vacios": vacios,
-                "por_tamano": cilindros_por_tamano,
-                "ventas_por_tamano": ventas_por_tamano,
-            },
-            "exoneraciones": {
-                "total_cilindros": exonerados_total,
-                "valor_monetario": round(valor_exoneraciones, 2),
-                "este_mes": exoneraciones_mes,
-            },
-            "plantas": datos_plantas,
-            "clientes": {
-                "total": total_clientes,
-                "exonerados": clientes_exonerados,
-            },
-            "repartidores": {
-                "activos": repartidores_activos,
-            },
-            "costos": {
-                "logistico": round(total_logistico, 2),
-                "administrativo": round(total_admin, 2),
-                "detalle": [
-                    {"descripcion": c.descripcion, "monto": float(c.monto), "fecha": str(c.fecha)}
-                    for c in costos_logisticos + costos_admin
-                ]
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "crear_cliente",
+            "description": "Crea un nuevo cliente en el sistema",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nombre": {"type": "string"},
+                    "cedula_rif": {"type": "string"},
+                    "telefono": {"type": "string"},
+                    "direccion": {"type": "string"},
+                    "comunidad_id": {"type": "integer"},
+                    "tipo": {"type": "string", "enum": ["Normal", "Institución Exonerada"]}
+                },
+                "required": ["nombre", "cedula_rif", "telefono", "direccion", "comunidad_id"]
             }
         }
-    finally:
-        db.close()
-
-def generar_respuesta(pregunta_usuario: str):
-    datos = get_estadisticas_completas()
-    
-    mensajes = [
-        {
-            "role": "system",
-            "content": f"""
-            Eres el asistente virtual de 'GASGUARIBE', una empresa de distribución de gas doméstico en el municipio Guaribe.
-            Tu tarea es ayudar al administrador respondiendo preguntas sobre el negocio.
-            Aquí tienes los datos actuales del sistema en formato JSON. Úsalos para responder las preguntas del usuario:
-            {json.dumps(datos, indent=2, default=str)}
-            
-            Instrucciones importantes:
-            - Responde siempre en español, de forma clara, amigable y profesional.
-            - Si el usuario pide un reporte, ofrécete a generarlo.
-            - Si el usuario pregunta algo que no está en los datos, indícalo y sugiere qué puede hacer.
-            - Puedes hacer cálculos simples con los datos.
-            - Sé conciso pero completo en tus respuestas.
-            """
-        },
-        {
-            "role": "user",
-            "content": pregunta_usuario
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "registrar_venta",
+            "description": "Registra una venta (despacho) de cilindros a un cliente",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cliente_id": {"type": "integer"},
+                    "proveedor_id": {"type": "integer"},
+                    "tamano": {"type": "string", "enum": ["P", "M", "G"]},
+                    "cantidad": {"type": "integer"},
+                    "precio_unitario": {"type": "number"},
+                    "exonerado": {"type": "boolean"}
+                },
+                "required": ["cliente_id", "proveedor_id", "tamano", "cantidad"]
+            }
         }
-    ]
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "registrar_carga",
+            "description": "Registra una compra de cilindros a una planta proveedora",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "proveedor_id": {"type": "integer"},
+                    "cantidad_P": {"type": "integer"},
+                    "cantidad_M": {"type": "integer"},
+                    "cantidad_G": {"type": "integer"},
+                    "numero_factura": {"type": "string"},
+                    "gastos_logisticos": {"type": "number"}
+                },
+                "required": ["proveedor_id", "numero_factura"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "crear_pedido",
+            "description": "Crea un pedido para un cliente",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cliente_id": {"type": "integer"},
+                    "tamano": {"type": "string", "enum": ["P", "M", "G"]},
+                    "cantidad": {"type": "integer"},
+                    "exonerado": {"type": "boolean"}
+                },
+                "required": ["cliente_id", "tamano", "cantidad"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "actualizar_estado_pedido",
+            "description": "Cambia el estado de un pedido",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pedido_id": {"type": "integer"},
+                    "nuevo_estado": {"type": "string", "enum": ["pendiente", "en_ruta", "entregado", "cancelado"]}
+                },
+                "required": ["pedido_id", "nuevo_estado"]
+            }
+        }
+    }
+]
 
-    try:
-        chat_completion = client.chat.completions.create(
-            messages=mensajes,
-            model="llama-3.3-70b-versatile",
-            temperature=0.5,
-            max_tokens=1500,
+@router.get("/", response_class=HTMLResponse)
+async def chat_page(request: Request, token: str = Depends(oauth2_scheme)):
+    user = await get_current_user(token)
+    return templates.TemplateResponse("admin_chat.html", {"request": request, "user": user})
+
+@router.post("/consultar")
+async def consultar_ia(request: Request, pregunta: str = Form(...), db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    user = await get_current_user(token)
+    es_admin = user.role == "admin"
+    
+    # Contexto resumido
+    total_clientes = db.query(func.count(Cliente.id)).scalar()
+    cilindros_disp = db.query(func.count(Cilindro.id)).filter(Cilindro.estado == "disponible").scalar()
+    pedidos_pend = db.query(func.count(Pedido.id)).filter(Pedido.estado == "pendiente").scalar()
+    ingresos = db.query(func.sum(Venta.cantidad * Venta.precio_unitario)).scalar() or 0.0
+    costos = db.query(func.sum(Carga.costo_total)).scalar() or 0.0
+    gastos = db.query(func.sum(GastoOperativo.monto)).scalar() or 0.0
+    utilidad = ingresos - costos - gastos
+    exoneraciones = db.query(func.count(Venta.id)).filter(Venta.exonerado == True).scalar()
+
+    contexto = f"""
+    Datos de GAS GUARIBE:
+    - Clientes: {total_clientes}
+    - Cilindros disponibles: {cilindros_disp}
+    - Pedidos pendientes: {pedidos_pend}
+    - Ingresos: {ingresos:.2f} Bs.
+    - Costos (compras + gastos): {costos + gastos:.2f} Bs.
+    - Utilidad: {utilidad:.2f} Bs.
+    - Exoneraciones: {exoneraciones}
+    """
+
+    if es_admin and client:
+        try:
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "Eres un asistente administrativo de GAS GUARIBE. Puedes ejecutar acciones si el usuario lo solicita."},
+                    {"role": "user", "content": f"{contexto}\nPregunta: {pregunta}"}
+                ],
+                tools=TOOLS,
+                tool_choice="auto",
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            response_message = completion.choices[0].message
+            tool_calls = response_message.tool_calls
+            if tool_calls:
+                for tool_call in tool_calls:
+                    function_name = tool_call.function.name
+                    arguments = json.loads(tool_call.function.arguments)
+                    try:
+                        resultado = ejecutar_funcion(db, function_name, arguments)
+                        db.commit()
+                        return JSONResponse({"respuesta": f"Acción ejecutada: {function_name}. Resultado: {resultado}"})
+                    except Exception as e:
+                        db.rollback()
+                        return JSONResponse({"respuesta": f"Error al ejecutar {function_name}: {str(e)}"}, status_code=500)
+            else:
+                return JSONResponse({"respuesta": response_message.content})
+        except Exception as e:
+            return JSONResponse({"respuesta": f"Error en IA: {str(e)}"}, status_code=500)
+    else:
+        # Solo consulta
+        if not client:
+            return JSONResponse({"respuesta": "El asistente IA no está configurado (falta GROQ_API_KEY)."})
+        try:
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "Eres un asistente de GAS GUARIBE. Solo responde preguntas basadas en los datos, no ejecutes acciones."},
+                    {"role": "user", "content": f"{contexto}\nPregunta: {pregunta}"}
+                ],
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            return JSONResponse({"respuesta": completion.choices[0].message.content})
+        except Exception as e:
+            return JSONResponse({"respuesta": f"Error: {str(e)}"}, status_code=500)
+
+def ejecutar_funcion(db, func_name, args):
+    if func_name == "crear_cliente":
+        comunidad = db.query(Comunidad).filter(Comunidad.id == args["comunidad_id"]).first()
+        if not comunidad:
+            return "Error: Comunidad no encontrada"
+        cliente = Cliente(
+            nombre=args["nombre"],
+            cedula_rif=args["cedula_rif"],
+            telefono=args["telefono"],
+            direccion=args["direccion"],
+            comunidad_id=args["comunidad_id"],
+            tipo=args.get("tipo", "Normal")
         )
-        return chat_completion.choices[0].message.content
-    except Exception as e:
-        return f"Lo siento, tuve un problema al procesar tu solicitud: {e}"
+        db.add(cliente)
+        db.flush()
+        return f"Cliente {cliente.nombre} creado con ID {cliente.id}"
+    
+    elif func_name == "registrar_venta":
+        cliente = db.query(Cliente).filter(Cliente.id == args["cliente_id"]).first()
+        if not cliente:
+            return "Error: Cliente no encontrado"
+        proveedor = db.query(Proveedor).filter(Proveedor.id == args["proveedor_id"]).first()
+        if not proveedor:
+            return "Error: Proveedor no encontrado"
+        disponibles = db.query(Cilindro).filter(Cilindro.tamano == args["tamano"], Cilindro.estado == "disponible").count()
+        if disponibles < args["cantidad"]:
+            return f"No hay suficientes cilindros tamaño {args['tamano']}. Disponibles: {disponibles}"
+        venta = Venta(
+            cliente_id=args["cliente_id"],
+            proveedor_id=args["proveedor_id"],
+            tamano=args["tamano"],
+            cantidad=args["cantidad"],
+            precio_unitario=args.get("precio_unitario", 0.0),
+            exonerado=args.get("exonerado", False)
+        )
+        db.add(venta)
+        db.flush()
+        cilindros = db.query(Cilindro).filter(Cilindro.tamano == args["tamano"], Cilindro.estado == "disponible").limit(args["cantidad"]).all()
+        for c in cilindros:
+            c.estado = "en_ruta"
+        return f"Venta registrada: {args['cantidad']} cilindros {args['tamano']} a {cliente.nombre}"
+    
+    elif func_name == "registrar_carga":
+        proveedor = db.query(Proveedor).filter(Proveedor.id == args["proveedor_id"]).first()
+        if not proveedor:
+            return "Error: Proveedor no encontrado"
+        cant_P = args.get("cantidad_P", 0)
+        cant_M = args.get("cantidad_M", 0)
+        cant_G = args.get("cantidad_G", 0)
+        costo_total = cant_P * proveedor.precio_P + cant_M * proveedor.precio_M + cant_G * proveedor.precio_G
+        carga = Carga(
+            proveedor_id=args["proveedor_id"],
+            cantidad_P=cant_P,
+            cantidad_M=cant_M,
+            cantidad_G=cant_G,
+            costo_total=costo_total,
+            numero_factura=args["numero_factura"],
+            gastos_logisticos=args.get("gastos_logisticos", 0.0)
+        )
+        db.add(carga)
+        db.flush()
+        from .utils import generar_codigo_qr
+        for tam, cant in [("P", cant_P), ("M", cant_M), ("G", cant_G)]:
+            for _ in range(cant):
+                precio_venta = getattr(proveedor, f"precio_{tam}") * 1.3
+                cil = Cilindro(
+                    codigo_qr=generar_codigo_qr(),
+                    tamano=tam,
+                    estado="disponible",
+                    proveedor_id=proveedor.id,
+                    costo_compra=getattr(proveedor, f"precio_{tam}"),
+                    precio_venta=precio_venta
+                )
+                db.add(cil)
+        return f"Carga registrada. Factura {args['numero_factura']}. Total: {costo_total:.2f}"
+    
+    elif func_name == "crear_pedido":
+        cliente = db.query(Cliente).filter(Cliente.id == args["cliente_id"]).first()
+        if not cliente:
+            return "Error: Cliente no encontrado"
+        pedido = Pedido(
+            cliente_id=args["cliente_id"],
+            tamano=args["tamano"],
+            cantidad=args["cantidad"],
+            exonerado=args.get("exonerado", False),
+            estado="pendiente"
+        )
+        db.add(pedido)
+        db.flush()
+        return f"Pedido creado para {cliente.nombre}: {args['cantidad']} cilindros {args['tamano']}"
+    
+    elif func_name == "actualizar_estado_pedido":
+        pedido = db.query(Pedido).filter(Pedido.id == args["pedido_id"]).first()
+        if not pedido:
+            return "Error: Pedido no encontrado"
+        pedido.estado = args["nuevo_estado"]
+        return f"Estado del pedido {pedido.id} actualizado a {args['nuevo_estado']}"
+    
+    else:
+        return "Función no implementada"
