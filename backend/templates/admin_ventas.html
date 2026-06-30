@@ -1,97 +1,93 @@
 {% extends "admin_base.html" %}
-
-{% block ventas_active %}active{% endblock %}
-{% block page_title %}Registrar Venta{% endblock %}
-{% block breadcrumb %}Administración / Ventas{% endblock %}
-
+{% block title %}Ventas{% endblock %}
 {% block content %}
-<div class="grid-2">
-    <div class="card">
-        <div class="card-title">🛒 Nueva Venta</div>
-        <form id="ventaForm">
-            <div class="form-group">
-                <label for="cliente">Cliente</label>
-                <select id="cliente" required>
-                    <option value="">Seleccionar</option>
-                    {% for c in clientes %}
-                    <option value="{{ c.id }}">{{ c.usuario.nombre if c.usuario else 'Cliente' }} {% if c.exonerado %}(Exonerado){% endif %}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="plantaVenta">Planta</label>
-                <select id="plantaVenta" required>
-                    {% for p in plantas %}
-                    <option value="{{ p.id }}">{{ p.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Tamaño</label>
-                <div style="display:flex; gap:15px;">
-                    <label><input type="radio" name="tamanio" value="P" checked> Pequeño</label>
-                    <label><input type="radio" name="tamanio" value="M"> Mediano</label>
-                    <label><input type="radio" name="tamanio" value="G"> Grande</label>
+<h2><i class="fas fa-cash-register"></i> Ventas (Despacho)</h2>
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post" action="/ventas/crear">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Cliente</label>
+                    <select name="cliente_id" class="form-select" required>
+                        {% for cl in clientes %}
+                        <option value="{{ cl.id }}">{{ cl.nombre }} ({{ cl.tipo }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Proveedor (Planta)</label>
+                    <select name="proveedor_id" class="form-select" required>
+                        {% for p in proveedores %}
+                        <option value="{{ p.id }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tamaño</label>
+                    <select name="tamano" class="form-select" required>
+                        <option value="P">P</option>
+                        <option value="M">M</option>
+                        <option value="G">G</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cantidad</label>
+                    <div class="input-group">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cambiarCantidadVenta(-1)">-</button>
+                        <input type="number" name="cantidad" id="cantVenta" class="form-control text-center" value="1" min="1">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cambiarCantidadVenta(1)">+</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Precio Unitario</label>
+                    <input type="number" step="0.01" name="precio_unitario" class="form-control" value="0" required>
+                </div>
+                <div class="col-md-3 d-flex align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="exonerado" id="exoneradoCheck">
+                        <label class="form-check-label" for="exoneradoCheck">Exonerado</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success w-100"><i class="fas fa-save"></i> Registrar Venta</button>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="cantidad">Cantidad</label>
-                <input type="number" id="cantidad" min="1" value="1" required>
-            </div>
-            <div class="form-group">
-                <label for="precioVenta">Precio Unitario (Bs)</label>
-                <input type="number" id="precioVenta" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label for="fechaVenta">Fecha</label>
-                <input type="date" id="fechaVenta" required>
-            </div>
-            <button type="submit" class="btn">✅ Registrar Venta</button>
         </form>
-        <div id="msg" style="margin-top:10px; font-weight:600;"></div>
     </div>
 </div>
-
+<h3>Historial de Ventas</h3>
+<div class="table-responsive">
+    <table class="table table-dark table-striped">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Tamaño</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Exonerado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in ventas %}
+            <tr>
+                <td>{{ v.fecha.strftime('%d/%m/%Y') }}</td>
+                <td>{{ v.cliente.nombre if v.cliente else 'N/A' }}</td>
+                <td>{{ v.tamano }}</td>
+                <td>{{ v.cantidad }}</td>
+                <td>${{ "%.2f"|format(v.precio_unitario) }}</td>
+                <td>{{ 'Sí' if v.exonerado else 'No' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 <script>
-    document.getElementById('fechaVenta').value = new Date().toISOString().split('T')[0];
-
-    document.getElementById('ventaForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const msg = document.getElementById('msg');
-        msg.innerHTML = '';
-
-        const data = {
-            cliente_id: parseInt(document.getElementById('cliente').value),
-            planta_id: parseInt(document.getElementById('plantaVenta').value),
-            tamanio: document.querySelector('input[name="tamanio"]:checked').value,
-            cantidad: parseInt(document.getElementById('cantidad').value),
-            precio_unitario: parseFloat(document.getElementById('precioVenta').value),
-            fecha: document.getElementById('fechaVenta').value
-        };
-
-        if (!data.cliente_id) {
-            msg.innerHTML = '<span style="color:#ef4444;">❌ Selecciona un cliente.</span>';
-            return;
-        }
-
-        try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch('/admin/ventas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if (response.ok) {
-                msg.innerHTML = `<span style="color:#22c55e;">✅ ${result.mensaje} (Total: $${result.total})</span>`;
-                document.getElementById('ventaForm').reset();
-                document.getElementById('fechaVenta').value = new Date().toISOString().split('T')[0];
-            } else {
-                msg.innerHTML = `<span style="color:#ef4444;">❌ Error: ${result.detail || 'No se pudo registrar'}</span>`;
-            }
-        } catch (error) {
-            msg.innerHTML = `<span style="color:#ef4444;">❌ Error de conexión: ${error.message}</span>`;
-        }
-    });
+    function cambiarCantidadVenta(delta) {
+        const input = document.getElementById('cantVenta');
+        let val = parseInt(input.value) || 1;
+        val = Math.max(1, val + delta);
+        input.value = val;
+    }
 </script>
 {% endblock %}
