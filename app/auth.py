@@ -72,5 +72,5 @@ def verificar_rol(user, roles_permitidos: list):
 
 
 # ---------- RE-EXPORTACIÓN PARA COMPATIBILIDAD CON main.py ----------
-# Esto permite que `from .auth import get_db` funcione sin errores.
-from .database import get_db   # <--- LÍNEA CLAVE
+# Esto permite que `from .auth import get_db` funcione correctamente.
+from .database import get_db   # <--- AHORA database.py SÍ EXPONE get_db
