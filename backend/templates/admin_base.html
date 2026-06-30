@@ -2,213 +2,48 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GASGUARIBE - Panel de Administración</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f1f5f9; display: flex; min-height: 100vh; }
-
-        .sidebar {
-            width: 260px;
-            background: #0f172a;
-            color: #e2e8f0;
-            padding: 20px 0;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-        .sidebar .logo { text-align: center; padding: 20px 0 30px; border-bottom: 1px solid #1e293b; }
-        .sidebar .logo h2 { color: #fbbf24; font-size: 1.8rem; }
-        .sidebar .logo small { color: #94a3b8; font-size: 0.8rem; display: block; }
-        .sidebar .menu { list-style: none; padding: 20px 0; }
-        .sidebar .menu li {
-            padding: 12px 25px;
-            margin: 2px 10px;
-            border-radius: 10px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .sidebar .menu li:hover { background: #1e293b; }
-        .sidebar .menu li.active { background: #fbbf24; color: #0f172a; }
-        .sidebar .menu li i { width: 24px; text-align: center; font-size: 1.2rem; }
-        .sidebar .menu li a { color: inherit; text-decoration: none; flex: 1; }
-        .sidebar .menu li.active a { color: #0f172a; font-weight: 600; }
-        .sidebar .user-info {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            padding: 15px 25px;
-            border-top: 1px solid #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .sidebar .user-info .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #fbbf24;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #0f172a;
-        }
-        .sidebar .user-info .logout { margin-left: auto; color: #94a3b8; cursor: pointer; font-size: 1.2rem; }
-        .sidebar .user-info .logout:hover { color: #fca5a5; }
-
-        .main-content { margin-left: 260px; flex: 1; padding: 30px; min-height: 100vh; }
-        .main-content .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .main-content .header h1 { font-size: 1.8rem; color: #0f172a; }
-
-        @media (max-width: 768px) {
-            .sidebar { width: 70px; }
-            .sidebar .logo h2 { font-size: 1.2rem; }
-            .sidebar .logo small { display: none; }
-            .sidebar .menu li span { display: none; }
-            .sidebar .user-info .name, .sidebar .user-info .role { display: none; }
-            .main-content { margin-left: 70px; }
-        }
-
-        .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .card-title { font-size: 1.1rem; font-weight: 600; color: #0f172a; margin-bottom: 15px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-        @media (max-width: 1024px) { .grid-4 { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 600px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
-
-        .stat-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-        .stat-card .number { font-size: 2.2rem; font-weight: 700; color: #0f172a; }
-        .stat-card .label { color: #64748b; font-size: 0.9rem; }
-        .stat-card .icon { font-size: 2rem; margin-bottom: 10px; color: #fbbf24; }
-
-        .btn {
-            background: #fbbf24;
-            color: #0f172a;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-        .btn:hover { background: #f59e0b; transform: scale(1.02); }
-
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-weight: 600; margin-bottom: 5px; color: #0f172a; }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1rem;
-            outline: none;
-        }
-        .form-group input:focus, .form-group select:focus { border-color: #fbbf24; }
-
-        .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        table th { text-align: left; padding: 12px; background: #f1f5f9; color: #0f172a; font-weight: 600; }
-        table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
-        table tr:hover { background: #f8fafc; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-        .badge-success { background: #22c55e; color: white; }
-        .badge-warning { background: #f59e0b; color: white; }
-        .badge-danger { background: #ef4444; color: white; }
-        .badge-info { background: #3b82f6; color: white; }
-
-        .chart-container { height: 250px; position: relative; }
-        .breadcrumb { color: #64748b; font-size: 0.9rem; }
-        .breadcrumb span { color: #0f172a; font-weight: 600; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>GAS GUARIBE - {% block title %}Panel{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    {% block head %}{% endblock %}
 </head>
 <body>
-
-    <div class="sidebar">
-        <div class="logo">
-            <h2>🏠 GAS</h2>
-            <small>Guaribe</small>
-        </div>
-        <ul class="menu">
-            <li class="{% block dashboard_active %}{% endblock %}">
-                <i class="fas fa-th-large"></i><a href="/admin/dashboard"><span>Panel</span></a>
-            </li>
-            <li class="{% block cargas_active %}{% endblock %}">
-                <i class="fas fa-boxes"></i><a href="/admin/cargas"><span>Cargas</span></a>
-            </li>
-            <li class="{% block ventas_active %}{% endblock %}">
-                <i class="fas fa-shopping-cart"></i><a href="/admin/ventas"><span>Ventas</span></a>
-            </li>
-            <li class="{% block clientes_active %}{% endblock %}">
-                <i class="fas fa-users"></i><a href="/admin/clientes"><span>Clientes</span></a>
-            </li>
-            <li class="{% block reportes_active %}{% endblock %}">
-                <i class="fas fa-chart-bar"></i><a href="/admin/reportes"><span>Reportes</span></a>
-            </li>
-            <li class="{% block asistente_active %}{% endblock %}">
-                <i class="fas fa-robot"></i><a href="/admin/asistente"><span>Asistente IA</span></a>
-            </li>
-            <li>
-                <i class="fas fa-cog"></i><a href="/admin/configuracion"><span>Configuración</span></a>
-            </li>
-        </ul>
-        <div class="user-info">
-            <div class="avatar" id="userAvatar">A</div>
-            <div><div class="name" id="userName">Administrador</div><div class="role" id="userRole">admin</div></div>
-            <div class="logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i></div>
-        </div>
-    </div>
-
-    <div class="main-content">
-        <div class="header">
-            <div>
-                <h1>{% block page_title %}Panel de Administración{% endblock %}</h1>
-                <div class="breadcrumb">{% block breadcrumb %}Inicio / Panel{% endblock %}</div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard"><i class="fas fa-fire"></i> GAS GUARIBE</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    {% if user.role in ['admin', 'operativo', 'auditor'] %}
+                    <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Panel</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/cargas/"><i class="fas fa-truck"></i> Cargas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ventas/"><i class="fas fa-cash-register"></i> Ventas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/clientes/"><i class="fas fa-users"></i> Clientes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/circuitos/"><i class="fas fa-map"></i> Circuitos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/pedidos/"><i class="fas fa-clipboard-list"></i> Pedidos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/reportes/"><i class="fas fa-chart-bar"></i> Reportes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/asistente/"><i class="fas fa-robot"></i> Asistente IA</a></li>
+                    {% if user.role == 'admin' %}
+                    <li class="nav-item"><a class="nav-link" href="/admin/usuarios"><i class="fas fa-user-cog"></i> Usuarios</a></li>
+                    {% endif %}
+                    {% elif user.role == 'cliente' %}
+                    <li class="nav-item"><a class="nav-link" href="/pedidos/cliente/dashboard"><i class="fas fa-home"></i> Mis Pedidos</a></li>
+                    {% endif %}
+                </ul>
+                <span class="navbar-text text-light me-2">{{ user.nombre_completo }} ({{ user.role }})</span>
+                <a href="/logout" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i></a>
             </div>
-            <div><span id="currentDate" style="color:#64748b;"></span></div>
         </div>
+    </nav>
+    <div class="container-fluid mt-5 pt-4">
         {% block content %}{% endblock %}
     </div>
-
-    <script>
-        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('es-ES', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
-
-        function logout() {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('user_rol');
-            localStorage.removeItem('user_nombre');
-            localStorage.removeItem('user_id');
-            window.location.href = '/login';
-        }
-
-        window.onload = function() {
-            const nombre = localStorage.getItem('user_nombre') || 'Administrador';
-            const avatar = document.getElementById('userAvatar');
-            if (avatar) avatar.textContent = nombre.charAt(0).toUpperCase();
-            document.getElementById('userName').textContent = nombre;
-            document.getElementById('userRole').textContent = localStorage.getItem('user_rol') || 'admin';
-
-            const token = localStorage.getItem('access_token');
-            if (!token) {
-                window.location.href = '/login';
-            }
-        };
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>
