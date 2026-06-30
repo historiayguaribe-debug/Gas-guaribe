@@ -51,17 +51,6 @@ app.include_router(pedidos_router)
 app.include_router(reportes_router)
 app.include_router(admin_router)
 
-# --- MANEJADOR DE ERROR 401 (No autenticado) - REDIRIGE AL LOGIN ---
-@app.exception_handler(HTTPException)
-async def auth_exception_handler(request: Request, exc: HTTPException):
-    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
-        # Si la petición espera HTML (navegador), redirige al login
-        if "text/html" in request.headers.get("accept", ""):
-            return RedirectResponse(url="/login")
-        # Si es API, devuelve el error normal
-        return exc
-    return exc
-
 # --- WEB SOCKET PARA SEGUIMIENTO EN VIVO ---
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
@@ -77,7 +66,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     except WebSocketDisconnect:
         manager.disconnect(user_id)
 
-# --- PÁGINA PRINCIPAL ---
+# --- PÁGINA PRINCIPAL (BONITA) ---
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -87,24 +76,24 @@ async def root(request: Request):
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
-# --- ENDPOINT DE BIENVENIDA ---
+# --- ENDPOINT DE BIENVENIDA (API) ---
 @app.get("/api")
 def api_root():
     return {
         "mensaje": "Bienvenido a GASGUARIBE API",
         "documentacion": "/docs",
         "login": "/login",
-        "panel_administracion": "/admin/panel",
+        "panel_administracion": "/admin/dashboard",
         "version": "2.0"
     }
 
-# --- ASISTENTE INTELIGENTE ---
+# --- ASISTENTE INTELIGENTE (ENDPOINT PARA EL CHAT) ---
 @app.post("/asistente/preguntar")
 async def preguntar_asistente(pregunta: Pregunta):
     respuesta = generar_respuesta(pregunta.pregunta)
     return {"respuesta": respuesta}
 
-# --- PÁGINA DE CHAT DEL ADMINISTRADOR ---
+# --- PÁGINA DE CHAT DEL ADMINISTRADOR (MANTENIDA POR COMPATIBILIDAD) ---
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_chat(request: Request):
     return templates.TemplateResponse("admin_chat.html", {"request": request})
@@ -117,6 +106,6 @@ def status():
         "servicio": "GASGUARIBE",
         "version": "2.0",
         "base_datos": "SQLite",
-        "panel_admin": "/admin/panel",
+        "panel_admin": "/admin/dashboard",
         "login": "/login"
     }
