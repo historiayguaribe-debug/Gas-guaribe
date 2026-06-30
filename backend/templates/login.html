@@ -5,8 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - GASGUARIBE</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #0f172a; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+        body {
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
         .login-container {
             background: #1e293b;
             border-radius: 30px;
@@ -16,51 +23,49 @@
             border: 1px solid #334155;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
         }
-        .login-container .logo { text-align: center; font-size: 3rem; margin-bottom: 5px; }
-        .login-container h1 { color: #fbbf24; text-align: center; font-size: 2rem; margin-bottom: 5px; }
-        .login-container .sub { color: #94a3b8; text-align: center; margin-bottom: 30px; font-size: 0.9rem; }
-        .login-container label { color: #e2e8f0; display: block; margin: 15px 0 5px; font-weight: 500; font-size: 0.95rem; }
+        .login-container .logo { text-align:center; font-size:3rem; margin-bottom:5px; }
+        .login-container h1 { color:#fbbf24; text-align:center; font-size:2rem; margin-bottom:5px; }
+        .login-container .sub { color:#94a3b8; text-align:center; margin-bottom:30px; font-size:0.9rem; }
+        .login-container label { color:#e2e8f0; display:block; margin:15px 0 5px; font-weight:500; }
         .login-container input {
-            width: 100%;
-            padding: 14px;
-            border-radius: 12px;
-            border: 1px solid #475569;
-            background: #0f172a;
-            color: white;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.3s;
+            width:100%;
+            padding:14px;
+            border-radius:12px;
+            border:1px solid #475569;
+            background:#0f172a;
+            color:white;
+            font-size:1rem;
+            outline:none;
         }
-        .login-container input:focus { border-color: #fbbf24; }
+        .login-container input:focus { border-color:#fbbf24; }
         .login-container .btn-login {
-            background: #fbbf24;
-            color: #0f172a;
-            border: none;
-            padding: 16px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            width: 100%;
-            margin-top: 25px;
-            cursor: pointer;
-            transition: all 0.2s;
+            background:#fbbf24;
+            color:#0f172a;
+            border:none;
+            padding:16px;
+            border-radius:12px;
+            font-weight:bold;
+            font-size:1.1rem;
+            width:100%;
+            margin-top:25px;
+            cursor:pointer;
+            transition:all 0.2s;
         }
-        .login-container .btn-login:hover { background: #f59e0b; transform: scale(1.02); }
-        .login-container .btn-login:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+        .login-container .btn-login:hover { background:#f59e0b; transform:scale(1.02); }
         .login-container .error-msg {
-            background: #7f1d1d;
-            color: #fca5a5;
-            padding: 12px;
-            border-radius: 10px;
-            margin-top: 15px;
-            text-align: center;
-            display: none;
-            border: 1px solid #991b1b;
+            background:#7f1d1d;
+            color:#fca5a5;
+            padding:12px;
+            border-radius:10px;
+            margin-top:15px;
+            text-align:center;
+            display:none;
+            border:1px solid #991b1b;
         }
-        .login-container .info { color: #475569; text-align: center; margin-top: 20px; font-size: 0.8rem; }
-        .login-container .info strong { color: #fbbf24; }
-        .spinner { display: none; text-align: center; margin-top: 10px; color: #94a3b8; }
-        .login-container .version { text-align: center; color: #334155; font-size: 0.7rem; margin-top: 20px; }
+        .login-container .info { color:#475569; text-align:center; margin-top:20px; font-size:0.8rem; }
+        .login-container .info strong { color:#fbbf24; }
+        .spinner { display:none; text-align:center; margin-top:10px; color:#94a3b8; }
+        .login-container .version { text-align:center; color:#334155; font-size:0.7rem; margin-top:20px; }
     </style>
 </head>
 <body>
@@ -69,7 +74,7 @@
         <h1>GASGUARIBE</h1>
         <p class="sub">Inicia sesión para administrar tu negocio</p>
 
-        <form id="loginForm" onsubmit="event.preventDefault(); login();">
+        <form id="loginForm">
             <label for="email">📧 Correo electrónico</label>
             <input type="email" id="email" placeholder="ejemplo@correo.com" required value="admin@test.com">
 
@@ -87,7 +92,9 @@
     </div>
 
     <script>
-        async function login() {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
@@ -119,12 +126,14 @@
                     return;
                 }
 
+                // Guardar token
                 localStorage.setItem('access_token', data.access_token);
                 localStorage.setItem('user_rol', data.rol);
                 localStorage.setItem('user_nombre', data.nombre);
                 localStorage.setItem('user_id', data.usuario_id);
 
-                window.location.href = '/admin/dashboard?token=' + data.access_token;
+                // Redirigir al dashboard
+                window.location.href = '/admin/dashboard';
 
             } catch (error) {
                 spinner.style.display = 'none';
@@ -134,12 +143,13 @@
                 errorMsg.style.display = 'block';
                 console.error('Error:', error);
             }
-        }
+        });
 
+        // Redirigir si ya hay token
         window.onload = function() {
             const token = localStorage.getItem('access_token');
             if (token) {
-                window.location.href = '/admin/dashboard?token=' + token;
+                window.location.href = '/admin/dashboard';
             }
         };
     </script>
