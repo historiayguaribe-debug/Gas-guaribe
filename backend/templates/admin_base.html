@@ -8,11 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body {
-            background: #f1f5f9;
-            display: flex;
-            min-height: 100vh;
-        }
+        body { background: #f1f5f9; display: flex; min-height: 100vh; }
+
         .sidebar {
             width: 260px;
             background: #0f172a;
@@ -24,15 +21,10 @@
             left: 0;
             overflow-y: auto;
             box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-            transition: all 0.3s;
             z-index: 1000;
         }
-        .sidebar .logo {
-            text-align: center;
-            padding: 20px 0 30px;
-            border-bottom: 1px solid #1e293b;
-        }
-        .sidebar .logo h2 { color: #fbbf24; font-size: 1.8rem; font-weight: 700; }
+        .sidebar .logo { text-align: center; padding: 20px 0 30px; border-bottom: 1px solid #1e293b; }
+        .sidebar .logo h2 { color: #fbbf24; font-size: 1.8rem; }
         .sidebar .logo small { color: #94a3b8; font-size: 0.8rem; display: block; }
         .sidebar .menu { list-style: none; padding: 20px 0; }
         .sidebar .menu li {
@@ -40,7 +32,6 @@
             margin: 2px 10px;
             border-radius: 10px;
             cursor: pointer;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -72,26 +63,13 @@
             font-weight: bold;
             color: #0f172a;
         }
-        .sidebar .user-info .name { font-weight: 600; }
-        .sidebar .user-info .role { font-size: 0.75rem; color: #94a3b8; }
         .sidebar .user-info .logout { margin-left: auto; color: #94a3b8; cursor: pointer; font-size: 1.2rem; }
         .sidebar .user-info .logout:hover { color: #fca5a5; }
-        .main-content {
-            margin-left: 260px;
-            flex: 1;
-            padding: 30px;
-            min-height: 100vh;
-            transition: all 0.3s;
-        }
-        .main-content .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
+
+        .main-content { margin-left: 260px; flex: 1; padding: 30px; min-height: 100vh; }
+        .main-content .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .main-content .header h1 { font-size: 1.8rem; color: #0f172a; }
-        .main-content .header .breadcrumb { color: #64748b; font-size: 0.9rem; }
-        .main-content .header .breadcrumb span { color: #0f172a; font-weight: 600; }
+
         @media (max-width: 768px) {
             .sidebar { width: 70px; }
             .sidebar .logo h2 { font-size: 1.2rem; }
@@ -100,29 +78,20 @@
             .sidebar .user-info .name, .sidebar .user-info .role { display: none; }
             .main-content { margin-left: 70px; }
         }
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
+
+        .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .card-title { font-size: 1.1rem; font-weight: 600; color: #0f172a; margin-bottom: 15px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         @media (max-width: 1024px) { .grid-4 { grid-template-columns: 1fr 1fr; } }
         @media (max-width: 600px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
-        .stat-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            text-align: center;
-        }
+
+        .stat-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
         .stat-card .number { font-size: 2.2rem; font-weight: 700; color: #0f172a; }
         .stat-card .label { color: #64748b; font-size: 0.9rem; }
         .stat-card .icon { font-size: 2rem; margin-bottom: 10px; color: #fbbf24; }
+
         .btn {
             background: #fbbf24;
             color: #0f172a;
@@ -138,8 +107,7 @@
             text-decoration: none;
         }
         .btn:hover { background: #f59e0b; transform: scale(1.02); }
-        .btn-secondary { background: #e2e8f0; color: #0f172a; }
-        .btn-secondary:hover { background: #cbd5e1; }
+
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 5px; color: #0f172a; }
         .form-group input, .form-group select {
@@ -151,23 +119,21 @@
             outline: none;
         }
         .form-group input:focus, .form-group select:focus { border-color: #fbbf24; }
+
         .table-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         table th { text-align: left; padding: 12px; background: #f1f5f9; color: #0f172a; font-weight: 600; }
         table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
         table tr:hover { background: #f8fafc; }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
         .badge-success { background: #22c55e; color: white; }
         .badge-warning { background: #f59e0b; color: white; }
         .badge-danger { background: #ef4444; color: white; }
         .badge-info { background: #3b82f6; color: white; }
+
         .chart-container { height: 250px; position: relative; }
+        .breadcrumb { color: #64748b; font-size: 0.9rem; }
+        .breadcrumb span { color: #0f172a; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -179,43 +145,31 @@
         </div>
         <ul class="menu">
             <li class="{% block dashboard_active %}{% endblock %}">
-                <i class="fas fa-th-large"></i>
-                <a href="/admin/dashboard">Panel</a>
+                <i class="fas fa-th-large"></i><a href="/admin/dashboard"><span>Panel</span></a>
             </li>
             <li class="{% block cargas_active %}{% endblock %}">
-                <i class="fas fa-boxes"></i>
-                <a href="/admin/cargas">Cargas</a>
+                <i class="fas fa-boxes"></i><a href="/admin/cargas"><span>Cargas</span></a>
             </li>
             <li class="{% block ventas_active %}{% endblock %}">
-                <i class="fas fa-shopping-cart"></i>
-                <a href="/admin/ventas">Ventas</a>
+                <i class="fas fa-shopping-cart"></i><a href="/admin/ventas"><span>Ventas</span></a>
             </li>
             <li class="{% block clientes_active %}{% endblock %}">
-                <i class="fas fa-users"></i>
-                <a href="/admin/clientes">Clientes</a>
+                <i class="fas fa-users"></i><a href="/admin/clientes"><span>Clientes</span></a>
             </li>
             <li class="{% block reportes_active %}{% endblock %}">
-                <i class="fas fa-chart-bar"></i>
-                <a href="/admin/reportes">Reportes</a>
+                <i class="fas fa-chart-bar"></i><a href="/admin/reportes"><span>Reportes</span></a>
             </li>
             <li class="{% block asistente_active %}{% endblock %}">
-                <i class="fas fa-robot"></i>
-                <a href="/admin/asistente">Asistente IA</a>
+                <i class="fas fa-robot"></i><a href="/admin/asistente"><span>Asistente IA</span></a>
             </li>
             <li>
-                <i class="fas fa-cog"></i>
-                <a href="#">Configuración</a>
+                <i class="fas fa-cog"></i><a href="/admin/configuracion"><span>Configuración</span></a>
             </li>
         </ul>
         <div class="user-info">
-            <div class="avatar">A</div>
-            <div>
-                <div class="name" id="userName">Administrador</div>
-                <div class="role" id="userRole">admin</div>
-            </div>
-            <div class="logout" onclick="logout()" title="Cerrar sesión">
-                <i class="fas fa-sign-out-alt"></i>
-            </div>
+            <div class="avatar" id="userAvatar">A</div>
+            <div><div class="name" id="userName">Administrador</div><div class="role" id="userRole">admin</div></div>
+            <div class="logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i></div>
         </div>
     </div>
 
@@ -225,35 +179,35 @@
                 <h1>{% block page_title %}Panel de Administración{% endblock %}</h1>
                 <div class="breadcrumb">{% block breadcrumb %}Inicio / Panel{% endblock %}</div>
             </div>
-            <div>
-                <span id="currentDate" style="color:#64748b;"></span>
-            </div>
+            <div><span id="currentDate" style="color:#64748b;"></span></div>
         </div>
-
-        {% block content %}
-        {% endblock %}
+        {% block content %}{% endblock %}
     </div>
 
     <script>
-        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('es-ES', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
 
         function logout() {
             localStorage.removeItem('access_token');
             localStorage.removeItem('user_rol');
             localStorage.removeItem('user_nombre');
+            localStorage.removeItem('user_id');
             window.location.href = '/login';
         }
 
         window.onload = function() {
+            const nombre = localStorage.getItem('user_nombre') || 'Administrador';
+            const avatar = document.getElementById('userAvatar');
+            if (avatar) avatar.textContent = nombre.charAt(0).toUpperCase();
+            document.getElementById('userName').textContent = nombre;
+            document.getElementById('userRole').textContent = localStorage.getItem('user_rol') || 'admin';
+
             const token = localStorage.getItem('access_token');
             if (!token) {
                 window.location.href = '/login';
-                return;
             }
-            const nombre = localStorage.getItem('user_nombre') || 'Administrador';
-            document.getElementById('userName').textContent = nombre;
-            const rol = localStorage.getItem('user_rol') || 'admin';
-            document.getElementById('userRole').textContent = rol;
         };
     </script>
 </body>
