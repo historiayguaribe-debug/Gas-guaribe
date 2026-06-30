@@ -1,13 +1,3 @@
-FROM python:3.10-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-ENV PYTHONPATH=/app
-ENV PORT=10000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
+SECRET_KEY=tu_clave_secreta_cambiar_en_produccion
+GROQ_API_KEY=tu_api_key_de_groq
+DATABASE_URL=sqlite:///./gas_guaribe.db
