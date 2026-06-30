@@ -71,13 +71,18 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+# --- PÁGINA DE LOGIN (NUEVA) ---
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
 # --- ENDPOINT DE BIENVENIDA ---
 @app.get("/api")
 def api_root():
     return {
         "mensaje": "Bienvenido a GASGUARIBE API",
         "documentacion": "/docs",
-        "asistente": "/admin",
+        "login": "/login",
         "panel_administracion": "/admin/panel",
         "version": "2.0"
     }
@@ -101,5 +106,6 @@ def status():
         "servicio": "GASGUARIBE",
         "version": "2.0",
         "base_datos": "SQLite",
-        "panel_admin": "/admin/panel"
+        "panel_admin": "/admin/panel",
+        "login": "/login"
     }
