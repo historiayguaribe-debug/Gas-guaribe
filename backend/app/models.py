@@ -1,108 +1,140 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum, Numeric, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship
+from datetime import datetime
 from .database import Base
-import datetime
 import enum
 
-class TamanioCilindro(enum.Enum):
-    P = "5kg"
-    M = "15kg"
-    G = "45kg"
+class TamanoCilindro(str, enum.Enum):
+    P = "P"
+    M = "M"
+    G = "G"
 
-class EstadoPedido(enum.Enum):
-    pendiente = "pendiente"
-    asignado = "asignado"
-    en_ruta = "en_ruta"
-    entregado = "entregado"
-    cancelado = "cancelado"
+class EstadoCilindro(str, enum.Enum):
+    DISPONIBLE = "disponible"
+    EN_RUTA = "en ruta"
+    VACIO = "vacio"
+    MANTENIMIENTO = "mantenimiento"
+
+class TipoCliente(str, enum.Enum):
+    NORMAL = "Normal"
+    INSTITUCION_EXONERADA = "Institución Exonerada"
+
+class TipoGasto(str, enum.Enum):
+    LOGISTICO = "Logístico"
+    ADMINISTRATIVO = "Administrativo"
 
 class Usuario(Base):
     __tablename__ = "usuarios"
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
+    username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    nombre = Column(String)
+    role = Column(String)  # admin, operativo, auditor, cliente
+    nombre_completo = Column(String)
+
+class Proveedor(Base):
+    __tablename__ = "proveedores"
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String, unique=True)
+    direccion = Column(String)
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
+    contacto = Column(String)
     telefono = Column(String)
-    rol = Column(String)
-    fecha_registro = Column(DateTime, default=datetime.datetime.utcnow)
+    precio_P = Column(Float, default=0.0)
+    precio_M = Column(Float, default=0.0)
+    precio_G = Column(Float, default=0.0)
+
+class Circuito(Base):
+    __tablename__ = "circuitos"
+    id = Column(Integer, primary_key=True, index=True)
+    numero = Column(Integer, unique=True)
+    nombre = Column(String)
+    descripcion = Column(String, nullable=True)
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
+    comunidades = relationship("Comunidad", back_populates="circuito")
+
+class Comunidad(Base):
+    __tablename__ = "comunidades"
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String)
+    circuito_id = Column(Integer, ForeignKey("circuitos.id"))
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
+    circuito = relationship("Circuito", back_populates="comunidades")
+    clientes = relationship("Cliente", back_populates="comunidad")
 
 class Cliente(Base):
     __tablename__ = "clientes"
     id = Column(Integer, primary_key=True, index=True)
-    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
-    usuario = relationship("Usuario")
-    direccion = Column(String)
-    lat = Column(Float)
-    lng = Column(Float)
-    es_institucion = Column(Boolean, default=False)
-    rif = Column(String, nullable=True)
-    exonerado = Column(Boolean, default=False)
-
-class Planta(Base):
-    __tablename__ = "plantas"
-    id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String)
-    lat = Column(Float)
-    lng = Column(Float)
-    capacidad_diaria = Column(Integer)
+    cedula_rif = Column(String, unique=True)
+    telefono = Column(String)
     direccion = Column(String)
-
-class Repartidor(Base):
-    __tablename__ = "repartidores"
-    id = Column(Integer, primary_key=True, index=True)
-    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
-    usuario = relationship("Usuario")
-    vehiculo = Column(String)
-    disponible = Column(Boolean, default=True)
-    lat = Column(Float)
-    lng = Column(Float)
-    calificacion = Column(Float, default=5.0)
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
+    tipo = Column(String, default=TipoCliente.NORMAL.value)
+    comunidad_id = Column(Integer, ForeignKey("comunidades.id"))
+    comunidad = relationship("Comunidad", back_populates="clientes")
+    ventas = relationship("Venta", back_populates="cliente")
+    pedidos = relationship("Pedido", back_populates="cliente")
 
 class Cilindro(Base):
     __tablename__ = "cilindros"
     id = Column(Integer, primary_key=True, index=True)
-    codigo_qr = Column(String, unique=True)
-    tamanio = Column(Enum(TamanioCilindro))
-    estado = Column(String)
-    planta_id = Column(Integer, ForeignKey("plantas.id"))
-    planta = relationship("Planta")
-    costo_compra = Column(Numeric(10,2))
-    precio_venta = Column(Numeric(10,2))
+    codigo_qr = Column(String, unique=True, index=True)
+    tamano = Column(String)
+    estado = Column(String, default=EstadoCilindro.DISPONIBLE.value)
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"))
+    costo_compra = Column(Float)
+    precio_venta = Column(Float)
+    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+    proveedor = relationship("Proveedor")
+
+class Carga(Base):
+    __tablename__ = "cargas"
+    id = Column(Integer, primary_key=True, index=True)
+    fecha = Column(DateTime, default=datetime.utcnow)
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"))
+    cantidad_P = Column(Integer, default=0)
+    cantidad_M = Column(Integer, default=0)
+    cantidad_G = Column(Integer, default=0)
+    costo_total = Column(Float)
+    numero_factura = Column(String)
+    gastos_logisticos = Column(Float, default=0.0)
+    proveedor = relationship("Proveedor")
+
+class Venta(Base):
+    __tablename__ = "ventas"
+    id = Column(Integer, primary_key=True, index=True)
+    fecha = Column(DateTime, default=datetime.utcnow)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"))
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"))
+    tamano = Column(String)
+    cantidad = Column(Integer)
+    precio_unitario = Column(Float)
+    exonerado = Column(Boolean, default=False)
+    cliente = relationship("Cliente", back_populates="ventas")
+    proveedor = relationship("Proveedor")
+
+class GastoOperativo(Base):
+    __tablename__ = "gastos_operativos"
+    id = Column(Integer, primary_key=True, index=True)
+    tipo = Column(String)
+    descripcion = Column(String)
+    monto = Column(Float)
+    fecha = Column(DateTime, default=datetime.utcnow)
 
 class Pedido(Base):
     __tablename__ = "pedidos"
     id = Column(Integer, primary_key=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
-    cliente = relationship("Cliente")
-    repartidor_id = Column(Integer, ForeignKey("repartidores.id"), nullable=True)
-    repartidor = relationship("Repartidor")
-    planta_asignada_id = Column(Integer, ForeignKey("plantas.id"))
-    planta = relationship("Planta")
-    direccion_entrega = Column(String)
-    lat_entrega = Column(Float)
-    lng_entrega = Column(Float)
-    estado = Column(Enum(EstadoPedido), default="pendiente")
-    costo_logistico = Column(Numeric(10,2), default=0)
-    costo_administrativo = Column(Numeric(10,2), default=0)
-    monto_total = Column(Numeric(10,2), default=0)
-    fecha_creacion = Column(DateTime, default=datetime.datetime.utcnow)
-    fecha_entrega = Column(DateTime, nullable=True)
-
-class DetallePedido(Base):
-    __tablename__ = "detalles_pedido"
-    id = Column(Integer, primary_key=True, index=True)
-    pedido_id = Column(Integer, ForeignKey("pedidos.id"))
-    pedido = relationship("Pedido")
-    cilindro_id = Column(Integer, ForeignKey("cilindros.id"))
-    cilindro = relationship("Cilindro")
+    fecha = Column(DateTime, default=datetime.utcnow)
+    estado = Column(String, default="pendiente")
+    tamano = Column(String)
     cantidad = Column(Integer)
-    precio_unitario = Column(Numeric(10,2))
+    precio_unitario = Column(Float, default=0.0)
     exonerado = Column(Boolean, default=False)
-
-class CostoOperativo(Base):
-    __tablename__ = "costos_operativos"
-    id = Column(Integer, primary_key=True, index=True)
-    tipo = Column(String)
-    descripcion = Column(String)
-    monto = Column(Numeric(10,2))
-    fecha = Column(DateTime, default=datetime.datetime.utcnow)
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
+    cliente = relationship("Cliente", back_populates="pedidos")
+    proveedor = relationship("Proveedor")
