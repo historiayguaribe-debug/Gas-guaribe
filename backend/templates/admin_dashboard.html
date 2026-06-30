@@ -1,129 +1,50 @@
 {% extends "admin_base.html" %}
-
-{% block dashboard_active %}active{% endblock %}
-{% block page_title %}Resumen del Día{% endblock %}
-{% block breadcrumb %}Inicio / Resumen{% endblock %}
-
+{% block title %}Dashboard{% endblock %}
 {% block content %}
-
-<div class="grid-4" id="statsContainer">
-    <div class="stat-card">
-        <div class="icon"><i class="fas fa-gas-pump"></i></div>
-        <div class="number" id="totalCilindros">0</div>
-        <div class="label">Cilindros Disponibles</div>
-    </div>
-    <div class="stat-card">
-        <div class="icon"><i class="fas fa-truck"></i></div>
-        <div class="number" id="pedidosHoy">0</div>
-        <div class="label">Pedidos Hoy</div>
-    </div>
-    <div class="stat-card">
-        <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
-        <div class="number" id="ingresosHoy">$0</div>
-        <div class="label">Ingresos Hoy</div>
-    </div>
-    <div class="stat-card">
-        <div class="icon"><i class="fas fa-school"></i></div>
-        <div class="number" id="exoneradosHoy">0</div>
-        <div class="label">Cilindros Exonerados</div>
-    </div>
-</div>
-
-<div class="grid-2">
-    <div class="card">
-        <div class="card-title">📊 Ventas por Tamaño</div>
-        <div class="chart-container" style="height:250px;">
-            <canvas id="ventasChart"></canvas>
+<div class="row g-4">
+    <div class="col-6 col-md-3">
+        <div class="card text-bg-primary">
+            <div class="card-body text-center">
+                <h5 class="card-title">Disponibles</h5>
+                <p class="display-6">{{ disponibles }}</p>
+            </div>
         </div>
     </div>
-    <div class="card">
-        <div class="card-title">📈 Utilidad Acumulada</div>
-        <div id="utilidadData">
-            <p>Ingresos: <strong id="ingresoTotal">$0</strong></p>
-            <p>Costo Logístico: <strong id="costoLog">$0</strong></p>
-            <p>Costo Admin: <strong id="costoAdmin">$0</strong></p>
-            <hr>
-            <p style="font-size:1.2rem;">Utilidad Bruta: <strong id="utilidadBruta" style="color:#22c55e;">$0</strong></p>
-            <p style="font-size:1.2rem;">Utilidad Neta: <strong id="utilidadNeta" style="color:#3b82f6;">$0</strong></p>
+    <div class="col-6 col-md-3">
+        <div class="card text-bg-success">
+            <div class="card-body text-center">
+                <h5 class="card-title">Ventas Hoy</h5>
+                <p class="display-6">{{ ventas_hoy }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-bg-warning">
+            <div class="card-body text-center">
+                <h5 class="card-title">Ingresos Hoy</h5>
+                <p class="display-6">${{ "%.2f"|format(ingresos_hoy) }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-bg-danger">
+            <div class="card-body text-center">
+                <h5 class="card-title">Exonerados Hoy</h5>
+                <p class="display-6">{{ exonerados_hoy }}</p>
+            </div>
         </div>
     </div>
 </div>
-
-<div class="card">
-    <div class="card-title">📋 Pedidos Recientes</div>
-    <div class="table-container">
-        <table>
-            <thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead>
-            <tbody id="recentOrders">
-                <tr><td colspan="5" style="text-align:center; color:#94a3b8;">Cargando...</td></tr>
-            </tbody>
-        </table>
+<div class="row mt-4">
+    <div class="col-md-6">
+        <canvas id="ventasPorTamano" height="200"></canvas>
+    </div>
+    <div class="col-md-6">
+        <canvas id="ventasPorCircuito" height="200"></canvas>
     </div>
 </div>
-
 <script>
-    const token = localStorage.getItem('access_token');
-
-    async function cargarDashboard() {
-        try {
-            const response = await fetch('/admin/estadisticas', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (!response.ok) throw new Error('Error al cargar datos');
-            const data = await response.json();
-
-            document.getElementById('totalCilindros').textContent = data.total_cilindros || 0;
-            document.getElementById('pedidosHoy').textContent = data.pedidos_hoy || 0;
-            document.getElementById('ingresosHoy').textContent = '$' + (data.ingresos_hoy || 0);
-            document.getElementById('exoneradosHoy').textContent = data.exonerados_hoy || 0;
-
-            const u = data.utilidad || {};
-            document.getElementById('ingresoTotal').textContent = '$' + u.ingreso_total;
-            document.getElementById('costoLog').textContent = '$' + u.costo_logistico;
-            document.getElementById('costoAdmin').textContent = '$' + u.costo_administrativo;
-            document.getElementById('utilidadBruta').textContent = '$' + u.utilidad_bruta;
-            document.getElementById('utilidadNeta').textContent = '$' + u.utilidad_neta;
-
-            const ctx = document.getElementById('ventasChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Pequeños (5kg)', 'Medianos (15kg)', 'Grandes (45kg)'],
-                    datasets: [{
-                        data: [data.ventas_por_tamano.P || 0, data.ventas_por_tamano.M || 0, data.ventas_por_tamano.G || 0],
-                        backgroundColor: ['#fbbf24', '#3b82f6', '#22c55e'],
-                        borderWidth: 0
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-            });
-
-            const tbody = document.getElementById('recentOrders');
-            if (data.pedidos_recientes && data.pedidos_recientes.length > 0) {
-                tbody.innerHTML = data.pedidos_recientes.map(p => {
-                    const estadoClass = {
-                        'entregado': 'badge-success',
-                        'en_ruta': 'badge-warning',
-                        'pendiente': 'badge-info',
-                        'cancelado': 'badge-danger'
-                    }[p.estado] || 'badge-info';
-                    return `<tr>
-                        <td>#${p.id}</td>
-                        <td>${p.cliente}</td>
-                        <td>$${p.total}</td>
-                        <td><span class="badge ${estadoClass}">${p.estado}</span></td>
-                        <td>${p.fecha}</td>
-                    </tr>`;
-                }).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No hay pedidos recientes</td></tr>';
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            document.querySelector('.grid-4').innerHTML = '<div class="card" style="grid-column:1/-1; text-align:center; color:#ef4444;">Error al cargar datos. Verifica tu conexión.</div>';
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', cargarDashboard);
+    // Ejemplo de gráficos - puedes llenarlos con datos desde el backend
+    // Se pueden añadir llamadas fetch a /reportes/datos_graficos
 </script>
 {% endblock %}
