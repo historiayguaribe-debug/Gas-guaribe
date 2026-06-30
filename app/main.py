@@ -10,17 +10,15 @@ from .cargar_datos import cargar_datos_iniciales
 from .config import SECRET_KEY
 import os
 from datetime import timedelta
-from . import (admin_routes, cargas_routes, ventas_routes, clientes_routes,
-               circuitos_routes, pedidos_routes, reportes_routes, asistente_routes)
+from . import admin_routes, cargas_routes, ventas_routes, clientes_routes, circuitos_routes, pedidos_routes, reportes_routes, asistente_routes
 from .templates import templates
+from datetime import datetime
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GAS GUARIBE")
-
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Incluir routers
 app.include_router(admin_routes.router, prefix="/admin", tags=["admin"])
 app.include_router(cargas_routes.router, prefix="/cargas", tags=["cargas"])
 app.include_router(ventas_routes.router, prefix="/ventas", tags=["ventas"])
@@ -65,7 +63,6 @@ async def dashboard(request: Request, db: Session = Depends(get_db), token: str 
     user = await get_current_user(token)
     if user.role == "cliente":
         return RedirectResponse(url="/pedidos/cliente/dashboard")
-    # Para admin, operativo, auditor
     from .models import Cilindro, Venta
     disponibles = db.query(Cilindro).filter(Cilindro.estado == "disponible").count()
     ventas_hoy = db.query(Venta).filter(Venta.fecha >= datetime.utcnow().date()).all()
