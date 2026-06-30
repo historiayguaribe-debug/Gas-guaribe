@@ -1,6 +1,8 @@
 import os
+from dotenv import load_dotenv
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "mi_clave_super_secreta_para_guaribe_2026")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./gasguaribe.db")
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key_change_in_production")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gas_guaribe.db")
