@@ -1,7 +1,7 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from .database import engine, Base
 from .auth import router as auth_router
 from .pedidos import router as pedidos_router
@@ -51,6 +51,17 @@ app.include_router(pedidos_router)
 app.include_router(reportes_router)
 app.include_router(admin_router)
 
+# --- MANEJADOR DE ERROR 401 (No autenticado) - REDIRIGE AL LOGIN ---
+@app.exception_handler(HTTPException)
+async def auth_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+        # Si la petición espera HTML (navegador), redirige al login
+        if "text/html" in request.headers.get("accept", ""):
+            return RedirectResponse(url="/login")
+        # Si es API, devuelve el error normal
+        return exc
+    return exc
+
 # --- WEB SOCKET PARA SEGUIMIENTO EN VIVO ---
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
@@ -71,7 +82,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# --- PÁGINA DE LOGIN (NUEVA) ---
+# --- PÁGINA DE LOGIN ---
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
