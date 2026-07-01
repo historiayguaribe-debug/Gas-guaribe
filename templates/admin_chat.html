@@ -8,7 +8,8 @@
     </div>
     <div class="card-footer">
         <form id="chat-form" class="d-flex gap-2">
-            <input type="text" id="pregunta" class="form-control" placeholder="Escribe tu pregunta..." required>
+            <!-- ⚠️ IMPORTANTE: Añadir name="pregunta" y mantener id -->
+            <input type="text" id="pregunta" name="pregunta" class="form-control" placeholder="Escribe tu pregunta..." required>
             <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
         </form>
     </div>
@@ -24,13 +25,22 @@
         if (!pregunta) return;
         addMessage('Tú', pregunta);
         input.value = '';
-        const resp = await fetch('/asistente/consultar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ pregunta })
-        });
-        const data = await resp.json();
-        addMessage('Asistente', data.respuesta);
+        try {
+            const resp = await fetch('/asistente/consultar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ pregunta: pregunta })
+            });
+            if (!resp.ok) {
+                const errorText = await resp.text();
+                addMessage('Asistente', '❌ Error: ' + errorText);
+                return;
+            }
+            const data = await resp.json();
+            addMessage('Asistente', data.respuesta || 'No se recibió respuesta.');
+        } catch (error) {
+            addMessage('Asistente', '❌ Error de conexión: ' + error.message);
+        }
     });
 
     function addMessage(autor, texto) {
