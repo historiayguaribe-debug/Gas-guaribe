@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from .config import settings
 
-# Verificar que settings.DATABASE_URL no esté vacío (por si acaso)
+# Verificar que settings.DATABASE_URL no esté vacío
 db_url = settings.DATABASE_URL if settings.DATABASE_URL else "sqlite:///./gas_guaribe.db"
 
 engine = create_engine(
@@ -14,6 +14,9 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+# ⚠️ IMPORTANTE: Importar TODOS los modelos para que SQLAlchemy los registre
+from .models import Usuario, Proveedor, Circuito, Comunidad, Cliente, Cilindro, Carga, Venta, GastoOperativo, Pedido
 
 def get_db():
     db = SessionLocal()
