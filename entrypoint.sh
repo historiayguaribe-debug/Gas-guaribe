@@ -20,7 +20,6 @@ fi
 echo "Creando tablas en la base de datos..."
 python -c "
 from app.database import engine, Base
-# Importar explícitamente los modelos para registrarlos
 from app.models import Usuario, Proveedor, Circuito, Comunidad, Cliente, Cilindro, Carga, Venta, GastoOperativo, Pedido
 Base.metadata.create_all(bind=engine)
 print('✅ Tablas creadas/verificadas.')
