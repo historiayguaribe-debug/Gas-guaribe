@@ -17,17 +17,9 @@ if [ "$RESET_DB_ON_STARTUP" = "true" ]; then
     echo "✅ Base de datos eliminada."
 fi
 
-echo "Creando tablas en la base de datos..."
-python -c "
-from app.database import engine, Base
-from app.models import Usuario, Proveedor, Circuito, Comunidad, Cliente, Cilindro, Carga, Venta, GastoOperativo, Pedido
-Base.metadata.create_all(bind=engine)
-print('✅ Tablas creadas/verificadas.')
-"
-
-echo "Cargando datos iniciales..."
-python -c "from app.database import SessionLocal; from app.cargar_datos import cargar_datos_iniciales; db=SessionLocal(); cargar_datos_iniciales(db); db.close()"
-echo "✅ Datos iniciales cargados."
+# Ejecutar el script de inicialización de la base de datos
+echo "Inicializando base de datos..."
+python scripts/init_db.py
 
 echo "🚀 Iniciando Uvicorn en el puerto $PORT..."
 exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}
