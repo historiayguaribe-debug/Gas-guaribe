@@ -4,7 +4,6 @@ set -e
 echo "=== Iniciando contenedor GAS GUARIBE ==="
 echo "DATABASE_URL (entorno) = ${DATABASE_URL:-no definida}"
 
-# Verificar si está vacía y forzar un valor por defecto si es necesario
 if [ -z "$DATABASE_URL" ] || [ "$DATABASE_URL" = "''" ]; then
     echo "⚠️  DATABASE_URL está vacía. Usando valor por defecto."
     export DATABASE_URL="sqlite:///./gas_guaribe.db"
@@ -19,8 +18,13 @@ if [ "$RESET_DB_ON_STARTUP" = "true" ]; then
 fi
 
 echo "Creando tablas en la base de datos..."
-python -c "from app.database import engine, Base; Base.metadata.create_all(bind=engine)"
-echo "✅ Tablas creadas/verificadas."
+python -c "
+from app.database import engine, Base
+# Importar explícitamente los modelos para registrarlos
+from app.models import Usuario, Proveedor, Circuito, Comunidad, Cliente, Cilindro, Carga, Venta, GastoOperativo, Pedido
+Base.metadata.create_all(bind=engine)
+print('✅ Tablas creadas/verificadas.')
+"
 
 echo "Cargando datos iniciales..."
 python -c "from app.database import SessionLocal; from app.cargar_datos import cargar_datos_iniciales; db=SessionLocal(); cargar_datos_iniciales(db); db.close()"
