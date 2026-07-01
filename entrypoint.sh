@@ -2,6 +2,15 @@
 set -e
 
 echo "=== Iniciando contenedor GAS GUARIBE ==="
+echo "DATABASE_URL (entorno) = ${DATABASE_URL:-no definida}"
+
+# Verificar si está vacía y forzar un valor por defecto si es necesario
+if [ -z "$DATABASE_URL" ] || [ "$DATABASE_URL" = "''" ]; then
+    echo "⚠️  DATABASE_URL está vacía. Usando valor por defecto."
+    export DATABASE_URL="sqlite:///./gas_guaribe.db"
+fi
+
+echo "DATABASE_URL (final) = $DATABASE_URL"
 
 if [ "$RESET_DB_ON_STARTUP" = "true" ]; then
     echo "⚠️  RESET_DB_ON_STARTUP activado. Eliminando archivo de base de datos..."
