@@ -1,1 +1,1 @@
-# Archivo de inicialización
+# Paquete app
