@@ -18,13 +18,13 @@ def cargar_datos_iniciales(db: Session):
         return
 
     # ---------- USUARIOS ----------
-    # Ya NO creamos el usuario "admin" clásico. En su lugar, creamos un usuario administrador con nombre único.
     usuarios = [
+        # NUEVO USUARIO ADMINISTRADOR (ya no se llama "admin")
         Usuario(
-            username="superadmin",  # Usuario administrador principal
-            hashed_password=get_password_hash("Gas2026!Super"),
+            username="gas.guaribe",
+            hashed_password=get_password_hash("G4s_Gu4r1b3#2026"),
             role="admin",
-            nombre_completo="Super Administrador"
+            nombre_completo="Administrador Principal"
         ),
         Usuario(
             username="oper1",
