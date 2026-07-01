@@ -1,24 +1,20 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Form
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from .database import engine, SessionLocal
-from .models import Base
-from .auth import authenticate_user, create_access_token, get_current_user, get_db, oauth2_scheme
+from .models import Base, Usuario
 from .cargar_datos import cargar_datos_iniciales
-from .config import SECRET_KEY
-import os
-from datetime import timedelta
-from . import admin_routes, cargas_routes, ventas_routes, clientes_routes, circuitos_routes, pedidos_routes, reportes_routes, asistente_routes
 from .templates import templates
 from datetime import datetime
+from . import admin_routes, cargas_routes, ventas_routes, clientes_routes, circuitos_routes, pedidos_routes, reportes_routes, asistente_routes
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="GAS GUARIBE")
+app = FastAPI(title="GAS GUARIBE - Acceso Directo")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Incluir routers
 app.include_router(admin_routes.router, prefix="/admin", tags=["admin"])
 app.include_router(cargas_routes.router, prefix="/cargas", tags=["cargas"])
 app.include_router(ventas_routes.router, prefix="/ventas", tags=["ventas"])
@@ -34,35 +30,26 @@ def startup():
     cargar_datos_iniciales(db)
     db.close()
 
+# Redirige la raíz directamente al dashboard
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    return RedirectResponse(url="/login")
+    return RedirectResponse(url="/dashboard")
 
+# El login ahora solo redirige al dashboard sin pedir credenciales
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return RedirectResponse(url="/dashboard")
 
-@app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario o contraseña incorrectos",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=60*24)
-    access_token = create_access_token(
-        data={"sub": user.username, "role": user.role},
-        expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
-
+# Dashboard con acceso directo (sin autenticación)
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    user = await get_current_user(token)
-    if user.role == "cliente":
-        return RedirectResponse(url="/pedidos/cliente/dashboard")
+async def dashboard(request: Request, db: Session = Depends(SessionLocal)):
+    # Crear un usuario fijo en memoria para mostrar en el menú
+    user = Usuario(
+        username="gas.guaribe",
+        role="admin",
+        nombre_completo="Administrador (Acceso Directo)"
+    )
+    # Estadísticas
     from .models import Cilindro, Venta
     disponibles = db.query(Cilindro).filter(Cilindro.estado == "disponible").count()
     ventas_hoy = db.query(Venta).filter(Venta.fecha >= datetime.utcnow().date()).all()
@@ -77,6 +64,7 @@ async def dashboard(request: Request, db: Session = Depends(get_db), token: str 
         "exonerados_hoy": exonerados_hoy
     })
 
+# Cerrar sesión simplemente redirige al dashboard
 @app.get("/logout")
 async def logout():
-    return RedirectResponse(url="/login")
+    return RedirectResponse(url="/dashboard")
