@@ -17,7 +17,6 @@ if [ "$RESET_DB_ON_STARTUP" = "true" ]; then
     echo "✅ Base de datos eliminada."
 fi
 
-# Ejecutar el script de inicialización de la base de datos
 echo "Inicializando base de datos..."
 python scripts/init_db.py
 
