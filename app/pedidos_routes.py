@@ -1,23 +1,33 @@
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from .database import SessionLocal
-from .models import Pedido, Cliente, Proveedor
-from .auth import get_current_user, get_db, oauth2_scheme, verificar_rol
-from .templates import templates
+from ..database import get_db
+from ..models import Pedido, Cliente, Proveedor
+from ..auth import get_current_user, verificar_rol, oauth2_scheme
+from ..templates import templates
 from datetime import datetime
 
 router = APIRouter()
 
-# ---- Administración ----
+# ---- Rutas para administradores y operativos ----
 @router.get("/", response_class=HTMLResponse)
-async def listar_pedidos(request: Request, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+async def listar_pedidos(
+    request: Request,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
     user = await get_current_user(token)
     verificar_rol(user, ["admin", "operativo", "auditor"])
     pedidos = db.query(Pedido).order_by(Pedido.fecha.desc()).all()
     clientes = db.query(Cliente).all()
     proveedores = db.query(Proveedor).all()
-    return templates.TemplateResponse("admin_pedidos.html", {"request": request, "user": user, "pedidos": pedidos, "clientes": clientes, "proveedores": proveedores})
+    return templates.TemplateResponse("admin_pedidos.html", {
+        "request": request,
+        "user": user,
+        "pedidos": pedidos,
+        "clientes": clientes,
+        "proveedores": proveedores
+    })
 
 @router.post("/crear")
 async def crear_pedido_admin(
@@ -33,11 +43,14 @@ async def crear_pedido_admin(
 ):
     user = await get_current_user(token)
     verificar_rol(user, ["admin", "operativo"])
+
     if cantidad <= 0:
         raise HTTPException(status_code=400, detail="La cantidad debe ser mayor a cero")
+
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     pedido = Pedido(
         cliente_id=cliente_id,
         tamano=tamano,
@@ -60,6 +73,7 @@ async def actualizar_estado(
 ):
     user = await get_current_user(token)
     verificar_rol(user, ["admin", "operativo"])
+
     pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
@@ -67,16 +81,27 @@ async def actualizar_estado(
     db.commit()
     return RedirectResponse(url="/pedidos/", status_code=303)
 
-# ---- Cliente ----
+# ---- Rutas para clientes ----
 @router.get("/cliente/dashboard", response_class=HTMLResponse)
-async def cliente_dashboard(request: Request, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+async def cliente_dashboard(
+    request: Request,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
     user = await get_current_user(token)
     verificar_rol(user, ["cliente"])
+
     cliente = db.query(Cliente).filter(Cliente.cedula_rif == user.username).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Perfil de cliente no configurado")
+
     pedidos = db.query(Pedido).filter(Pedido.cliente_id == cliente.id).order_by(Pedido.fecha.desc()).all()
-    return templates.TemplateResponse("cliente_dashboard.html", {"request": request, "user": user, "cliente": cliente, "pedidos": pedidos})
+    return templates.TemplateResponse("cliente_dashboard.html", {
+        "request": request,
+        "user": user,
+        "cliente": cliente,
+        "pedidos": pedidos
+    })
 
 @router.post("/cliente/crear_pedido")
 async def cliente_crear_pedido(
@@ -88,11 +113,14 @@ async def cliente_crear_pedido(
 ):
     user = await get_current_user(token)
     verificar_rol(user, ["cliente"])
+
     if cantidad <= 0:
         raise HTTPException(status_code=400, detail="La cantidad debe ser mayor a cero")
+
     cliente = db.query(Cliente).filter(Cliente.cedula_rif == user.username).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     pedido = Pedido(
         cliente_id=cliente.id,
         tamano=tamano,
