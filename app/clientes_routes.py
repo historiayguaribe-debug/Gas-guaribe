@@ -1,20 +1,29 @@
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from .database import SessionLocal
-from .models import Cliente, Comunidad
-from .auth import get_current_user, get_db, oauth2_scheme, verificar_rol
-from .templates import templates
+from ..database import get_db
+from ..models import Cliente, Comunidad
+from ..auth import get_current_user, verificar_rol, oauth2_scheme
+from ..templates import templates
 
 router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse)
-async def listar_clientes(request: Request, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+async def listar_clientes(
+    request: Request,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
     user = await get_current_user(token)
     verificar_rol(user, ["admin", "operativo", "auditor"])
     clientes = db.query(Cliente).all()
     comunidades = db.query(Comunidad).all()
-    return templates.TemplateResponse("admin_clientes.html", {"request": request, "user": user, "clientes": clientes, "comunidades": comunidades})
+    return templates.TemplateResponse("admin_clientes.html", {
+        "request": request,
+        "user": user,
+        "clientes": clientes,
+        "comunidades": comunidades
+    })
 
 @router.post("/crear")
 async def crear_cliente(
@@ -30,6 +39,7 @@ async def crear_cliente(
 ):
     user = await get_current_user(token)
     verificar_rol(user, ["admin", "operativo"])
+
     cliente = Cliente(
         nombre=nombre,
         cedula_rif=cedula_rif,
