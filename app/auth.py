@@ -72,5 +72,4 @@ def verificar_rol(user, roles_permitidos: list):
     if user.role not in roles_permitidos:
         raise HTTPException(status_code=403, detail="No autorizado")
 
-# ---------- ESTA ES LA LÍNEA QUE FALTA ----------
 from .database import get_db
