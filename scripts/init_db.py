@@ -1,7 +1,6 @@
 import sys
 import os
 
-# Agregar el directorio raíz al path para poder importar app
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import engine, Base
