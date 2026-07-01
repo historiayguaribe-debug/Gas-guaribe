@@ -1,3 +1,4 @@
+# Forzando recarga de base de datos - nuevo usuario gas.guaribe (2026-06-30)
 from sqlalchemy.orm import Session
 from .models import (
     Usuario, Proveedor, Circuito, Comunidad, Cliente, Cilindro,
