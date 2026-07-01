@@ -18,7 +18,6 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="GAS GUARIBE")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Incluir routers
 app.include_router(admin_routes.router, prefix="/admin", tags=["admin"])
 app.include_router(cargas_routes.router, prefix="/cargas", tags=["cargas"])
 app.include_router(ventas_routes.router, prefix="/ventas", tags=["ventas"])
