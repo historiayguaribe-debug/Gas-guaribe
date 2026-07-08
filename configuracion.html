@@ -5,116 +5,165 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Configuración - GAS GUARIBE</title>
     <link rel="stylesheet" href="style.css">
+    <script src="app.js"></script>
 </head>
 <body>
-    <div id="app">
+    <div class="container">
         <header>
             <h1>⚙️ Configuración</h1>
-            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+            <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <main>
-            <form id="formConfig">
-                <h3>Precios de venta</h3>
-                <div class="form-group">
-                    <label for="confPrecioPeq">Pequeño ($)</label>
-                    <input type="number" id="confPrecioPeq" step="0.01" value="3.50">
-                </div>
-                <div class="form-group">
-                    <label for="confPrecioMed">Mediano ($)</label>
-                    <input type="number" id="confPrecioMed" step="0.01" value="5.00">
-                </div>
-                <div class="form-group">
-                    <label for="confPrecioGran">Grande ($)</label>
-                    <input type="number" id="confPrecioGran" step="0.01" value="7.50">
-                </div>
+        <h3>Precios de venta generales</h3>
+        <div class="form-group">
+            <label>Pequeño ($)</label>
+            <input type="number" id="precio_pequeno" step="0.01">
+        </div>
+        <div class="form-group">
+            <label>Mediano ($)</label>
+            <input type="number" id="precio_mediano" step="0.01">
+        </div>
+        <div class="form-group">
+            <label>Grande ($)</label>
+            <input type="number" id="precio_grande" step="0.01">
+        </div>
 
-                <h3>Costo de llenado en planta</h3>
-                <div class="form-group">
-                    <label for="confCostoPeq">Pequeño ($)</label>
-                    <input type="number" id="confCostoPeq" step="0.01" value="2.00">
-                </div>
-                <div class="form-group">
-                    <label for="confCostoMed">Mediano ($)</label>
-                    <input type="number" id="confCostoMed" step="0.01" value="3.00">
-                </div>
-                <div class="form-group">
-                    <label for="confCostoGran">Grande ($)</label>
-                    <input type="number" id="confCostoGran" step="0.01" value="4.50">
-                </div>
+        <h3>Plantas de llenado</h3>
+        <div id="listaPlantas"></div>
+        <button class="btn-secondary" onclick="agregarPlanta()">➕ Agregar planta</button>
 
-                <h3>Gastos fijos estimados por viaje</h3>
-                <div class="form-group">
-                    <label for="confCombustible">Combustible ($)</label>
-                    <input type="number" id="confCombustible" step="0.01" value="50">
-                </div>
-                <div class="form-group">
-                    <label for="confPeaje">Peaje ($)</label>
-                    <input type="number" id="confPeaje" step="0.01" value="10">
-                </div>
-                <div class="form-group">
-                    <label for="confViaticos">Viáticos ($)</label>
-                    <input type="number" id="confViaticos" step="0.01" value="30">
-                </div>
-
-                <button type="submit" class="btn-guardar">💾 Guardar configuración</button>
-            </form>
-
-            <div id="mensaje" style="margin-top:16px;"></div>
-            <a href="index.html" class="btn-volver">← Volver al inicio</a>
-        </main>
+        <button class="btn-primary" onclick="guardarConfiguracion()">Guardar configuración</button>
+        <div id="mensaje" style="margin-top:16px; padding:12px; border-radius:8px; display:none;"></div>
     </div>
 
-    <script src="app.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            cargarConfiguracion();
-
-            document.getElementById('formConfig').addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                const config = {
-                    preciosVenta: {
-                        pequeño: parseFloat(document.getElementById('confPrecioPeq').value) || 0,
-                        mediano: parseFloat(document.getElementById('confPrecioMed').value) || 0,
-                        grande: parseFloat(document.getElementById('confPrecioGran').value) || 0
-                    },
-                    costosPlanta: {
-                        pequeño: parseFloat(document.getElementById('confCostoPeq').value) || 0,
-                        mediano: parseFloat(document.getElementById('confCostoMed').value) || 0,
-                        grande: parseFloat(document.getElementById('confCostoGran').value) || 0
-                    },
-                    gastosFijos: {
-                        combustible: parseFloat(document.getElementById('confCombustible').value) || 0,
-                        peaje: parseFloat(document.getElementById('confPeaje').value) || 0,
-                        viaticos: parseFloat(document.getElementById('confViaticos').value) || 0
-                    }
-                };
-
-                guardarDatos('config', config);
-                mostrarMensaje('✅ Configuración guardada', 'exito');
-            });
-        });
+        let plantasEditando = [];
 
         function cargarConfiguracion() {
-            const config = obtenerOCrear('config', CONFIG);
-            document.getElementById('confPrecioPeq').value = config.preciosVenta?.pequeño || 3.50;
-            document.getElementById('confPrecioMed').value = config.preciosVenta?.mediano || 5.00;
-            document.getElementById('confPrecioGran').value = config.preciosVenta?.grande || 7.50;
-            document.getElementById('confCostoPeq').value = config.costosPlanta?.pequeño || 2.00;
-            document.getElementById('confCostoMed').value = config.costosPlanta?.mediano || 3.00;
-            document.getElementById('confCostoGran').value = config.costosPlanta?.grande || 4.50;
-            document.getElementById('confCombustible').value = config.gastosFijos?.combustible || 50;
-            document.getElementById('confPeaje').value = config.gastosFijos?.peaje || 10;
-            document.getElementById('confViaticos').value = config.gastosFijos?.viaticos || 30;
+            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos') || '{"config":{}}');
+            const config = datos.config || {};
+            document.getElementById('precio_pequeno').value = config.precios_venta?.pequeno || 3.50;
+            document.getElementById('precio_mediano').value = config.precios_venta?.mediano || 5.00;
+            document.getElementById('precio_grande').value = config.precios_venta?.grande || 7.50;
+            plantasEditando = config.plantas || PLANTAS_PREDEFINIDAS;
+            renderPlantas();
+        }
+
+        function renderPlantas() {
+            const container = document.getElementById('listaPlantas');
+            container.innerHTML = '';
+            plantasEditando.forEach((p, idx) => {
+                const div = document.createElement('div');
+                div.style.cssText = 'background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px;';
+                div.innerHTML = `
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:100px;">
+                            <label style="font-size:12px;">Nombre</label>
+                            <input type="text" value="${p.nombre}" id="planta_nombre_${idx}" style="padding:8px;">
+                        </div>
+                        <div style="flex:1; min-width:60px;">
+                            <label style="font-size:12px;">Costo P</label>
+                            <input type="number" step="0.01" value="${p.costos.pequeno}" id="planta_costo_p_${idx}" style="padding:8px;">
+                        </div>
+                        <div style="flex:1; min-width:60px;">
+                            <label style="font-size:12px;">Costo M</label>
+                            <input type="number" step="0.01" value="${p.costos.mediano}" id="planta_costo_m_${idx}" style="padding:8px;">
+                        </div>
+                        <div style="flex:1; min-width:60px;">
+                            <label style="font-size:12px;">Costo G</label>
+                            <input type="number" step="0.01" value="${p.costos.grande}" id="planta_costo_g_${idx}" style="padding:8px;">
+                        </div>
+                        <div style="flex:0 0 auto; display:flex; align-items:flex-end;">
+                            <button class="btn-secondary" style="padding:6px 12px; margin:0;" onclick="eliminarPlanta(${idx})">✕</button>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:4px;">
+                        <div style="flex:1;">
+                            <label style="font-size:12px;">Combustible</label>
+                            <input type="number" step="0.01" value="${p.gastos.combustible}" id="planta_gasto_comb_${idx}" style="padding:8px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:12px;">Peaje</label>
+                            <input type="number" step="0.01" value="${p.gastos.peaje}" id="planta_gasto_peaje_${idx}" style="padding:8px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:12px;">Viáticos</label>
+                            <input type="number" step="0.01" value="${p.gastos.viaticos}" id="planta_gasto_via_${idx}" style="padding:8px;">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function agregarPlanta() {
+            const nueva = {
+                id: 'planta_' + Date.now(),
+                nombre: 'Nueva planta',
+                costos: { pequeno: 2.00, mediano: 3.00, grande: 4.50 },
+                gastos: { combustible: 50, peaje: 10, viaticos: 30 }
+            };
+            plantasEditando.push(nueva);
+            renderPlantas();
+            // Scroll al final
+            setTimeout(() => {
+                const container = document.getElementById('listaPlantas');
+                container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+        }
+
+        function eliminarPlanta(idx) {
+            if (confirm('¿Eliminar esta planta?')) {
+                plantasEditando.splice(idx, 1);
+                renderPlantas();
+            }
+        }
+
+        function guardarConfiguracion() {
+            // Guardar precios
+            const precios = {
+                pequeno: parseFloat(document.getElementById('precio_pequeno').value) || 3.50,
+                mediano: parseFloat(document.getElementById('precio_mediano').value) || 5.00,
+                grande: parseFloat(document.getElementById('precio_grande').value) || 7.50
+            };
+
+            // Guardar plantas
+            const plantas = [];
+            plantasEditando.forEach((p, idx) => {
+                plantas.push({
+                    id: p.id || 'planta_' + Date.now() + '_' + idx,
+                    nombre: document.getElementById('planta_nombre_' + idx)?.value || p.nombre,
+                    costos: {
+                        pequeno: parseFloat(document.getElementById('planta_costo_p_' + idx)?.value) || p.costos.pequeno,
+                        mediano: parseFloat(document.getElementById('planta_costo_m_' + idx)?.value) || p.costos.mediano,
+                        grande: parseFloat(document.getElementById('planta_costo_g_' + idx)?.value) || p.costos.grande
+                    },
+                    gastos: {
+                        combustible: parseFloat(document.getElementById('planta_gasto_comb_' + idx)?.value) || p.gastos.combustible,
+                        peaje: parseFloat(document.getElementById('planta_gasto_peaje_' + idx)?.value) || p.gastos.peaje,
+                        viaticos: parseFloat(document.getElementById('planta_gasto_via_' + idx)?.value) || p.gastos.viaticos
+                    }
+                });
+            });
+
+            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos') || '{"config":{}}');
+            datos.config.precios_venta = precios;
+            datos.config.plantas = plantas;
+            localStorage.setItem('gasguaribe_datos', JSON.stringify(datos));
+
+            mostrarMensaje('✅ Configuración guardada', 'exito');
         }
 
         function mostrarMensaje(texto, tipo) {
-            const div = document.getElementById('mensaje');
-            div.textContent = texto;
-            div.className = 'mensaje ' + (tipo === 'exito' ? 'mensaje-exito' : 'mensaje-error');
-            setTimeout(() => { div.textContent = ''; div.className = ''; }, 5000);
+            const msg = document.getElementById('mensaje');
+            msg.textContent = texto;
+            msg.style.display = 'block';
+            msg.style.backgroundColor = tipo === 'exito' ? '#d4edda' : '#f8d7da';
+            msg.style.color = tipo === 'exito' ? '#155724' : '#721c24';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
         }
+
+        document.addEventListener('DOMContentLoaded', cargarConfiguracion);
     </script>
 </body>
 </html>
