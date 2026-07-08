@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Reportes - GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>📊 Reportes</h1>
+            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+        </header>
+
+        <main>
+            <div class="form-group">
+                <label for="tipoReporte">Tipo de reporte</label>
+                <select id="tipoReporte">
+                    <option value="carga">Por carga</option>
+                    <option value="mensual">Resumen mensual</option>
+                    <option value="inventario">Inventario completo</option>
+                    <option value="exonerados">Exonerados</option>
+                </select>
+            </div>
+
+            <button id="btnGenerar" class="btn-guardar">📄 Generar reporte</button>
+
+            <div id="reporteContainer" style="margin-top:20px; background:white; padding:16px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+                <p>Selecciona un tipo de reporte y haz clic en "Generar reporte".</p>
+            </div>
+
+            <a href="index.html" class="btn-volver">← Volver al inicio</a>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.getElementById('btnGenerar').addEventListener('click', function() {
+            const tipo = document.getElementById('tipoReporte').value;
+            const container = document.getElementById('reporteContainer');
+
+            switch(tipo) {
+                case 'carga':
+                    generarReporteCarga(container);
+                    break;
+                case 'mensual':
+                    generarReporteMensual(container);
+                    break;
+                case 'inventario':
+                    generarReporteInventario(container);
+                    break;
+                case 'exonerados':
+                    generarReporteExonerados(container);
+                    break;
+                default:
+                    container.innerHTML = '<p>Selecciona un tipo de reporte válido.</p>';
+            }
+        });
+
+        function generarReporteCarga(container) {
+            const recogidas = obtenerRecogidas();
+            if (recogidas.length === 0) {
+                container.innerHTML = '<p>No hay cargas registradas.</p>';
+                return;
+            }
+            let html = '<h3>📋 Reporte por carga</h3>';
+            recogidas.forEach(r => {
+                const entrega = obtenerEntregas().find(e => e.recogidaId === r.id);
+                html += `<div style="border-bottom:1px solid #ddd; padding:8px 0;">`;
+                html += `<p><strong>${r.comunidad}</strong> - ${r.fecha.split('T')[0]}</p>`;
+                html += `<p>Recogidos: P:${r.pequeños} M:${r.medianos} G:${r.grandes}</p>`;
+                if (entrega) {
+                    html += `<p>Entregados: P:${entrega.entregados.pequeño} M:${entrega.entregados.mediano} G:${entrega.entregados.grande}</p>`;
+                    html += `<p>Ganancia: $${entrega.ganancia.toFixed(2)}</p>`;
+                } else {
+                    html += `<p><em>Sin entrega registrada</em></p>`;
+                }
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function generarReporteMensual(container) {
+            const hoy = new Date();
+            const mes = hoy.getMonth();
+            const año = hoy.getFullYear();
+            const resumen = generarResumenMensual(mes, año);
+
+            let html = `<h3>📊 Resumen mensual - ${hoy.toLocaleString('es', {month:'long', year:'numeric'})}</h3>`;
+            html += `<p><strong>Ingresos totales:</strong> $${resumen.totalIngresos.toFixed(2)}</p>`;
+            html += `<p><strong>Costo planta:</strong> $${resumen.totalCostosPlanta.toFixed(2)}</p>`;
+            html += `<p><strong>Gastos operativos:</strong> $${resumen.totalGastosOperativos.toFixed(2)}</p>`;
+            html += `<p><strong>Gastos generales:</strong> $${resumen.totalGastosGenerales.toFixed(2)}</p>`;
+            html += `<p><strong>Ganancia neta:</strong> $${resumen.totalGanancia.toFixed(2)}</p>`;
+            html += `<hr>`;
+            html += `<p><em>Total de entregas: ${resumen.entregas.length}</em></p>`;
+            container.innerHTML = html;
+        }
+
+        function generarReporteInventario(container) {
+            const inv = calcularInventario();
+            let html = '<h3>📦 Inventario completo</h3>';
+            html += `<p><strong>Vacios en resguardo:</strong> ${inv.totalVacios}</p>`;
+            html += `<ul><li>Pequeños: ${inv.vaciosResguardo.pequeño}</li><li>Medianos: ${inv.vaciosResguardo.mediano}</li><li>Grandes: ${inv.vaciosResguardo.grande}</li></ul>`;
+            html += `<p><strong>Llenos en almacén:</strong> ${inv.totalLlenos}</p>`;
+            html += `<ul><li>Pequeños: ${inv.llenosAlmacen.pequeño}</li><li>Medianos: ${inv.llenosAlmacen.mediano}</li><li>Grandes: ${inv.llenosAlmacen.grande}</li></ul>`;
+            container.innerHTML = html;
+        }
+
+        function generarReporteExonerados(container) {
+            const entregas = obtenerEntregas();
+            const exonerados = entregas.filter(e => e.exonerados && e.exonerados.cantidad > 0);
+            if (exonerados.length === 0) {
+                container.innerHTML = '<p>No hay registros de exonerados.</p>';
+                return;
+            }
+            let html = '<h3>📋 Exonerados</h3>';
+            exonerados.forEach(e => {
+                html += `<div style="border-bottom:1px solid #ddd; padding:4px 0;">`;
+                html += `<p><strong>${e.comunidad}</strong> - ${e.fecha.split('T')[0]}</p>`;
+                html += `<p>Institución: ${e.exonerados.institucion || 'No especificada'}</p>`;
+                html += `<p>Cantidad: ${e.exonerados.cantidad} cilindros</p>`;
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
