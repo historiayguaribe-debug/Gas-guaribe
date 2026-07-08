@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Nueva recogida - GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>📋 Nueva recogida</h1>
+            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+        </header>
+
+        <main>
+            <form id="formRecogida">
+                <div class="form-group">
+                    <label for="comunidad">Comunidad</label>
+                    <select id="comunidad" required>
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pequeños">Cilindros pequeños</label>
+                    <input type="number" id="pequeños" min="0" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="medianos">Cilindros medianos</label>
+                    <input type="number" id="medianos" min="0" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="grandes">Cilindros grandes</label>
+                    <input type="number" id="grandes" min="0" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="observaciones">Observaciones (opcional)</label>
+                    <input type="text" id="observaciones" placeholder="Ej: faltan 3 por recoger">
+                </div>
+
+                <button type="submit" class="btn-guardar">✅ Guardar recogida</button>
+            </form>
+
+            <div id="mensaje" style="margin-top: 16px;"></div>
+            <a href="index.html" class="btn-volver">← Volver al inicio</a>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cargar comunidades en el select
+            const select = document.getElementById('comunidad');
+            COMUNIDADES.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                select.appendChild(opt);
+            });
+
+            document.getElementById('formRecogida').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const comunidad = document.getElementById('comunidad').value;
+                const pequeños = parseInt(document.getElementById('pequeños').value) || 0;
+                const medianos = parseInt(document.getElementById('medianos').value) || 0;
+                const grandes = parseInt(document.getElementById('grandes').value) || 0;
+                const observaciones = document.getElementById('observaciones').value;
+
+                if (!comunidad) {
+                    mostrarMensaje('❌ Selecciona una comunidad', 'error');
+                    return;
+                }
+
+                if (pequeños === 0 && medianos === 0 && grandes === 0) {
+                    mostrarMensaje('❌ Debes registrar al menos un cilindro', 'error');
+                    return;
+                }
+
+                const recogida = registrarRecogida(comunidad, pequeños, medianos, grandes, observaciones);
+                mostrarMensaje(`✅ Recogida registrada: ${comunidad} (${pequeños+medianos+grandes} cilindros)`, 'exito');
+                document.getElementById('formRecogida').reset();
+                document.getElementById('pequeños').value = 0;
+                document.getElementById('medianos').value = 0;
+                document.getElementById('grandes').value = 0;
+            });
+        });
+
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('mensaje');
+            div.textContent = texto;
+            div.className = 'mensaje ' + (tipo === 'exito' ? 'mensaje-exito' : 'mensaje-error');
+            setTimeout(() => { div.textContent = ''; div.className = ''; }, 5000);
+        }
+    </script>
+</body>
+</html>
