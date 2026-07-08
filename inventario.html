@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Inventario - GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>📦 Inventario</h1>
+            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+        </header>
+
+        <main>
+            <div id="inventarioContainer">
+                <div class="card" style="margin-bottom:16px;">
+                    <h3>📭 Vacíos en resguardo</h3>
+                    <div id="vaciosDetalle">Cargando...</div>
+                </div>
+
+                <div class="card" style="margin-bottom:16px;">
+                    <h3>🏠 Llenos en almacén</h3>
+                    <div id="llenosDetalle">Cargando...</div>
+                </div>
+
+                <div class="card" style="margin-bottom:16px;">
+                    <h3>🚛 En ruta a planta</h3>
+                    <div id="enRutaDetalle">Cargando...</div>
+                </div>
+            </div>
+
+            <a href="index.html" class="btn-volver">← Volver al inicio</a>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarInventario();
+        });
+
+        function actualizarInventario() {
+            const inventario = calcularInventario();
+            const recogidas = obtenerRecogidasPendientes();
+
+            // Vacíos en resguardo
+            document.getElementById('vaciosDetalle').innerHTML = `
+                <p>Pequeños: ${inventario.vaciosResguardo.pequeño}</p>
+                <p>Medianos: ${inventario.vaciosResguardo.mediano}</p>
+                <p>Grandes: ${inventario.vaciosResguardo.grande}</p>
+                <p><strong>Total: ${inventario.totalVacios}</strong></p>
+            `;
+
+            // Llenos en almacén
+            document.getElementById('llenosDetalle').innerHTML = `
+                <p>Pequeños: ${inventario.llenosAlmacen.pequeño}</p>
+                <p>Medianos: ${inventario.llenosAlmacen.mediano}</p>
+                <p>Grandes: ${inventario.llenosAlmacen.grande}</p>
+                <p><strong>Total: ${inventario.totalLlenos}</strong></p>
+            `;
+
+            // En ruta a planta (simulado: recogidas pendientes)
+            let totalEnRuta = 0;
+            let detalle = '';
+            recogidas.forEach(r => {
+                const t = (r.pequeños || 0) + (r.medianos || 0) + (r.grandes || 0);
+                totalEnRuta += t;
+                detalle += `<p>${r.comunidad}: ${t} cilindros (P:${r.pequeños} M:${r.medianos} G:${r.grandes})</p>`;
+            });
+            document.getElementById('enRutaDetalle').innerHTML = detalle || '<p>No hay cargas en ruta</p>';
+        }
+    </script>
+</body>
+</html>
