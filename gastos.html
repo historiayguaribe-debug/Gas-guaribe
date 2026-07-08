@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Gastos - GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>💸 Gastos</h1>
+            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+        </header>
+
+        <main>
+            <h3>📌 Gastos operativos por carga</h3>
+            <form id="formGastosCarga">
+                <div class="form-group">
+                    <label for="cargaSelect">Seleccionar carga</label>
+                    <select id="cargaSelect" required>
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="gCombustible">Combustible ($)</label>
+                    <input type="number" id="gCombustible" step="0.01" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="gPeaje">Peaje ($)</label>
+                    <input type="number" id="gPeaje" step="0.01" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="gViaticos">Viáticos ($)</label>
+                    <input type="number" id="gViaticos" step="0.01" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="gImprevistos">Imprevistos ($)</label>
+                    <input type="number" id="gImprevistos" step="0.01" value="0">
+                </div>
+                <button type="submit" class="btn-guardar">💾 Guardar gastos de carga</button>
+            </form>
+
+            <hr style="margin:24px 0;">
+
+            <h3>📌 Gastos generales</h3>
+            <form id="formGastosGenerales">
+                <div class="form-group">
+                    <label for="categoriaGasto">Categoría</label>
+                    <select id="categoriaGasto" required>
+                        <option value="">Seleccionar...</option>
+                        <option value="nomina">Nómina</option>
+                        <option value="alquiler">Alquiler</option>
+                        <option value="mantenimiento">Mantenimiento de camión</option>
+                        <option value="repuestos">Repuestos</option>
+                        <option value="varios">Varios</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="descGasto">Descripción</label>
+                    <input type="text" id="descGasto" placeholder="Ej: pago semanal">
+                </div>
+                <div class="form-group">
+                    <label for="montoGasto">Monto ($)</label>
+                    <input type="number" id="montoGasto" step="0.01" value="0" required>
+                </div>
+                <button type="submit" class="btn-guardar">💾 Guardar gasto general</button>
+            </form>
+
+            <div id="mensaje" style="margin-top:16px;"></div>
+            <a href="index.html" class="btn-volver">← Volver al inicio</a>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarCargas();
+
+            document.getElementById('formGastosCarga').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const cargaId = parseInt(document.getElementById('cargaSelect').value);
+                if (!cargaId) {
+                    mostrarMensaje('❌ Selecciona una carga', 'error');
+                    return;
+                }
+                const combustible = parseFloat(document.getElementById('gCombustible').value) || 0;
+                const peaje = parseFloat(document.getElementById('gPeaje').value) || 0;
+                const viaticos = parseFloat(document.getElementById('gViaticos').value) || 0;
+                const imprevistos = parseFloat(document.getElementById('gImprevistos').value) || 0;
+
+                registrarGastosCarga(cargaId, combustible, peaje, viaticos, imprevistos);
+                mostrarMensaje('✅ Gastos de carga guardados', 'exito');
+            });
+
+            document.getElementById('formGastosGenerales').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const categoria = document.getElementById('categoriaGasto').value;
+                const descripcion = document.getElementById('descGasto').value;
+                const monto = parseFloat(document.getElementById('montoGasto').value) || 0;
+
+                if (!categoria) {
+                    mostrarMensaje('❌ Selecciona una categoría', 'error');
+                    return;
+                }
+                if (monto <= 0) {
+                    mostrarMensaje('❌ El monto debe ser mayor a 0', 'error');
+                    return;
+                }
+
+                registrarGastoGeneral(categoria, descripcion, monto);
+                mostrarMensaje('✅ Gasto general registrado', 'exito');
+                document.getElementById('formGastosGenerales').reset();
+            });
+        });
+
+        function cargarCargas() {
+            const select = document.getElementById('cargaSelect');
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+            const recogidas = obtenerRecogidas();
+            recogidas.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                const total = (r.pequeños || 0) + (r.medianos || 0) + (r.grandes || 0);
+                opt.textContent = `${r.comunidad} - ${total} cilindros (${r.fecha.split('T')[0]})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('mensaje');
+            div.textContent = texto;
+            div.className = 'mensaje ' + (tipo === 'exito' ? 'mensaje-exito' : 'mensaje-error');
+            setTimeout(() => { div.textContent = ''; div.className = ''; }, 5000);
+        }
+    </script>
+</body>
+</html>
