@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a5e2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>🏠 GAS GUARIBE</h1>
+            <span id="fecha"></span>
+        </header>
+
+        <main>
+            <!-- Resumen rápido -->
+            <section class="resumen">
+                <div class="card">
+                    <span class="icono">🚛</span>
+                    <span class="numero" id="enRuta">0</span>
+                    <span class="etiqueta">En ruta a planta</span>
+                </div>
+                <div class="card">
+                    <span class="icono">🏠</span>
+                    <span class="numero" id="llenosAlmacen">0</span>
+                    <span class="etiqueta">Llenos en almacén</span>
+                </div>
+                <div class="card">
+                    <span class="icono">📦</span>
+                    <span class="numero" id="vaciosResguardo">0</span>
+                    <span class="etiqueta">Vacíos en resguardo</span>
+                </div>
+                <div class="card">
+                    <span class="icono">✅</span>
+                    <span class="numero" id="entregadosHoy">0</span>
+                    <span class="etiqueta">Entregados hoy</span>
+                </div>
+            </section>
+
+            <!-- Última carga -->
+            <section class="ultima-carga">
+                <h3>Última carga</h3>
+                <div id="ultimaCargaInfo">No hay cargas registradas</div>
+            </section>
+
+            <!-- Botones de acción -->
+            <section class="acciones">
+                <a href="recogidas.html" class="btn">📋 Nueva recogida</a>
+                <a href="entregas.html" class="btn">💰 Registrar entrega</a>
+                <a href="inventario.html" class="btn">📦 Ver inventario</a>
+                <a href="ventas.html" class="btn">🏪 Ventas almacén</a>
+                <a href="gastos.html" class="btn">💸 Gastos</a>
+                <a href="reportes.html" class="btn">📊 Reportes</a>
+                <a href="configuracion.html" class="btn">⚙️ Configuración</a>
+            </section>
+        </main>
+
+        <footer>
+            <p>GAS GUARIBE v1.0</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Cargar datos y actualizar resumen al abrir la página
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarResumen();
+            mostrarUltimaCarga();
+            document.getElementById('fecha').textContent = new Date().toLocaleDateString();
+        });
+    </script>
+</body>
+</html>
