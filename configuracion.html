@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Configuración - GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>⚙️ Configuración</h1>
+            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+        </header>
+
+        <main>
+            <form id="formConfig">
+                <h3>Precios de venta</h3>
+                <div class="form-group">
+                    <label for="confPrecioPeq">Pequeño ($)</label>
+                    <input type="number" id="confPrecioPeq" step="0.01" value="3.50">
+                </div>
+                <div class="form-group">
+                    <label for="confPrecioMed">Mediano ($)</label>
+                    <input type="number" id="confPrecioMed" step="0.01" value="5.00">
+                </div>
+                <div class="form-group">
+                    <label for="confPrecioGran">Grande ($)</label>
+                    <input type="number" id="confPrecioGran" step="0.01" value="7.50">
+                </div>
+
+                <h3>Costo de llenado en planta</h3>
+                <div class="form-group">
+                    <label for="confCostoPeq">Pequeño ($)</label>
+                    <input type="number" id="confCostoPeq" step="0.01" value="2.00">
+                </div>
+                <div class="form-group">
+                    <label for="confCostoMed">Mediano ($)</label>
+                    <input type="number" id="confCostoMed" step="0.01" value="3.00">
+                </div>
+                <div class="form-group">
+                    <label for="confCostoGran">Grande ($)</label>
+                    <input type="number" id="confCostoGran" step="0.01" value="4.50">
+                </div>
+
+                <h3>Gastos fijos estimados por viaje</h3>
+                <div class="form-group">
+                    <label for="confCombustible">Combustible ($)</label>
+                    <input type="number" id="confCombustible" step="0.01" value="50">
+                </div>
+                <div class="form-group">
+                    <label for="confPeaje">Peaje ($)</label>
+                    <input type="number" id="confPeaje" step="0.01" value="10">
+                </div>
+                <div class="form-group">
+                    <label for="confViaticos">Viáticos ($)</label>
+                    <input type="number" id="confViaticos" step="0.01" value="30">
+                </div>
+
+                <button type="submit" class="btn-guardar">💾 Guardar configuración</button>
+            </form>
+
+            <div id="mensaje" style="margin-top:16px;"></div>
+            <a href="index.html" class="btn-volver">← Volver al inicio</a>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarConfiguracion();
+
+            document.getElementById('formConfig').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const config = {
+                    preciosVenta: {
+                        pequeño: parseFloat(document.getElementById('confPrecioPeq').value) || 0,
+                        mediano: parseFloat(document.getElementById('confPrecioMed').value) || 0,
+                        grande: parseFloat(document.getElementById('confPrecioGran').value) || 0
+                    },
+                    costosPlanta: {
+                        pequeño: parseFloat(document.getElementById('confCostoPeq').value) || 0,
+                        mediano: parseFloat(document.getElementById('confCostoMed').value) || 0,
+                        grande: parseFloat(document.getElementById('confCostoGran').value) || 0
+                    },
+                    gastosFijos: {
+                        combustible: parseFloat(document.getElementById('confCombustible').value) || 0,
+                        peaje: parseFloat(document.getElementById('confPeaje').value) || 0,
+                        viaticos: parseFloat(document.getElementById('confViaticos').value) || 0
+                    }
+                };
+
+                guardarDatos('config', config);
+                mostrarMensaje('✅ Configuración guardada', 'exito');
+            });
+        });
+
+        function cargarConfiguracion() {
+            const config = obtenerOCrear('config', CONFIG);
+            document.getElementById('confPrecioPeq').value = config.preciosVenta?.pequeño || 3.50;
+            document.getElementById('confPrecioMed').value = config.preciosVenta?.mediano || 5.00;
+            document.getElementById('confPrecioGran').value = config.preciosVenta?.grande || 7.50;
+            document.getElementById('confCostoPeq').value = config.costosPlanta?.pequeño || 2.00;
+            document.getElementById('confCostoMed').value = config.costosPlanta?.mediano || 3.00;
+            document.getElementById('confCostoGran').value = config.costosPlanta?.grande || 4.50;
+            document.getElementById('confCombustible').value = config.gastosFijos?.combustible || 50;
+            document.getElementById('confPeaje').value = config.gastosFijos?.peaje || 10;
+            document.getElementById('confViaticos').value = config.gastosFijos?.viaticos || 30;
+        }
+
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('mensaje');
+            div.textContent = texto;
+            div.className = 'mensaje ' + (tipo === 'exito' ? 'mensaje-exito' : 'mensaje-error');
+            setTimeout(() => { div.textContent = ''; div.className = ''; }, 5000);
+        }
+    </script>
+</body>
+</html>
