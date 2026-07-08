@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Ventas almacén - GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>🏪 Ventas almacén</h1>
+            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+        </header>
+
+        <main>
+            <form id="formVenta">
+                <div class="form-group">
+                    <label for="cliente">Cliente</label>
+                    <input type="text" id="cliente" placeholder="Nombre o descripción" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="vPequeños">Pequeños</label>
+                    <input type="number" id="vPequeños" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="vMedianos">Medianos</label>
+                    <input type="number" id="vMedianos" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="vGrandes">Grandes</label>
+                    <input type="number" id="vGrandes" min="0" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="vPrecioPeq">Precio unitario pequeño ($)</label>
+                    <input type="number" id="vPrecioPeq" step="0.01" value="3.50">
+                </div>
+                <div class="form-group">
+                    <label for="vPrecioMed">Precio unitario mediano ($)</label>
+                    <input type="number" id="vPrecioMed" step="0.01" value="5.00">
+                </div>
+                <div class="form-group">
+                    <label for="vPrecioGran">Precio unitario grande ($)</label>
+                    <input type="number" id="vPrecioGran" step="0.01" value="7.50">
+                </div>
+
+                <div class="form-group">
+                    <label for="vPago">Forma de pago</label>
+                    <select id="vPago">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="pendiente">Pendiente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="vMonto">Monto recibido ($)</label>
+                    <input type="number" id="vMonto" step="0.01" value="0">
+                </div>
+
+                <button type="submit" class="btn-guardar">💰 Registrar venta</button>
+            </form>
+
+            <div id="mensaje" style="margin-top:16px;"></div>
+            <a href="index.html" class="btn-volver">← Volver al inicio</a>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.getElementById('formVenta').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const cliente = document.getElementById('cliente').value;
+            const pequeños = parseInt(document.getElementById('vPequeños').value) || 0;
+            const medianos = parseInt(document.getElementById('vMedianos').value) || 0;
+            const grandes = parseInt(document.getElementById('vGrandes').value) || 0;
+            const precioUnitario = {
+                pequeño: parseFloat(document.getElementById('vPrecioPeq').value) || 0,
+                mediano: parseFloat(document.getElementById('vPrecioMed').value) || 0,
+                grande: parseFloat(document.getElementById('vPrecioGran').value) || 0
+            };
+            const pago = document.getElementById('vPago').value;
+            const monto = parseFloat(document.getElementById('vMonto').value) || 0;
+
+            if (!cliente) {
+                mostrarMensaje('❌ Ingresa el nombre del cliente', 'error');
+                return;
+            }
+            if (pequeños === 0 && medianos === 0 && grandes === 0) {
+                mostrarMensaje('❌ Debes vender al menos un cilindro', 'error');
+                return;
+            }
+
+            registrarVentaAlmacen(cliente, pequeños, medianos, grandes, precioUnitario, pago, monto);
+            mostrarMensaje('✅ Venta registrada', 'exito');
+            document.getElementById('formVenta').reset();
+            document.getElementById('vPequeños').value = 0;
+            document.getElementById('vMedianos').value = 0;
+            document.getElementById('vGrandes').value = 0;
+            document.getElementById('vMonto').value = 0;
+        });
+
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('mensaje');
+            div.textContent = texto;
+            div.className = 'mensaje ' + (tipo === 'exito' ? 'mensaje-exito' : 'mensaje-error');
+            setTimeout(() => { div.textContent = ''; div.className = ''; }, 5000);
+        }
+    </script>
+</body>
+</html>
