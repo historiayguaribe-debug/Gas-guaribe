@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Registrar entrega - GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>💰 Registrar entrega</h1>
+            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+        </header>
+
+        <main>
+            <form id="formEntrega">
+                <div class="form-group">
+                    <label for="recogida">Seleccionar recogida</label>
+                    <select id="recogida" required>
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+
+                <div id="detalleRecogida" style="background:#f0f4f0; padding:10px; border-radius:10px; margin-bottom:16px; display:none;">
+                    <p><strong>Comunidad:</strong> <span id="detComunidad"></span></p>
+                    <p><strong>Recogidos:</strong> <span id="detRecogidos"></span></p>
+                </div>
+
+                <h3 style="margin-top:20px;">Cilindros entregados</h3>
+
+                <div class="form-group">
+                    <label for="entPequeños">Pequeños</label>
+                    <input type="number" id="entPequeños" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="entMedianos">Medianos</label>
+                    <input type="number" id="entMedianos" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="entGrandes">Grandes</label>
+                    <input type="number" id="entGrandes" min="0" value="0">
+                </div>
+
+                <h3>Precios de venta aplicados</h3>
+                <div class="form-group">
+                    <label for="precioPeq">Precio pequeño ($)</label>
+                    <input type="number" id="precioPeq" step="0.01" value="3.50">
+                </div>
+                <div class="form-group">
+                    <label for="precioMed">Precio mediano ($)</label>
+                    <input type="number" id="precioMed" step="0.01" value="5.00">
+                </div>
+                <div class="form-group">
+                    <label for="precioGran">Precio grande ($)</label>
+                    <input type="number" id="precioGran" step="0.01" value="7.50">
+                </div>
+
+                <h3>Exonerados</h3>
+                <div class="form-group">
+                    <label for="exoInstitucion">Institución (si aplica)</label>
+                    <input type="text" id="exoInstitucion" placeholder="Escuela, comedor, etc.">
+                </div>
+                <div class="form-group">
+                    <label for="exoCantidad">Cantidad exonerada</label>
+                    <input type="number" id="exoCantidad" min="0" value="0">
+                </div>
+
+                <h3>Pago</h3>
+                <div class="form-group">
+                    <label for="tipoPago">Forma de pago</label>
+                    <select id="tipoPago">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="pendiente">Pendiente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="montoPago">Monto recibido ($)</label>
+                    <input type="number" id="montoPago" step="0.01" value="0">
+                </div>
+
+                <button type="submit" class="btn-guardar">✅ Registrar entrega</button>
+            </form>
+
+            <div id="mensaje" style="margin-top:16px;"></div>
+            <a href="index.html" class="btn-volver">← Volver al inicio</a>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarRecogidas();
+
+            document.getElementById('recogida').addEventListener('change', function() {
+                const id = parseInt(this.value);
+                const recogidas = obtenerRecogidas();
+                const recogida = recogidas.find(r => r.id === id);
+                if (recogida) {
+                    document.getElementById('detalleRecogida').style.display = 'block';
+                    document.getElementById('detComunidad').textContent = recogida.comunidad;
+                    document.getElementById('detRecogidos').textContent = 
+                        `P:${recogida.pequeños} M:${recogida.medianos} G:${recogida.grandes}`;
+                    // Pre-cargar cantidades entregadas igual a recogidas
+                    document.getElementById('entPequeños').value = recogida.pequeños || 0;
+                    document.getElementById('entMedianos').value = recogida.medianos || 0;
+                    document.getElementById('entGrandes').value = recogida.grandes || 0;
+                } else {
+                    document.getElementById('detalleRecogida').style.display = 'none';
+                }
+            });
+
+            document.getElementById('formEntrega').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const recogidaId = parseInt(document.getElementById('recogida').value);
+                if (!recogidaId) {
+                    mostrarMensaje('❌ Selecciona una recogida', 'error');
+                    return;
+                }
+
+                const recogidas = obtenerRecogidas();
+                const recogida = recogidas.find(r => r.id === recogidaId);
+                if (!recogida) {
+                    mostrarMensaje('❌ Recogida no encontrada', 'error');
+                    return;
+                }
+
+                const entregados = {
+                    pequeño: parseInt(document.getElementById('entPequeños').value) || 0,
+                    mediano: parseInt(document.getElementById('entMedianos').value) || 0,
+                    grande: parseInt(document.getElementById('entGrandes').value) || 0
+                };
+
+                const precios = {
+                    pequeño: parseFloat(document.getElementById('precioPeq').value) || 0,
+                    mediano: parseFloat(document.getElementById('precioMed').value) || 0,
+                    grande: parseFloat(document.getElementById('precioGran').value) || 0
+                };
+
+                const exonerados = {
+                    institucion: document.getElementById('exoInstitucion').value,
+                    cantidad: parseInt(document.getElementById('exoCantidad').value) || 0
+                };
+
+                const pago = document.getElementById('tipoPago').value;
+                const monto = parseFloat(document.getElementById('montoPago').value) || 0;
+
+                try {
+                    const entrega = registrarEntrega(recogidaId, recogida.comunidad, entregados, precios, exonerados, pago, monto);
+                    mostrarMensaje(`✅ Entrega registrada para ${recogida.comunidad}`, 'exito');
+                    document.getElementById('formEntrega').reset();
+                    cargarRecogidas();
+                } catch (err) {
+                    mostrarMensaje('❌ Error: ' + err.message, 'error');
+                }
+            });
+        });
+
+        function cargarRecogidas() {
+            const select = document.getElementById('recogida');
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+            const recogidas = obtenerRecogidasPendientes();
+            recogidas.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                const total = (r.pequeños || 0) + (r.medianos || 0) + (r.grandes || 0);
+                opt.textContent = `${r.comunidad} - ${total} cilindros (${r.fecha.split('T')[0]})`;
+                select.appendChild(opt);
+            });
+            if (recogidas.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'No hay recogidas pendientes';
+                select.appendChild(opt);
+            }
+        }
+
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('mensaje');
+            div.textContent = texto;
+            div.className = 'mensaje ' + (tipo === 'exito' ? 'mensaje-exito' : 'mensaje-error');
+            setTimeout(() => { div.textContent = ''; div.className = ''; }, 5000);
+        }
+    </script>
+</body>
+</html>
