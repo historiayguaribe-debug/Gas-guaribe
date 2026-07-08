@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Registrar entrega - GAS GUARIBE</title>
+    <title>Nueva recogida - GAS GUARIBE</title>
     <link rel="stylesheet" href="style.css">
     <script src="app.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>💰 Registrar entrega</h1>
+            <h1>📋 Nueva recogida</h1>
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <form id="formEntrega">
+        <form id="formRecogida">
             <div class="form-group">
                 <label for="comunidad">Comunidad o cliente</label>
                 <input type="text" id="comunidad" list="listaComunidades" placeholder="Escribe o selecciona" required>
@@ -29,97 +29,22 @@
             </div>
 
             <div class="form-group">
-                <label>Cilindros entregados</label>
+                <label>Cilindros recogidos</label>
                 <div style="display:flex; gap:8px;">
                     <div style="flex:1;">
                         <label style="font-size:12px;">Pequeños</label>
-                        <input type="number" id="pequenos" min="0" value="0" oninput="actualizarTotales()">
+                        <input type="number" id="pequenos" min="0" value="0" oninput="actualizarSubtotal()">
                     </div>
                     <div style="flex:1;">
                         <label style="font-size:12px;">Medianos</label>
-                        <input type="number" id="medianos" min="0" value="0" oninput="actualizarTotales()">
+                        <input type="number" id="medianos" min="0" value="0" oninput="actualizarSubtotal()">
                     </div>
                     <div style="flex:1;">
                         <label style="font-size:12px;">Grandes</label>
-                        <input type="number" id="grandes" min="0" value="0" oninput="actualizarTotales()">
+                        <input type="number" id="grandes" min="0" value="0" oninput="actualizarSubtotal()">
                     </div>
                 </div>
-            </div>
-
-            <div class="form-group">
-                <label>Precios aplicados (por cilindro)</label>
-                <div style="display:flex; gap:8px;">
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Pequeño $</label>
-                        <input type="number" id="precio_pequeno" step="0.01" value="3.50" oninput="actualizarTotales()">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Mediano $</label>
-                        <input type="number" id="precio_mediano" step="0.01" value="5.00" oninput="actualizarTotales()">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Grande $</label>
-                        <input type="number" id="precio_grande" step="0.01" value="7.50" oninput="actualizarTotales()">
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECCIÓN EXONERADOS -->
-            <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
-                <label style="font-weight:700;">🎓 Exonerados</label>
-                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Destino</label>
-                        <select id="exo_destino">
-                            <option value="comunidad">Comunidad</option>
-                            <option value="galpon">Galpón</option>
-                        </select>
-                    </div>
-                    <div style="flex:2;">
-                        <label style="font-size:12px;">Institución (si es comunidad)</label>
-                        <input type="text" id="exo_institucion" placeholder="Escuela X">
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Pequeños</label>
-                        <input type="number" id="exo_pequenos" min="0" value="0">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Medianos</label>
-                        <input type="number" id="exo_medianos" min="0" value="0">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Grandes</label>
-                        <input type="number" id="exo_grandes" min="0" value="0">
-                    </div>
-                    <div style="flex:0 0 auto; display:flex; align-items:flex-end;">
-                        <button type="button" class="btn-secondary" style="padding:8px 16px; margin:0;" onclick="agregarExonerado()">+</button>
-                    </div>
-                </div>
-                <div id="listaExonerados" style="margin-top:8px; font-size:13px;"></div>
-            </div>
-
-            <!-- SECCIÓN PAGO MIXTO -->
-            <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
-                <label style="font-weight:700;">💵 Pago recibido</label>
-                <div style="display:flex; gap:8px;">
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Efectivo $</label>
-                        <input type="number" id="pago_efectivo" step="0.01" min="0" value="0" oninput="actualizarTotales()">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Transferencia $</label>
-                        <input type="number" id="pago_transferencia" step="0.01" min="0" value="0" oninput="actualizarTotales()">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Punto de venta $</label>
-                        <input type="number" id="pago_punto_venta" step="0.01" min="0" value="0" oninput="actualizarTotales()">
-                    </div>
-                </div>
-                <div id="resumenPago" class="subtotal-box">
-                    Total a pagar: $0.00 | Recibido: $0.00 | Pendiente: $0.00
-                </div>
+                <div id="subtotal" class="subtotal-box">Total: 0 cilindros</div>
             </div>
 
             <div class="form-group">
@@ -127,9 +52,13 @@
                 <input type="date" id="fecha">
             </div>
 
+            <div class="form-group">
+                <label for="observaciones">Observaciones</label>
+                <textarea id="observaciones" rows="2"></textarea>
+            </div>
+
             <input type="hidden" id="editId" value="">
-            <input type="hidden" id="exoneradosData" value="[]">
-            <button type="submit" class="btn-primary" id="btnGuardar">Guardar entrega</button>
+            <button type="submit" class="btn-primary" id="btnGuardar">Guardar recogida</button>
             <button type="button" class="btn-danger" id="btnEliminar" style="display:none;">Eliminar</button>
         </form>
 
@@ -137,9 +66,7 @@
     </div>
 
     <script>
-        // Variables para exonerados
-        let exoneradosList = [];
-
+        // Cargar comunidades
         function cargarComunidades() {
             const comunidades = obtenerComunidades();
             const datalist = document.getElementById('listaComunidades');
@@ -151,6 +78,7 @@
             });
         }
 
+        // Cargar plantas
         function cargarPlantas() {
             const plantas = obtenerPlantas();
             const select = document.getElementById('planta');
@@ -163,140 +91,52 @@
             });
         }
 
-        function actualizarTotales() {
+        // Actualizar subtotal
+        function actualizarSubtotal() {
             const p = parseInt(document.getElementById('pequenos').value) || 0;
             const m = parseInt(document.getElementById('medianos').value) || 0;
             const g = parseInt(document.getElementById('grandes').value) || 0;
-            const precioP = parseFloat(document.getElementById('precio_pequeno').value) || 0;
-            const precioM = parseFloat(document.getElementById('precio_mediano').value) || 0;
-            const precioG = parseFloat(document.getElementById('precio_grande').value) || 0;
-            const total = (p * precioP) + (m * precioM) + (g * precioG);
-            
-            const ef = parseFloat(document.getElementById('pago_efectivo').value) || 0;
-            const tf = parseFloat(document.getElementById('pago_transferencia').value) || 0;
-            const pv = parseFloat(document.getElementById('pago_punto_venta').value) || 0;
-            const recibido = ef + tf + pv;
-            const pendiente = total - recibido;
-
-            document.getElementById('resumenPago').textContent = 
-                `Total a pagar: $${total.toFixed(2)} | Recibido: $${recibido.toFixed(2)} | Pendiente: $${pendiente.toFixed(2)}`;
-        }
-
-        function agregarExonerado() {
-            const destino = document.getElementById('exo_destino').value;
-            const institucion = document.getElementById('exo_institucion').value.trim();
-            const pequenos = parseInt(document.getElementById('exo_pequenos').value) || 0;
-            const medianos = parseInt(document.getElementById('exo_medianos').value) || 0;
-            const grandes = parseInt(document.getElementById('exo_grandes').value) || 0;
-
-            if (pequenos === 0 && medianos === 0 && grandes === 0) {
-                mostrarMensaje('Indica al menos un cilindro exonerado', 'error');
-                return;
-            }
-
-            // Si destino es comunidad, necesita institución
-            if (destino === 'comunidad' && !institucion) {
-                mostrarMensaje('Indica la institución para la comunidad', 'error');
-                return;
-            }
-
-            // Calcular costo (usando costos de planta)
-            const plantaId = document.getElementById('planta').value;
-            const plantas = obtenerPlantas();
-            const planta = plantas.find(p => p.id === plantaId);
-            const costos = planta ? planta.costos : { pequeno: 0, mediano: 0, grande: 0 };
-
-            const exo = {
-                tipo: destino === 'comunidad' ? 'comunidad' : 'galpon',
-                institucion: destino === 'comunidad' ? institucion : 'Galpón',
-                pequenos,
-                medianos,
-                grandes,
-                costo: (pequenos * costos.pequeno) + (medianos * costos.mediano) + (grandes * costos.grande)
-            };
-
-            exoneradosList.push(exo);
-            document.getElementById('exoneradosData').value = JSON.stringify(exoneradosList);
-            renderExonerados();
-            
-            // Limpiar campos
-            document.getElementById('exo_institucion').value = '';
-            document.getElementById('exo_pequenos').value = 0;
-            document.getElementById('exo_medianos').value = 0;
-            document.getElementById('exo_grandes').value = 0;
-            mostrarMensaje('✅ Exonerado agregado', 'exito');
-        }
-
-        function renderExonerados() {
-            const container = document.getElementById('listaExonerados');
-            if (exoneradosList.length === 0) {
-                container.innerHTML = '<p style="color:#999; font-size:13px;">No hay exonerados registrados</p>';
-                return;
-            }
-            let html = '';
-            exoneradosList.forEach((ex, idx) => {
-                html += `<div style="background:#f8f9fa; padding:8px; border-radius:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                    <span><strong>${ex.institucion}</strong> - P:${ex.pequenos} M:${ex.medianos} G:${ex.grandes} ($${ex.costo.toFixed(2)})</span>
-                    <button type="button" onclick="eliminarExonerado(${idx})" style="background:#d32f2f; color:white; border:none; border-radius:4px; padding:4px 8px;">✕</button>
-                </div>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function eliminarExonerado(idx) {
-            exoneradosList.splice(idx, 1);
-            document.getElementById('exoneradosData').value = JSON.stringify(exoneradosList);
-            renderExonerados();
+            document.getElementById('subtotal').textContent = `Total: ${p + m + g} cilindros`;
         }
 
         // Cargar datos para edición
         function cargarParaEdicion(id) {
             const datos = JSON.parse(localStorage.getItem('gasguaribe_datos'));
-            const entrega = datos.entregas.find(e => e.id === id);
-            if (!entrega) return;
-            document.getElementById('comunidad').value = entrega.comunidad || '';
-            document.getElementById('planta').value = entrega.planta || '';
-            document.getElementById('pequenos').value = entrega.pequenos || 0;
-            document.getElementById('medianos').value = entrega.medianos || 0;
-            document.getElementById('grandes').value = entrega.grandes || 0;
-            document.getElementById('precio_pequeno').value = entrega.precios?.pequeno || 3.50;
-            document.getElementById('precio_mediano').value = entrega.precios?.mediano || 5.00;
-            document.getElementById('precio_grande').value = entrega.precios?.grande || 7.50;
-            document.getElementById('pago_efectivo').value = entrega.pago_efectivo || 0;
-            document.getElementById('pago_transferencia').value = entrega.pago_transferencia || 0;
-            document.getElementById('pago_punto_venta').value = entrega.pago_punto_venta || 0;
-            document.getElementById('fecha').value = entrega.fecha ? new Date(entrega.fecha).toISOString().slice(0,10) : '';
-            document.getElementById('editId').value = entrega.id;
-            document.getElementById('btnGuardar').textContent = 'Actualizar entrega';
+            const recogida = datos.recogidas.find(r => r.id === id);
+            if (!recogida) return;
+            document.getElementById('comunidad').value = recogida.comunidad || '';
+            document.getElementById('planta').value = recogida.planta || '';
+            document.getElementById('pequenos').value = recogida.pequenos || 0;
+            document.getElementById('medianos').value = recogida.medianos || 0;
+            document.getElementById('grandes').value = recogida.grandes || 0;
+            document.getElementById('fecha').value = recogida.fecha ? new Date(recogida.fecha).toISOString().slice(0,10) : '';
+            document.getElementById('observaciones').value = recogida.observaciones || '';
+            document.getElementById('editId').value = recogida.id;
+            document.getElementById('btnGuardar').textContent = 'Actualizar recogida';
             document.getElementById('btnEliminar').style.display = 'block';
+            actualizarSubtotal();
+        }
 
-            // Cargar exonerados
-            if (entrega.exonerados) {
-                exoneradosList = entrega.exonerados;
-                document.getElementById('exoneradosData').value = JSON.stringify(exoneradosList);
-                renderExonerados();
-            }
-            actualizarTotales();
+        // Verificar si hay parámetro de edición
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit');
+        if (editId) {
+            cargarParaEdicion(parseInt(editId));
         }
 
         // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
             cargarComunidades();
             cargarPlantas();
+            // Fecha por defecto
             if (!document.getElementById('fecha').value) {
                 document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
             }
-            actualizarTotales();
-
-            // Verificar parámetro de edición
-            const urlParams = new URLSearchParams(window.location.search);
-            const editId = urlParams.get('edit');
-            if (editId) {
-                cargarParaEdicion(parseInt(editId));
-            }
+            actualizarSubtotal();
         });
 
-        document.getElementById('formEntrega').addEventListener('submit', function(e) {
+        // Manejar envío
+        document.getElementById('formRecogida').addEventListener('submit', function(e) {
             e.preventDefault();
             const id = parseInt(document.getElementById('editId').value);
             const comunidad = document.getElementById('comunidad').value.trim();
@@ -304,16 +144,8 @@
             const pequenos = parseInt(document.getElementById('pequenos').value) || 0;
             const medianos = parseInt(document.getElementById('medianos').value) || 0;
             const grandes = parseInt(document.getElementById('grandes').value) || 0;
-            const precios = {
-                pequeno: parseFloat(document.getElementById('precio_pequeno').value) || 3.50,
-                mediano: parseFloat(document.getElementById('precio_mediano').value) || 5.00,
-                grande: parseFloat(document.getElementById('precio_grande').value) || 7.50
-            };
-            const pago_efectivo = parseFloat(document.getElementById('pago_efectivo').value) || 0;
-            const pago_transferencia = parseFloat(document.getElementById('pago_transferencia').value) || 0;
-            const pago_punto_venta = parseFloat(document.getElementById('pago_punto_venta').value) || 0;
             const fecha = document.getElementById('fecha').value;
-            const exonerados = JSON.parse(document.getElementById('exoneradosData').value || '[]');
+            const observaciones = document.getElementById('observaciones').value;
 
             if (!comunidad) {
                 mostrarMensaje('Indica la comunidad o cliente', 'error');
@@ -328,67 +160,62 @@
                 return;
             }
 
+            // Agregar comunidad si es nueva
             agregarComunidad(comunidad);
 
             let resultado;
             if (id) {
-                resultado = actualizarEntrega(id, {
+                // Editar
+                resultado = actualizarRecogida(id, {
                     comunidad,
                     planta,
                     pequenos,
                     medianos,
                     grandes,
-                    precios,
-                    pago_efectivo,
-                    pago_transferencia,
-                    pago_punto_venta,
-                    exonerados,
-                    fecha: fecha ? new Date(fecha).toISOString() : new Date().toISOString()
+                    fecha: fecha ? new Date(fecha).toISOString() : new Date().toISOString(),
+                    observaciones
                 });
                 if (resultado) {
-                    mostrarMensaje('✅ Entrega actualizada', 'exito');
+                    mostrarMensaje('✅ Recogida actualizada', 'exito');
                 } else {
                     mostrarMensaje('❌ Error al actualizar', 'error');
                 }
             } else {
-                resultado = registrarEntrega(comunidad, pequenos, medianos, grandes, precios, pago_efectivo, pago_transferencia, pago_punto_venta, exonerados, planta, fecha ? new Date(fecha).toISOString() : new Date().toISOString());
+                // Nueva
+                resultado = registrarRecogida(comunidad, pequenos, medianos, grandes, observaciones, planta, fecha ? new Date(fecha).toISOString() : new Date().toISOString());
                 if (resultado) {
-                    setUltimo('entrega', resultado.id);
-                    mostrarMensaje(`✅ Entrega guardada: ${comunidad} (${pequenos+medianos+grandes} cilindros)`, 'exito');
+                    setUltimo('recogida', resultado.id);
+                    mostrarMensaje(`✅ Recogida guardada: ${comunidad} (${pequenos+medianos+grandes} cilindros)`, 'exito');
                 } else {
                     mostrarMensaje('❌ Error al guardar', 'error');
                 }
             }
 
             if (resultado) {
-                document.getElementById('formEntrega').reset();
+                document.getElementById('formRecogida').reset();
                 document.getElementById('editId').value = '';
-                document.getElementById('btnGuardar').textContent = 'Guardar entrega';
+                document.getElementById('btnGuardar').textContent = 'Guardar recogida';
                 document.getElementById('btnEliminar').style.display = 'none';
+                // Restaurar fecha
                 document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
-                exoneradosList = [];
-                document.getElementById('exoneradosData').value = '[]';
-                renderExonerados();
-                actualizarTotales();
+                actualizarSubtotal();
                 cargarComunidades();
             }
         });
 
+        // Eliminar
         document.getElementById('btnEliminar').addEventListener('click', function() {
             const id = parseInt(document.getElementById('editId').value);
             if (!id) return;
-            if (confirm('¿Eliminar esta entrega?')) {
-                eliminarEntrega(id);
-                mostrarMensaje('🗑️ Entrega eliminada', 'exito');
-                document.getElementById('formEntrega').reset();
+            if (confirm('¿Eliminar esta recogida?')) {
+                eliminarRecogida(id);
+                mostrarMensaje('🗑️ Recogida eliminada', 'exito');
+                document.getElementById('formRecogida').reset();
                 document.getElementById('editId').value = '';
-                document.getElementById('btnGuardar').textContent = 'Guardar entrega';
+                document.getElementById('btnGuardar').textContent = 'Guardar recogida';
                 document.getElementById('btnEliminar').style.display = 'none';
                 document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
-                exoneradosList = [];
-                document.getElementById('exoneradosData').value = '[]';
-                renderExonerados();
-                actualizarTotales();
+                actualizarSubtotal();
             }
         });
 
