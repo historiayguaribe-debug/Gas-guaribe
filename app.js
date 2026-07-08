@@ -1,354 +1,365 @@
+// app.js - GAS GUARIBE v2.0
+
 // ============================================================
-// GAS GUARIBE - app.js
-// Lógica completa para gestión de gas comunitaria
+// 1. CONFIGURACIÓN INICIAL Y DATOS POR DEFECTO
 // ============================================================
 
-// ------------------- CONFIGURACIÓN INICIAL -------------------
-const CONFIG = {
-    preciosVenta: {
-        pequeño: 3.50,
-        mediano: 5.00,
-        grande: 7.50
-    },
-    costosPlanta: {
-        pequeño: 2.00,
-        mediano: 3.00,
-        grande: 4.50
-    },
-    gastosFijos: {
-        combustible: 50,
-        peaje: 10,
-        viaticos: 30
-    }
-};
-
-// Lista de comunidades (se puede editar manualmente)
-const COMUNIDADES = [
+const COMUNIDADES_PREDEFINIDAS = [
     "El Bachiller", "La Mirandera", "Guaribito", "Los Samanes",
     "Santa Rosa", "Santa Rosa de Lima", "Las Delicias", "Delicias Norte",
     "Sectores Unidos", "Chivirital", "Terrazas de Guaribe", "El Acueducto",
     "San Luis", "Cañicito", "El Centro", "San Pascual", "El Delirio",
     "Caraquita", "El Quizando", "Samán Gacho", "Inavi", "Colinas de Inavi",
     "Aserradero", "19 de Abril", "El Cedro", "Las Aguaditas", "Las Lajas",
-    "Uveral", "El Cinco", "Arenita"
+    "Uveral", "El Cinco", "Arenita",
+    "Abasto el Llanero", "Distribuidora Caridad", "Queseras", "Galpón"
 ];
 
-// ------------------- FUNCIONES DE ALMACENAMIENTO -------------------
-function guardarDatos(clave, datos) {
-    localStorage.setItem(clave, JSON.stringify(datos));
+const PLANTAS_PREDEFINIDAS = [
+    { id: 'planta1', nombre: 'Puerto La Cruz', costos: { pequeno: 2.00, mediano: 3.00, grande: 4.50 }, gastos: { combustible: 50, peaje: 10, viaticos: 30 } },
+    { id: 'planta2', nombre: 'Altagracia', costos: { pequeno: 2.20, mediano: 3.30, grande: 4.80 }, gastos: { combustible: 60, peaje: 15, viaticos: 35 } },
+    { id: 'planta3', nombre: 'Valle de la Pascua', costos: { pequeno: 2.50, mediano: 3.80, grande: 5.20 }, gastos: { combustible: 70, peaje: 20, viaticos: 40 } }
+];
+
+const CONFIG_DEFAULT = {
+    plantas: PLANTAS_PREDEFINIDAS,
+    precios_venta: { pequeno: 3.50, mediano: 5.00, grande: 7.50 },
+    gastos_generales: { nomina: 0, alquiler: 0, mantenimiento: 0, repuestos: 0, varios: 0 }
+};
+
+let datos = {
+    comunidades: [...COMUNIDADES_PREDEFINIDAS],
+    config: CONFIG_DEFAULT,
+    recogidas: [],
+    entregas: [],
+    ventas: [],
+    gastos: []
+};
+
+// ============================================================
+// 2. FUNCIONES DE PERSISTENCIA
+// ============================================================
+
+function guardarDatos() {
+    localStorage.setItem('gasguaribe_datos', JSON.stringify(datos));
 }
 
-function obtenerDatos(clave) {
-    const data = localStorage.getItem(clave);
-    return data ? JSON.parse(data) : null;
-}
-
-function obtenerOCrear(clave, valorDefecto) {
-    const data = localStorage.getItem(clave);
-    if (data) {
+function cargarDatos() {
+    const saved = localStorage.getItem('gasguaribe_datos');
+    if (saved) {
         try {
-            return JSON.parse(data);
-        } catch (e) {
-            return valorDefecto;
+            datos = JSON.parse(saved);
+            // Asegurar que existan las propiedades nuevas
+            if (!datos.config) datos.config = CONFIG_DEFAULT;
+            if (!datos.comunidades) datos.comunidades = [...COMUNIDADES_PREDEFINIDAS];
+            if (!datos.recogidas) datos.recogidas = [];
+            if (!datos.entregas) datos.entregas = [];
+            if (!datos.ventas) datos.ventas = [];
+            if (!datos.gastos) datos.gastos = [];
+        } catch(e) {
+            console.warn('Error al cargar datos, usando default');
+            datos = { comunidades: [...COMUNIDADES_PREDEFINIDAS], config: CONFIG_DEFAULT, recogidas: [], entregas: [], ventas: [], gastos: [] };
         }
     }
-    return valorDefecto;
-}
-
-// ------------------- ESTRUCTURA DE DATOS -------------------
-function inicializarDatos() {
-    if (!localStorage.getItem('recogidas')) {
-        guardarDatos('recogidas', []);
-    }
-    if (!localStorage.getItem('entregas')) {
-        guardarDatos('entregas', []);
-    }
-    if (!localStorage.getItem('ventas')) {
-        guardarDatos('ventas', []);
-    }
-    if (!localStorage.getItem('gastos')) {
-        guardarDatos('gastos', []);
-    }
-    if (!localStorage.getItem('config')) {
-        guardarDatos('config', CONFIG);
-    }
-    if (!localStorage.getItem('cargas')) {
-        guardarDatos('cargas', []);
+    // Si no hay plantas configuradas, usar las predeterminadas
+    if (!datos.config.plantas || datos.config.plantas.length === 0) {
+        datos.config.plantas = PLANTAS_PREDEFINIDAS;
+        guardarDatos();
     }
 }
 
-// ------------------- RECOGIDAS -------------------
-function registrarRecogida(comunidad, pequeños, medianos, grandes, observaciones = '') {
-    const recogidas = obtenerOCrear('recogidas', []);
-    const nueva = {
+function resetDatos() {
+    localStorage.removeItem('gasguaribe_datos');
+    datos = { comunidades: [...COMUNIDADES_PREDEFINIDAS], config: CONFIG_DEFAULT, recogidas: [], entregas: [], ventas: [], gastos: [] };
+    guardarDatos();
+}
+
+// ============================================================
+// 3. FUNCIONES DE NEGOCIO
+// ============================================================
+
+// ---- COMUNIDADES ----
+function obtenerComunidades() {
+    return datos.comunidades || COMUNIDADES_PREDEFINIDAS;
+}
+
+function agregarComunidad(nombre) {
+    if (!nombre || nombre.trim() === '') return false;
+    const nombreLimpio = nombre.trim();
+    if (!datos.comunidades.includes(nombreLimpio)) {
+        datos.comunidades.push(nombreLimpio);
+        guardarDatos();
+        return true;
+    }
+    return false;
+}
+
+// ---- PLANTAS ----
+function obtenerPlantas() {
+    return datos.config.plantas || PLANTAS_PREDEFINIDAS;
+}
+
+function obtenerPlantaPorId(id) {
+    return (datos.config.plantas || []).find(p => p.id === id);
+}
+
+function guardarPlantas(plantas) {
+    datos.config.plantas = plantas;
+    guardarDatos();
+}
+
+// ---- RECOGIDAS ----
+function registrarRecogida(comunidad, pequenos, medianos, grandes, observaciones, planta, fecha) {
+    const recogida = {
         id: Date.now(),
-        fecha: new Date().toISOString(),
-        comunidad,
-        pequeños: parseInt(pequeños) || 0,
+        comunidad: comunidad.trim(),
+        pequenos: parseInt(pequenos) || 0,
         medianos: parseInt(medianos) || 0,
         grandes: parseInt(grandes) || 0,
-        observaciones,
-        sincronizado: false
-    };
-    recogidas.push(nueva);
-    guardarDatos('recogidas', recogidas);
-    return nueva;
-}
-
-function obtenerRecogidas() {
-    return obtenerOCrear('recogidas', []);
-}
-
-function obtenerRecogidasPendientes() {
-    const recogidas = obtenerRecogidas();
-    const entregas = obtenerEntregas();
-    const idsEntregados = entregas.map(e => e.recogidaId);
-    return recogidas.filter(r => !idsEntregados.includes(r.id));
-}
-
-// ------------------- ENTREGAS -------------------
-function registrarEntrega(recogidaId, comunidad, entregados, precios, exonerados, pago, monto) {
-    const entregas = obtenerOCrear('entregas', []);
-    const recogida = obtenerRecogidas().find(r => r.id === recogidaId);
-    if (!recogida) {
-        throw new Error('No se encontró la recogida asociada');
-    }
-
-    const config = obtenerOCrear('config', CONFIG);
-    const costosPlanta = config.costosPlanta || CONFIG.costosPlanta;
-
-    // Calcular costos y ganancias
-    const costos = {
-        pequeño: (entregados.pequeño || 0) * (costosPlanta.pequeño || 0),
-        mediano: (entregados.mediano || 0) * (costosPlanta.mediano || 0),
-        grande: (entregados.grande || 0) * (costosPlanta.grande || 0)
-    };
-    const totalCostoPlanta = costos.pequeño + costos.mediano + costos.grande;
-
-    const ingresos = {
-        pequeño: (entregados.pequeño || 0) * (precios.pequeño || 0),
-        mediano: (entregados.mediano || 0) * (precios.mediano || 0),
-        grande: (entregados.grande || 0) * (precios.grande || 0)
-    };
-    const totalIngreso = ingresos.pequeño + ingresos.mediano + ingresos.grande;
-
-    // Gastos operativos (se pueden asignar manualmente después)
-    const gastosOperativos = obtenerGastosPorCarga(recogidaId);
-
-    const nueva = {
-        id: Date.now(),
-        recogidaId,
-        fecha: new Date().toISOString(),
-        comunidad,
-        entregados,
-        precios,
-        exonerados: exonerados || { institucion: '', cantidad: 0 },
-        pago,
-        monto: parseFloat(monto) || 0,
-        costosPlanta: costos,
-        totalCostoPlanta,
-        ingresos,
-        totalIngreso,
-        gastosOperativos: gastosOperativos || { combustible: 0, peaje: 0, viaticos: 0, imprevistos: 0 },
-        ganancia: totalIngreso - totalCostoPlanta - (gastosOperativos ? gastosOperativos.combustible + gastosOperativos.peaje + gastosOperativos.viaticos + gastosOperativos.imprevistos : 0),
-        sincronizado: false
-    };
-    entregas.push(nueva);
-    guardarDatos('entregas', entregas);
-    return nueva;
-}
-
-function obtenerEntregas() {
-    return obtenerOCrear('entregas', []);
-}
-
-// ------------------- GASTOS OPERATIVOS POR CARGA -------------------
-function registrarGastosCarga(cargaId, combustible, peaje, viaticos, imprevistos) {
-    const gastos = obtenerOCrear('gastosCarga', {});
-    gastos[cargaId] = {
-        combustible: parseFloat(combustible) || 0,
-        peaje: parseFloat(peaje) || 0,
-        viaticos: parseFloat(viaticos) || 0,
-        imprevistos: parseFloat(imprevistos) || 0
-    };
-    guardarDatos('gastosCarga', gastos);
-}
-
-function obtenerGastosPorCarga(cargaId) {
-    const gastos = obtenerOCrear('gastosCarga', {});
-    return gastos[cargaId] || null;
-}
-
-// ------------------- GASTOS GENERALES -------------------
-function registrarGastoGeneral(categoria, descripcion, monto, fecha = null) {
-    const gastos = obtenerOCrear('gastosGenerales', []);
-    gastos.push({
-        id: Date.now(),
         fecha: fecha || new Date().toISOString(),
-        categoria,
-        descripcion,
-        monto: parseFloat(monto) || 0
-    });
-    guardarDatos('gastosGenerales', gastos);
+        observaciones: observaciones || '',
+        planta: planta || '',
+        estado: 'recogido'
+    };
+    datos.recogidas.push(recogida);
+    guardarDatos();
+    return recogida;
 }
 
-function obtenerGastosGenerales() {
-    return obtenerOCrear('gastosGenerales', []);
+function actualizarRecogida(id, data) {
+    const idx = datos.recogidas.findIndex(r => r.id === id);
+    if (idx === -1) return null;
+    datos.recogidas[idx] = { ...datos.recogidas[idx], ...data };
+    guardarDatos();
+    return datos.recogidas[idx];
 }
 
-// ------------------- VENTAS DE ALMACÉN -------------------
-function registrarVentaAlmacen(cliente, pequeños, medianos, grandes, precioUnitario, pago, monto) {
-    const ventas = obtenerOCrear('ventas', []);
-    const total = (pequeños * precioUnitario.pequeño || 0) + (medianos * precioUnitario.mediano || 0) + (grandes * precioUnitario.grande || 0);
-    ventas.push({
+function eliminarRecogida(id) {
+    datos.recogidas = datos.recogidas.filter(r => r.id !== id);
+    guardarDatos();
+}
+
+// ---- ENTREGAS ----
+function registrarEntrega(comunidad, pequenos, medianos, grandes, precios, pago_efectivo, pago_transferencia, pago_punto_venta, exonerados, planta, fecha) {
+    const entrega = {
         id: Date.now(),
-        fecha: new Date().toISOString(),
-        cliente,
-        pequeños: parseInt(pequeños) || 0,
+        comunidad: comunidad.trim(),
+        pequenos: parseInt(pequenos) || 0,
         medianos: parseInt(medianos) || 0,
         grandes: parseInt(grandes) || 0,
-        precioUnitario,
-        total,
-        pago,
-        monto: parseFloat(monto) || 0
-    });
-    guardarDatos('ventas', ventas);
+        precios: precios || { pequeno: 3.50, mediano: 5.00, grande: 7.50 },
+        pago_efectivo: parseFloat(pago_efectivo) || 0,
+        pago_transferencia: parseFloat(pago_transferencia) || 0,
+        pago_punto_venta: parseFloat(pago_punto_venta) || 0,
+        exonerados: exonerados || [], // array de { tipo, institucion, pequenos, medianos, grandes, costo }
+        planta: planta || '',
+        fecha: fecha || new Date().toISOString(),
+        estado: 'entregado'
+    };
+    datos.entregas.push(entrega);
+    guardarDatos();
+    return entrega;
 }
 
-function obtenerVentasAlmacen() {
-    return obtenerOCrear('ventas', []);
+function actualizarEntrega(id, data) {
+    const idx = datos.entregas.findIndex(e => e.id === id);
+    if (idx === -1) return null;
+    datos.entregas[idx] = { ...datos.entregas[idx], ...data };
+    guardarDatos();
+    return datos.entregas[idx];
 }
 
-// ------------------- REPORTES -------------------
-function generarReporteCarga(recogidaId) {
-    const recogida = obtenerRecogidas().find(r => r.id === recogidaId);
-    if (!recogida) return null;
-    const entrega = obtenerEntregas().find(e => e.recogidaId === recogidaId);
-    if (!entrega) return null;
+function eliminarEntrega(id) {
+    datos.entregas = datos.entregas.filter(e => e.id !== id);
+    guardarDatos();
+}
 
+// ---- VENTAS ----
+function registrarVenta(cliente, pequenos, medianos, grandes, precio_unitario, fecha) {
+    const venta = {
+        id: Date.now(),
+        cliente: cliente.trim(),
+        pequenos: parseInt(pequenos) || 0,
+        medianos: parseInt(medianos) || 0,
+        grandes: parseInt(grandes) || 0,
+        precio_unitario: precio_unitario || { pequeno: 3.50, mediano: 5.00, grande: 7.50 },
+        fecha: fecha || new Date().toISOString()
+    };
+    datos.ventas.push(venta);
+    guardarDatos();
+    return venta;
+}
+
+function eliminarVenta(id) {
+    datos.ventas = datos.ventas.filter(v => v.id !== id);
+    guardarDatos();
+}
+
+// ---- GASTOS ----
+function registrarGasto(categoria, descripcion, monto, planta, fecha) {
+    const gasto = {
+        id: Date.now(),
+        categoria: categoria.trim(),
+        descripcion: descripcion || categoria,
+        monto: parseFloat(monto) || 0,
+        planta: planta || '',
+        fecha: fecha || new Date().toISOString()
+    };
+    datos.gastos.push(gasto);
+    guardarDatos();
+    return gasto;
+}
+
+function eliminarGasto(id) {
+    datos.gastos = datos.gastos.filter(g => g.id !== id);
+    guardarDatos();
+}
+
+// ---- ÚLTIMO REGISTRO (para deshacer) ----
+let ultimoId = null;
+let ultimoTipo = null;
+
+function setUltimo(tipo, id) {
+    ultimoTipo = tipo;
+    ultimoId = id;
+    sessionStorage.setItem('ultimo_tipo', tipo);
+    sessionStorage.setItem('ultimo_id', id);
+}
+
+function getUltimo() {
     return {
-        recogida,
-        entrega,
-        resumen: {
-            recogidos: {
-                pequeños: recogida.pequeños,
-                medianos: recogida.medianos,
-                grandes: recogida.grandes
-            },
-            entregados: entrega.entregados,
-            exonerados: entrega.exonerados,
-            totalIngreso: entrega.totalIngreso,
-            totalCostoPlanta: entrega.totalCostoPlanta,
-            gastosOperativos: entrega.gastosOperativos,
-            ganancia: entrega.ganancia
-        }
+        tipo: sessionStorage.getItem('ultimo_tipo'),
+        id: parseInt(sessionStorage.getItem('ultimo_id'))
     };
 }
 
-function generarResumenMensual(mes, año) {
-    const entregas = obtenerEntregas().filter(e => {
-        const f = new Date(e.fecha);
-        return f.getMonth() === mes && f.getFullYear() === año;
-    });
-    const gastosGenerales = obtenerGastosGenerales().filter(g => {
-        const f = new Date(g.fecha);
-        return f.getMonth() === mes && f.getFullYear() === año;
-    });
-
-    let totalIngresos = 0;
-    let totalCostosPlanta = 0;
-    let totalGastosOperativos = 0;
-    let totalGanancia = 0;
-
-    entregas.forEach(e => {
-        totalIngresos += e.totalIngreso || 0;
-        totalCostosPlanta += e.totalCostoPlanta || 0;
-        const op = e.gastosOperativos || { combustible: 0, peaje: 0, viaticos: 0, imprevistos: 0 };
-        totalGastosOperativos += op.combustible + op.peaje + op.viaticos + op.imprevistos;
-        totalGanancia += e.ganancia || 0;
-    });
-
-    const totalGastosGenerales = gastosGenerales.reduce((acc, g) => acc + g.monto, 0);
-
-    return {
-        entregas,
-        gastosGenerales,
-        totalIngresos,
-        totalCostosPlanta,
-        totalGastosOperativos,
-        totalGastosGenerales,
-        totalGanancia: totalGanancia - totalGastosGenerales
-    };
-}
-
-// ------------------- INVENTARIO -------------------
-function calcularInventario() {
-    const recogidas = obtenerRecogidas();
-    const entregas = obtenerEntregas();
-    const ventas = obtenerVentasAlmacen();
-
-    // Vacíos en resguardo: recogidas no entregadas
-    const idsEntregados = entregas.map(e => e.recogidaId);
-    const recogidasPendientes = recogidas.filter(r => !idsEntregados.includes(r.id));
-
-    let vaciosResguardo = { pequeño: 0, mediano: 0, grande: 0 };
-    recogidasPendientes.forEach(r => {
-        vaciosResguardo.pequeño += r.pequeños || 0;
-        vaciosResguardo.mediano += r.medianos || 0;
-        vaciosResguardo.grande += r.grandes || 0;
-    });
-
-    // Llenos en almacén: entregados no vendidos en almacén
-    let llenosAlmacen = { pequeño: 0, mediano: 0, grande: 0 };
-    entregas.forEach(e => {
-        llenosAlmacen.pequeño += e.entregados.pequeño || 0;
-        llenosAlmacen.mediano += e.entregados.mediano || 0;
-        llenosAlmacen.grande += e.entregados.grande || 0;
-    });
-    // Restar ventas de almacén
-    ventas.forEach(v => {
-        llenosAlmacen.pequeño -= v.pequeños || 0;
-        llenosAlmacen.mediano -= v.medianos || 0;
-        llenosAlmacen.grande -= v.grandes || 0;
-    });
-
-    return {
-        vaciosResguardo,
-        llenosAlmacen,
-        totalVacios: vaciosResguardo.pequeño + vaciosResguardo.mediano + vaciosResguardo.grande,
-        totalLlenos: llenosAlmacen.pequeño + llenosAlmacen.mediano + llenosAlmacen.grande
-    };
-}
-
-// ------------------- ACTUALIZAR DASHBOARD -------------------
-function actualizarResumen() {
-    const inventario = calcularInventario();
-    const entregas = obtenerEntregas();
-    const hoy = new Date().toISOString().split('T')[0];
-    const entregasHoy = entregas.filter(e => e.fecha.split('T')[0] === hoy);
-
-    document.getElementById('vaciosResguardo').textContent = inventario.totalVacios;
-    document.getElementById('llenosAlmacen').textContent = inventario.totalLlenos;
-    document.getElementById('entregadosHoy').textContent = entregasHoy.length;
-
-    // En ruta a planta (simulado: recogidas pendientes que han sido enviadas)
-    // Por simplicidad, asumimos que las recogidas pendientes son las que están en ruta
-    document.getElementById('enRuta').textContent = document.getElementById('vaciosResguardo').textContent;
-}
-
-function mostrarUltimaCarga() {
-    const recogidas = obtenerRecogidas();
-    if (recogidas.length === 0) {
-        document.getElementById('ultimaCargaInfo').textContent = 'No hay cargas registradas';
-        return;
+function deshacerUltimo() {
+    const { tipo, id } = getUltimo();
+    if (!tipo || !id) return false;
+    let eliminado = false;
+    switch(tipo) {
+        case 'recogida':
+            eliminarRecogida(id);
+            eliminado = true;
+            break;
+        case 'entrega':
+            eliminarEntrega(id);
+            eliminado = true;
+            break;
+        case 'venta':
+            eliminarVenta(id);
+            eliminado = true;
+            break;
+        case 'gasto':
+            eliminarGasto(id);
+            eliminado = true;
+            break;
+        default:
+            return false;
     }
-    const ultima = recogidas[recogidas.length - 1];
-    const total = (ultima.pequeños || 0) + (ultima.medianos || 0) + (ultima.grandes || 0);
-    document.getElementById('ultimaCargaInfo').textContent = `#${ultima.id} - ${ultima.comunidad} - ${total} cilindros (${ultima.fecha.split('T')[0]})`;
+    if (eliminado) {
+        sessionStorage.removeItem('ultimo_tipo');
+        sessionStorage.removeItem('ultimo_id');
+        return true;
+    }
+    return false;
 }
 
-// ------------------- EXPORTAR (para usar en otros archivos) -------------------
-// Las funciones ya están disponibles globalmente porque las declaramos en el scope global.
+// ============================================================
+// 4. FUNCIONES DE REPORTES Y CÁLCULOS
+// ============================================================
 
-// Inicializar datos al cargar
-inicializarDatos();
+function calcularTotalEntrega(entrega) {
+    const p = entrega.precios || { pequeno: 3.50, mediano: 5.00, grande: 7.50 };
+    return (entrega.pequenos * p.pequeno) + (entrega.medianos * p.mediano) + (entrega.grandes * p.grande);
+}
+
+function calcularPagoTotal(entrega) {
+    return (entrega.pago_efectivo || 0) + (entrega.pago_transferencia || 0) + (entrega.pago_punto_venta || 0);
+}
+
+function calcularCostoExonerados(exonerados, plantaCostos) {
+    // plantaCostos: { pequeno, mediano, grande }
+    let total = 0;
+    exonerados.forEach(ex => {
+        total += (ex.pequenos * (plantaCostos.pequeno || 0)) +
+                 (ex.medianos * (plantaCostos.mediano || 0)) +
+                 (ex.grandes * (plantaCostos.grande || 0));
+    });
+    return total;
+}
+
+function obtenerPlantasMap() {
+    const plantas = datos.config.plantas || PLANTAS_PREDEFINIDAS;
+    const map = {};
+    plantas.forEach(p => {
+        map[p.id] = p;
+    });
+    return map;
+}
+
+// ============================================================
+// 5. INICIALIZACIÓN
+// ============================================================
+
+cargarDatos();
+// Si no hay datos, guardar default
+if (!localStorage.getItem('gasguaribe_datos')) {
+    guardarDatos();
+}
+
+// ============================================================
+// 6. FUNCIONES PARA EL DASHBOARD (se usan en index.html)
+// ============================================================
+
+function actualizarDashboard() {
+    cargarDatos();
+    const recogidas = datos.recogidas || [];
+    const entregas = datos.entregas || [];
+    
+    let totalRecogidos = { p:0, m:0, g:0 };
+    let totalEntregados = { p:0, m:0, g:0 };
+    
+    recogidas.forEach(r => {
+        totalRecogidos.p += r.pequenos || 0;
+        totalRecogidos.m += r.medianos || 0;
+        totalRecogidos.g += r.grandes || 0;
+    });
+    entregas.forEach(e => {
+        totalEntregados.p += e.pequenos || 0;
+        totalEntregados.m += e.medianos || 0;
+        totalEntregados.g += e.grandes || 0;
+    });
+    
+    const vacios = {
+        p: totalRecogidos.p - totalEntregados.p,
+        m: totalRecogidos.m - totalEntregados.m,
+        g: totalRecogidos.g - totalEntregados.g
+    };
+    
+    const totalVacios = vacios.p + vacios.m + vacios.g;
+    const totalLlenos = totalEntregados.p + totalEntregados.m + totalEntregados.g;
+    const enPlanta = recogidas.filter(r => r.estado === 'en_planta').length;
+    const entregadosHoy = entregas.filter(e => new Date(e.fecha).toDateString() === new Date().toDateString()).reduce((sum, e) => sum + e.pequenos + e.medianos + e.grandes, 0);
+    
+    document.getElementById('enRuta').textContent = enPlanta;
+    document.getElementById('llenos').textContent = totalLlenos;
+    document.getElementById('vacios').textContent = totalVacios;
+    document.getElementById('entregados').textContent = entregadosHoy;
+    
+    // Última carga
+    if (entregas.length > 0) {
+        const ultima = entregas[entregas.length - 1];
+        const fecha = new Date(ultima.fecha).toLocaleDateString();
+        const total = calcularTotalEntrega(ultima);
+        document.getElementById('ultimaCargaTexto').textContent = `${ultima.comunidad} - ${fecha} - $${total.toFixed(2)}`;
+    } else {
+        document.getElementById('ultimaCargaTexto').textContent = 'No hay cargas registradas';
+    }
+}
+
+// ============================================================
+// 7. EXPORTAR FUNCIONES PARA USO EN OTROS ARCHIVOS
+// ============================================================
+
+// Las funciones ya están en el ámbito global para ser usadas desde HTML
