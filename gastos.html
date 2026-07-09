@@ -5,134 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Gastos - GAS GUARIBE</title>
     <link rel="stylesheet" href="style.css">
+    <script src="app.js"></script>
 </head>
 <body>
-    <div id="app">
+    <div class="container">
         <header>
             <h1>💸 Gastos</h1>
-            <a href="index.html" style="color:white; text-decoration:none;">✕</a>
+            <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <main>
-            <h3>📌 Gastos operativos por carga</h3>
-            <form id="formGastosCarga">
-                <div class="form-group">
-                    <label for="cargaSelect">Seleccionar carga</label>
-                    <select id="cargaSelect" required>
-                        <option value="">Seleccionar...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="gCombustible">Combustible ($)</label>
-                    <input type="number" id="gCombustible" step="0.01" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="gPeaje">Peaje ($)</label>
-                    <input type="number" id="gPeaje" step="0.01" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="gViaticos">Viáticos ($)</label>
-                    <input type="number" id="gViaticos" step="0.01" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="gImprevistos">Imprevistos ($)</label>
-                    <input type="number" id="gImprevistos" step="0.01" value="0">
-                </div>
-                <button type="submit" class="btn-guardar">💾 Guardar gastos de carga</button>
-            </form>
+        <div id="totalGastos" class="subtotal-box">Total de gastos: $0.00</div>
 
-            <hr style="margin:24px 0;">
+        <form id="formGasto">
+            <div class="form-group">
+                <label for="categoria">Categoría</label>
+                <select id="categoria" required>
+                    <option value="">Selecciona</option>
+                    <option value="combustible">Combustible</option>
+                    <option value="peaje">Peaje</option>
+                    <option value="viaticos">Viáticos</option>
+                    <option value="imprevistos">Imprevistos</option>
+                    <option value="nomina">Nómina</option>
+                    <option value="alquiler">Alquiler</option>
+                    <option value="mantenimiento">Mantenimiento</option>
+                    <option value="repuestos">Repuestos</option>
+                    <option value="varios">Varios</option>
+                </select>
+            </div>
 
-            <h3>📌 Gastos generales</h3>
-            <form id="formGastosGenerales">
-                <div class="form-group">
-                    <label for="categoriaGasto">Categoría</label>
-                    <select id="categoriaGasto" required>
-                        <option value="">Seleccionar...</option>
-                        <option value="nomina">Nómina</option>
-                        <option value="alquiler">Alquiler</option>
-                        <option value="mantenimiento">Mantenimiento de camión</option>
-                        <option value="repuestos">Repuestos</option>
-                        <option value="varios">Varios</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="descGasto">Descripción</label>
-                    <input type="text" id="descGasto" placeholder="Ej: pago semanal">
-                </div>
-                <div class="form-group">
-                    <label for="montoGasto">Monto ($)</label>
-                    <input type="number" id="montoGasto" step="0.01" value="0" required>
-                </div>
-                <button type="submit" class="btn-guardar">💾 Guardar gasto general</button>
-            </form>
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <input type="text" id="descripcion" placeholder="Detalle del gasto">
+            </div>
 
-            <div id="mensaje" style="margin-top:16px;"></div>
-            <a href="index.html" class="btn-volver">← Volver al inicio</a>
-        </main>
+            <div class="form-group">
+                <label for="monto">Monto ($)</label>
+                <input type="number" id="monto" step="0.01" min="0" required>
+            </div>
+
+            <button type="submit" class="btn-primary">Registrar gasto</button>
+        </form>
+
+        <div id="mensaje" style="margin-top:16px; padding:12px; border-radius:8px; display:none;"></div>
     </div>
 
-    <script src="app.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            cargarCargas();
+        function actualizarTotalGastos() {
+            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"gastos":[]}');
+            const total = (datos.gastos || []).reduce((sum, g) => sum + g.monto, 0);
+            document.getElementById('totalGastos').textContent = `Total de gastos: $${total.toFixed(2)}`;
+        }
 
-            document.getElementById('formGastosCarga').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const cargaId = parseInt(document.getElementById('cargaSelect').value);
-                if (!cargaId) {
-                    mostrarMensaje('❌ Selecciona una carga', 'error');
-                    return;
-                }
-                const combustible = parseFloat(document.getElementById('gCombustible').value) || 0;
-                const peaje = parseFloat(document.getElementById('gPeaje').value) || 0;
-                const viaticos = parseFloat(document.getElementById('gViaticos').value) || 0;
-                const imprevistos = parseFloat(document.getElementById('gImprevistos').value) || 0;
+        document.getElementById('formGasto').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const categoria = document.getElementById('categoria').value;
+            const descripcion = document.getElementById('descripcion').value;
+            const monto = parseFloat(document.getElementById('monto').value);
 
-                registrarGastosCarga(cargaId, combustible, peaje, viaticos, imprevistos);
-                mostrarMensaje('✅ Gastos de carga guardados', 'exito');
-            });
+            if (!categoria) {
+                mostrarMensaje('Selecciona una categoría', 'error');
+                return;
+            }
 
-            document.getElementById('formGastosGenerales').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const categoria = document.getElementById('categoriaGasto').value;
-                const descripcion = document.getElementById('descGasto').value;
-                const monto = parseFloat(document.getElementById('montoGasto').value) || 0;
+            if (!monto || monto <= 0) {
+                mostrarMensaje('Ingresa un monto válido', 'error');
+                return;
+            }
 
-                if (!categoria) {
-                    mostrarMensaje('❌ Selecciona una categoría', 'error');
-                    return;
-                }
-                if (monto <= 0) {
-                    mostrarMensaje('❌ El monto debe ser mayor a 0', 'error');
-                    return;
-                }
+            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"gastos":[]}');
+            const gasto = {
+                id: Date.now(),
+                categoria,
+                descripcion: descripcion || categoria,
+                monto,
+                fecha: new Date().toISOString()
+            };
+            datos.gastos.push(gasto);
+            localStorage.setItem('gasguaribe_datos_v2', JSON.stringify(datos));
 
-                registrarGastoGeneral(categoria, descripcion, monto);
-                mostrarMensaje('✅ Gasto general registrado', 'exito');
-                document.getElementById('formGastosGenerales').reset();
-            });
+            mostrarMensaje(`✅ Gasto registrado: ${categoria} - $${monto.toFixed(2)}`, 'exito');
+            document.getElementById('formGasto').reset();
+            actualizarTotalGastos();
         });
 
-        function cargarCargas() {
-            const select = document.getElementById('cargaSelect');
-            select.innerHTML = '<option value="">Seleccionar...</option>';
-            const recogidas = obtenerRecogidas();
-            recogidas.forEach(r => {
-                const opt = document.createElement('option');
-                opt.value = r.id;
-                const total = (r.pequeños || 0) + (r.medianos || 0) + (r.grandes || 0);
-                opt.textContent = `${r.comunidad} - ${total} cilindros (${r.fecha.split('T')[0]})`;
-                select.appendChild(opt);
-            });
+        function mostrarMensaje(texto, tipo) {
+            const msg = document.getElementById('mensaje');
+            msg.textContent = texto;
+            msg.style.display = 'block';
+            msg.style.backgroundColor = tipo === 'exito' ? '#d4edda' : '#f8d7da';
+            msg.style.color = tipo === 'exito' ? '#155724' : '#721c24';
+            setTimeout(() => { msg.style.display = 'none'; }, 4000);
         }
 
-        function mostrarMensaje(texto, tipo) {
-            const div = document.getElementById('mensaje');
-            div.textContent = texto;
-            div.className = 'mensaje ' + (tipo === 'exito' ? 'mensaje-exito' : 'mensaje-error');
-            setTimeout(() => { div.textContent = ''; div.className = ''; }, 5000);
-        }
+        document.addEventListener('DOMContentLoaded', actualizarTotalGastos);
     </script>
 </body>
 </html>
