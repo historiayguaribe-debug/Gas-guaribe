@@ -38,8 +38,8 @@ const CONFIG_DEFAULT = {
 let datos = {
     comunidades: [...COMUNIDADES_PREDEFINIDAS],
     config: CONFIG_DEFAULT,
-    recogidas: [],      // { id, comunidad, planta, pequenos, medianos, grandes, fecha, observaciones, estado, enviado, exonerados_planificados: [] }
-    cargas: [],         // { id, planta, fecha, items: [{ recogidaId, pequenos, medianos, grandes, exonerados: [] }], estado, costos, gastos }
+    recogidas: [],
+    cargas: [],
     entregas: [],
     ventas: [],
     gastos: []
@@ -58,7 +58,6 @@ function cargarDatos() {
     if (saved) {
         try {
             datos = JSON.parse(saved);
-            // Asegurar propiedades nuevas
             if (!datos.config) datos.config = CONFIG_DEFAULT;
             if (!datos.comunidades) datos.comunidades = [...COMUNIDADES_PREDEFINIDAS];
             if (!datos.recogidas) datos.recogidas = [];
@@ -67,14 +66,12 @@ function cargarDatos() {
             if (!datos.ventas) datos.ventas = [];
             if (!datos.gastos) datos.gastos = [];
             if (!datos.config.capacidad_camion) datos.config.capacidad_camion = 50;
-            // Asegurar que cada recogida tenga los campos nuevos
             datos.recogidas = datos.recogidas.map(r => {
                 if (!r.estado) r.estado = 'pendiente';
                 if (!r.enviado) r.enviado = { p: 0, m: 0, g: 0 };
                 if (!r.exonerados_planificados) r.exonerados_planificados = [];
                 return r;
             });
-            // Asegurar que cada carga tenga los campos nuevos
             datos.cargas = datos.cargas.map(c => {
                 if (!c.items) c.items = [];
                 c.items = c.items.map(item => {
@@ -138,7 +135,7 @@ function guardarPlantas(plantas) {
 }
 
 // ------------------------------------------------------------
-// 4. FUNCIONES DE RECOGIDAS (CON EXONERACIONES PLANIFICADAS)
+// 4. FUNCIONES DE RECOGIDAS
 // ------------------------------------------------------------
 
 function registrarRecogida(comunidad, planta, pequenos, medianos, grandes, fecha, observaciones, exonerados_planificados) {
@@ -164,7 +161,6 @@ function actualizarRecogida(id, data) {
     const idx = datos.recogidas.findIndex(r => r.id === id);
     if (idx === -1) return null;
     datos.recogidas[idx] = { ...datos.recogidas[idx], ...data };
-    // Recalcular estado
     const r = datos.recogidas[idx];
     const totalRecogido = r.pequenos + r.medianos + r.grandes;
     const totalEnviado = (r.enviado?.p || 0) + (r.enviado?.m || 0) + (r.enviado?.g || 0);
@@ -203,11 +199,10 @@ function actualizarEstadoRecogida(recogida) {
 }
 
 // ------------------------------------------------------------
-// 5. FUNCIONES DE CARGAS (CON EXONERACIONES)
+// 5. FUNCIONES DE CARGAS
 // ------------------------------------------------------------
 
 function crearCarga(planta, fecha, items) {
-    // items: [{ recogidaId, pequenos, medianos, grandes, exonerados: [{ destino, institucion, pequenos, medianos, grandes, costo }] }]
     const carga = {
         id: Date.now(),
         planta: planta || '',
@@ -232,7 +227,6 @@ function crearCarga(planta, fecha, items) {
     };
     datos.cargas.push(carga);
 
-    // Actualizar recogidas (sumar lo enviado)
     items.forEach(item => {
         const recogida = datos.recogidas.find(r => r.id === item.recogidaId);
         if (recogida) {
@@ -412,28 +406,12 @@ function deshacerUltimo() {
     if (!tipo || !id) return false;
     let eliminado = false;
     switch(tipo) {
-        case 'recogida':
-            eliminarRecogida(id);
-            eliminado = true;
-            break;
-        case 'entrega':
-            eliminarEntrega(id);
-            eliminado = true;
-            break;
-        case 'venta':
-            eliminarVenta(id);
-            eliminado = true;
-            break;
-        case 'gasto':
-            eliminarGasto(id);
-            eliminado = true;
-            break;
-        case 'carga':
-            eliminarCarga(id);
-            eliminado = true;
-            break;
-        default:
-            return false;
+        case 'recogida': eliminarRecogida(id); eliminado = true; break;
+        case 'entrega': eliminarEntrega(id); eliminado = true; break;
+        case 'venta': eliminarVenta(id); eliminado = true; break;
+        case 'gasto': eliminarGasto(id); eliminado = true; break;
+        case 'carga': eliminarCarga(id); eliminado = true; break;
+        default: return false;
     }
     if (eliminado) {
         sessionStorage.removeItem('ultimo_tipo');
@@ -499,8 +477,6 @@ function calcularGananciaEstimada(items, plantaId) {
             mediano: obtenerCostoPlanta(plantaId, 'mediano'),
             grande: obtenerCostoPlanta(plantaId, 'grande')
         };
-        // Los cilindros exonerados no generan ingreso
-        const exoTotal = (item.exonerados || []).reduce((sum, ex) => sum + ex.pequenos + ex.medianos + ex.grandes, 0);
         const exoCosto = (item.exonerados || []).reduce((sum, ex) => sum + ex.costo, 0);
         totalExoneradosCosto += exoCosto;
         totalIngreso += (item.pequenos * precios.pequeno) + (item.medianos * precios.mediano) + (item.grandes * precios.grande);
@@ -527,7 +503,7 @@ function obtenerNombrePlanta(plantaId) {
 cargarDatos();
 
 // ------------------------------------------------------------
-// 11. EXPORTAR FUNCIONES AL ÁMBITO GLOBAL
+// 11. EXPORTAR FUNCIONES
 // ------------------------------------------------------------
 
 window.obtenerComunidades = obtenerComunidades;
