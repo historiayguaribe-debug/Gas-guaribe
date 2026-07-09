@@ -299,7 +299,6 @@
                 renderExoneradosPlanificados();
                 actualizarSubtotal();
                 cargarComunidades();
-                if (window.opener) window.opener.actualizarDashboard();
             }
         });
 
@@ -318,7 +317,6 @@
                 document.getElementById('exoneradosPlanificadosData').value = '[]';
                 renderExoneradosPlanificados();
                 actualizarSubtotal();
-                if (window.opener) window.opener.actualizarDashboard();
             }
         });
 
