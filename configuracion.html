@@ -72,10 +72,8 @@
             document.getElementById('precio_galpon_m').value = precios.galpon?.mediano || 3.80;
             document.getElementById('precio_galpon_g').value = precios.galpon?.grande || 5.20;
             
-            // Capacidad camión
             document.getElementById('capacidadCamionConfig').value = config.capacidad_camion || 50;
             
-            // Plantas
             plantasEditando = config.plantas || PLANTAS_PREDEFINIDAS;
             renderPlantas();
         }
@@ -146,7 +144,6 @@
         }
 
         function guardarConfiguracion() {
-            // Precios por tipo de cliente
             const precios_venta = {
                 comunidad: {
                     pequeno: parseFloat(document.getElementById('precio_comunidad_p').value) || 3.50,
@@ -165,10 +162,8 @@
                 }
             };
 
-            // Capacidad camión
             const capacidad_camion = parseInt(document.getElementById('capacidadCamionConfig').value) || 50;
 
-            // Plantas
             const plantas = [];
             plantasEditando.forEach((p, idx) => {
                 plantas.push({
