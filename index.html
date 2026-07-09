@@ -39,7 +39,7 @@
             </div>
 
             <div class="menu-grid">
-                <a href="recogidas.html" class="menu-btn">📋 Nueva recogida</a>
+                <a href="recogida_nueva.html" class="menu-btn">📋 Nueva recogida</a>
                 <a href="cargas.html" class="menu-btn">🛻 Armar carga</a>
                 <a href="entregas.html" class="menu-btn">💰 Registrar entrega</a>
                 <a href="inventario.html" class="menu-btn">📦 Ver inventario</a>
@@ -66,25 +66,20 @@
             const cargas = datos.cargas || [];
             const entregas = datos.entregas || [];
 
-            // Recogidas pendientes (estado 'pendiente')
             const pendientes = recogidas.filter(r => r.estado === 'pendiente');
             document.getElementById('recogidasPendientes').textContent = pendientes.length;
 
-            // Recogidas parciales (estado 'parcial')
             const parciales = recogidas.filter(r => r.estado === 'parcial');
             document.getElementById('recogidasParciales').textContent = parciales.length;
 
-            // Cargas activas
             const activas = cargas.filter(c => c.estado === 'activa');
             document.getElementById('cargasActivas').textContent = activas.length;
 
-            // Entregas hoy
             const hoy = new Date().toDateString();
             const entregasHoy = entregas.filter(e => new Date(e.fecha).toDateString() === hoy);
             const totalEntregadosHoy = entregasHoy.reduce((sum, e) => sum + e.pequenos + e.medianos + e.grandes, 0);
             document.getElementById('entregasHoy').textContent = totalEntregadosHoy;
 
-            // Total pendiente de enviar a planta (suma de saldos de recogidas no completas)
             let totalPendiente = 0;
             recogidas.forEach(r => {
                 if (r.estado !== 'completa') {
@@ -116,7 +111,6 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             actualizarDashboard();
-            // Actualizar cada 30 segundos
             setInterval(actualizarDashboard, 30000);
         });
     </script>
