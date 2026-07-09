@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Reportes - GAS GUARIBE</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Librerías para Excel y PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -15,11 +16,13 @@
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
+        <!-- Botones de exportación -->
         <div style="display:flex; gap:8px; margin:16px 0;">
             <button class="menu-btn" onclick="generarExcel()" style="background:#1e7e34;">📥 Excel</button>
             <button class="menu-btn" onclick="generarPDF()" style="background:#c62828;">📥 PDF</button>
         </div>
 
+        <!-- Selector de tipo de reporte -->
         <div class="form-group">
             <label for="tipoReporte">Tipo de reporte</label>
             <select id="tipoReporte" onchange="cambiarReporte()">
@@ -36,6 +39,7 @@
             </select>
         </div>
 
+        <!-- Contenido del reporte -->
         <div id="reporteResultado" style="margin-top:16px; padding:16px; background:#f8f9fa; border-radius:8px;">
             <div id="reporteContenido">
                 <p style="color:#999;">Selecciona un tipo de reporte</p>
@@ -45,7 +49,7 @@
 
     <script>
         // ============================================================
-        // FUNCIONES DE AYUDA (ya existentes)
+        // FUNCIONES DE AYUDA (usar las de app.js)
         // ============================================================
         function obtenerDatos() {
             const saved = localStorage.getItem('gasguaribe_datos_v2');
@@ -131,8 +135,499 @@
         }
 
         // ============================================================
-        // GENERADORES DE REPORTES (existentes + nuevo)
+        // GENERADORES DE REPORTES
         // ============================================================
+
+        function generarReporteCargas(datos) {
+            const entregas = datos.entregas || [];
+            if (entregas.length === 0) return '<p style="color:#999;">No hay cargas registradas.</p>';
+            
+            let html = `<table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <thead>
+                    <tr style="background:#0d47a1; color:white;">
+                        <th style="padding:8px; border:1px solid #ddd;">Comunidad</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Fecha</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Planta</th>
+                        <th style="padding:8px; border:1px solid #ddd;">P</th>
+                        <th style="padding:8px; border:1px solid #ddd;">M</th>
+                        <th style="padding:8px; border:1px solid #ddd;">G</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Total $</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Pago</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            entregas.forEach(e => {
+                const total = calcularTotalEntrega(e);
+                const fecha = new Date(e.fecha).toLocaleDateString();
+                const pagoTotal = calcularPagoTotal(e);
+                const estadoPago = pagoTotal >= total ? '✅ Pagado' : (pagoTotal > 0 ? '⚠️ Parcial' : '❌ Pendiente');
+                const plantaNombre = obtenerNombrePlanta(e.planta);
+                html += `<tr>
+                    <td style="padding:6px; border:1px solid #ddd;">${e.comunidad}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${fecha}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${plantaNombre}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${e.pequenos}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${e.medianos}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${e.grandes}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">$${total.toFixed(2)}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${estadoPago}</td>
+                </tr>`;
+            });
+
+            const totalGeneral = entregas.reduce((sum, e) => sum + calcularTotalEntrega(e), 0);
+            const totalPagado = entregas.reduce((sum, e) => sum + calcularPagoTotal(e), 0);
+            html += `<tr style="background:#e3f2fd; font-weight:bold;">
+                <td colspan="6" style="padding:8px; border:1px solid #ddd; text-align:right;">TOTAL GENERAL</td>
+                <td style="padding:8px; border:1px solid #ddd;">$${totalGeneral.toFixed(2)}</td>
+                <td style="padding:8px; border:1px solid #ddd;">$${totalPagado.toFixed(2)}</td>
+            </tr>`;
+
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        function generarReporteInventario(datos) {
+            const recogidas = datos.recogidas || [];
+            const entregas = datos.entregas || [];
+            let totalRecogidos = { p:0, m:0, g:0 };
+            let totalEntregados = { p:0, m:0, g:0 };
+            let totalEnPlanta = { p:0, m:0, g:0 };
+
+            recogidas.forEach(r => {
+                if (r.estado === 'pendiente' || r.estado === 'parcial') {
+                    const saldo = obtenerSaldoRecogida(r);
+                    totalEnPlanta.p += r.enviado?.p || 0;
+                    totalEnPlanta.m += r.enviado?.m || 0;
+                    totalEnPlanta.g += r.enviado?.g || 0;
+                    totalRecogidos.p += saldo.p;
+                    totalRecogidos.m += saldo.m;
+                    totalRecogidos.g += saldo.g;
+                } else if (r.estado === 'completa') {
+                    totalEnPlanta.p += r.pequenos || 0;
+                    totalEnPlanta.m += r.medianos || 0;
+                    totalEnPlanta.g += r.grandes || 0;
+                }
+            });
+
+            entregas.forEach(e => {
+                totalEntregados.p += e.pequenos || 0;
+                totalEntregados.m += e.medianos || 0;
+                totalEntregados.g += e.grandes || 0;
+            });
+
+            const vacios = {
+                p: totalRecogidos.p,
+                m: totalRecogidos.m,
+                g: totalRecogidos.g
+            };
+            const llenos = {
+                p: totalEntregados.p,
+                m: totalEntregados.m,
+                g: totalEntregados.g
+            };
+
+            return `
+                <h4>📦 Inventario actual</h4>
+                <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                    <tr style="background:#0d47a1; color:white;">
+                        <th style="padding:8px; border:1px solid #ddd;">Estado</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Pequeños</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Medianos</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Grandes</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Total</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>Vacios en resguardo</strong></td>
+                        <td style="padding:6px; border:1px solid #ddd;">${vacios.p}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${vacios.m}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${vacios.g}</td>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>${vacios.p + vacios.m + vacios.g}</strong></td>
+                    </tr>
+                    <tr style="background:#e8f5e9;">
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>Llenos en almacén</strong></td>
+                        <td style="padding:6px; border:1px solid #ddd;">${llenos.p}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${llenos.m}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${llenos.g}</td>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>${llenos.p + llenos.m + llenos.g}</strong></td>
+                    </tr>
+                    <tr style="background:#fff9c4;">
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>En planta (proceso)</strong></td>
+                        <td style="padding:6px; border:1px solid #ddd;">${totalEnPlanta.p}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${totalEnPlanta.m}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${totalEnPlanta.g}</td>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>${totalEnPlanta.p + totalEnPlanta.m + totalEnPlanta.g}</strong></td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function generarReporteExonerados(datos) {
+            const entregas = datos.entregas || [];
+            const exonerados = [];
+            entregas.forEach(e => {
+                if (e.exonerados && e.exonerados.length > 0) {
+                    e.exonerados.forEach(ex => {
+                        exonerados.push({
+                            comunidad: e.comunidad,
+                            destino: ex.destino || 'comunidad',
+                            institucion: ex.institucion || 'Sin institución',
+                            pequenos: ex.pequenos || 0,
+                            medianos: ex.medianos || 0,
+                            grandes: ex.grandes || 0,
+                            costo: ex.costo || 0,
+                            fecha: e.fecha,
+                            planta: e.planta || ''
+                        });
+                    });
+                }
+            });
+            
+            if (exonerados.length === 0) return '<p style="color:#999;">No hay exoneraciones registradas.</p>';
+            
+            let html = `<table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <thead>
+                    <tr style="background:#0d47a1; color:white;">
+                        <th style="padding:8px; border:1px solid #ddd;">Comunidad</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Destino</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Institución</th>
+                        <th style="padding:8px; border:1px solid #ddd;">P</th>
+                        <th style="padding:8px; border:1px solid #ddd;">M</th>
+                        <th style="padding:8px; border:1px solid #ddd;">G</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Costo $</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            let totalCosto = 0;
+            exonerados.forEach(ex => {
+                const fecha = new Date(ex.fecha).toLocaleDateString();
+                const destino = ex.destino === 'galpon' ? 'Galpón' : 'Comunidad';
+                totalCosto += ex.costo;
+                html += `<tr>
+                    <td style="padding:6px; border:1px solid #ddd;">${ex.comunidad}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${destino}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${ex.institucion}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${ex.pequenos}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${ex.medianos}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${ex.grandes}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">$${ex.costo.toFixed(2)}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${fecha}</td>
+                </tr>`;
+            });
+            
+            html += `<tr style="background:#e3f2fd; font-weight:bold;">
+                <td colspan="6" style="padding:8px; border:1px solid #ddd; text-align:right;">TOTAL EXONERADOS</td>
+                <td style="padding:8px; border:1px solid #ddd;">$${totalCosto.toFixed(2)}</td>
+                <td style="padding:8px; border:1px solid #ddd;"></td>
+            </tr>`;
+            
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        function generarReporteVentas(datos) {
+            const ventas = datos.ventas || [];
+            if (ventas.length === 0) return '<p style="color:#999;">No hay ventas registradas.</p>';
+            
+            let html = `<table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <thead>
+                    <tr style="background:#0d47a1; color:white;">
+                        <th style="padding:8px; border:1px solid #ddd;">Cliente</th>
+                        <th style="padding:8px; border:1px solid #ddd;">P</th>
+                        <th style="padding:8px; border:1px solid #ddd;">M</th>
+                        <th style="padding:8px; border:1px solid #ddd;">G</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Total $</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            ventas.forEach(v => {
+                const total = (v.pequenos * v.precio_unitario.pequeno) + (v.medianos * v.precio_unitario.mediano) + (v.grandes * v.precio_unitario.grande);
+                const fecha = new Date(v.fecha).toLocaleDateString();
+                html += `<tr>
+                    <td style="padding:6px; border:1px solid #ddd;">${v.cliente}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${v.pequenos}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${v.medianos}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${v.grandes}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">$${total.toFixed(2)}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${fecha}</td>
+                </tr>`;
+            });
+            
+            const totalVentas = ventas.reduce((sum, v) => {
+                return sum + (v.pequenos * v.precio_unitario.pequeno) + (v.medianos * v.precio_unitario.mediano) + (v.grandes * v.precio_unitario.grande);
+            }, 0);
+            html += `<tr style="background:#e3f2fd; font-weight:bold;">
+                <td colspan="4" style="padding:8px; border:1px solid #ddd; text-align:right;">TOTAL VENTAS</td>
+                <td style="padding:8px; border:1px solid #ddd;">$${totalVentas.toFixed(2)}</td>
+                <td style="padding:8px; border:1px solid #ddd;"></td>
+            </tr>`;
+            
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        function generarReporteGastos(datos) {
+            const gastos = datos.gastos || [];
+            if (gastos.length === 0) return '<p style="color:#999;">No hay gastos registrados.</p>';
+            
+            let html = `<table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <thead>
+                    <tr style="background:#0d47a1; color:white;">
+                        <th style="padding:8px; border:1px solid #ddd;">Categoría</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Descripción</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Monto</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            gastos.forEach(g => {
+                const fecha = new Date(g.fecha).toLocaleDateString();
+                html += `<tr>
+                    <td style="padding:6px; border:1px solid #ddd;">${g.categoria}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${g.descripcion || '-'}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">$${g.monto.toFixed(2)}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${fecha}</td>
+                </tr>`;
+            });
+            
+            const totalGastos = gastos.reduce((sum, g) => sum + g.monto, 0);
+            html += `<tr style="background:#e3f2fd; font-weight:bold;">
+                <td colspan="2" style="padding:8px; border:1px solid #ddd; text-align:right;">TOTAL GASTOS</td>
+                <td style="padding:8px; border:1px solid #ddd;">$${totalGastos.toFixed(2)}</td>
+                <td style="padding:8px; border:1px solid #ddd;"></td>
+            </tr>`;
+            
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        function generarReporteMensual(datos) {
+            const ahora = new Date();
+            const mes = ahora.getMonth();
+            const anio = ahora.getFullYear();
+            const nombreMes = ahora.toLocaleString('es', { month: 'long' });
+
+            const gastos = (datos.gastos || []).filter(g => {
+                const d = new Date(g.fecha);
+                return d.getMonth() === mes && d.getFullYear() === anio;
+            });
+            const totalGastos = gastos.reduce((sum, g) => sum + g.monto, 0);
+
+            const ventas = (datos.ventas || []).filter(v => {
+                const d = new Date(v.fecha);
+                return d.getMonth() === mes && d.getFullYear() === anio;
+            });
+            const totalVentas = ventas.reduce((sum, v) => {
+                return sum + (v.pequenos * v.precio_unitario.pequeno) + 
+                            (v.medianos * v.precio_unitario.mediano) + 
+                            (v.grandes * v.precio_unitario.grande);
+            }, 0);
+
+            const entregas = (datos.entregas || []).filter(e => {
+                const d = new Date(e.fecha);
+                return d.getMonth() === mes && d.getFullYear() === anio;
+            });
+            const totalEntregas = entregas.reduce((sum, e) => {
+                return sum + e.pequenos + e.medianos + e.grandes;
+            }, 0);
+
+            const ingresosEntregas = entregas.reduce((sum, e) => sum + calcularTotalEntrega(e), 0);
+
+            const ganancia = ingresosEntregas + totalVentas - totalGastos;
+
+            return `
+                <h4>📅 Resumen mensual - ${nombreMes} ${anio}</h4>
+                <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                    <tr style="background:#0d47a1; color:white;">
+                        <th style="padding:8px; border:1px solid #ddd;">Indicador</th>
+                        <th style="padding:8px; border:1px solid #ddd;">Valor</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px; border:1px solid #ddd;">Ingresos por entregas</td>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>$${ingresosEntregas.toFixed(2)}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px; border:1px solid #ddd;">Ventas directas (almacén)</td>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>$${totalVentas.toFixed(2)}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px; border:1px solid #ddd;">Ingresos totales</td>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>$${(ingresosEntregas + totalVentas).toFixed(2)}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px; border:1px solid #ddd;">Gastos totales</td>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>$${totalGastos.toFixed(2)}</strong></td>
+                    </tr>
+                    <tr style="background:#e8f5e9; font-weight:bold;">
+                        <td style="padding:6px; border:1px solid #ddd;">Ganancia neta</td>
+                        <td style="padding:6px; border:1px solid #ddd; color:${ganancia >= 0 ? '#2e7d32' : '#c62828'};">$${ganancia.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px; border:1px solid #ddd;">Cilindros entregados</td>
+                        <td style="padding:6px; border:1px solid #ddd;"><strong>${totalEntregas}</strong></td>
+                    </tr>
+                </table>
+                <p style="margin-top:8px; font-size:12px; color:#666;">${gastos.length} gastos registrados | ${ventas.length} ventas realizadas</p>
+            `;
+        }
+
+        function generarHistorialComunidad(datos, comunidad) {
+            const recogidas = datos.recogidas.filter(r => r.comunidad === comunidad);
+            const entregas = datos.entregas.filter(e => e.comunidad === comunidad);
+            const ventas = datos.ventas.filter(v => v.cliente === comunidad);
+
+            let html = `<h4>📋 Historial de "<strong>${comunidad}</strong>"</h4>`;
+            if (recogidas.length === 0 && entregas.length === 0 && ventas.length === 0) {
+                html += '<p>No hay registros para esta comunidad.</p>';
+                return html;
+            }
+
+            if (recogidas.length > 0) {
+                html += `<h5>📋 Recogidas (${recogidas.length})</h5>`;
+                recogidas.forEach(r => {
+                    const fecha = new Date(r.fecha).toLocaleDateString();
+                    const saldo = obtenerSaldoRecogida(r);
+                    const exoPlan = r.exonerados_planificados || [];
+                    const totalExo = exoPlan.reduce((sum, ex) => sum + ex.pequenos + ex.medianos + ex.grandes, 0);
+                    html += `<div class="report-item">
+                        ${fecha} - P:${r.pequenos} M:${r.medianos} G:${r.grandes}
+                        <br>Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0} | Saldo: P:${saldo.p} M:${saldo.m} G:${saldo.g}
+                        ${totalExo > 0 ? `<br>🎓 Exoneraciones planificadas: ${totalExo} cilindros` : ''}
+                        ${r.observaciones ? `<br><em>${r.observaciones}</em>` : ''}
+                    </div>`;
+                });
+            }
+
+            if (entregas.length > 0) {
+                html += `<h5>💰 Entregas (${entregas.length})</h5>`;
+                entregas.forEach(e => {
+                    const fecha = new Date(e.fecha).toLocaleDateString();
+                    const total = calcularTotalEntrega(e);
+                    const pagoTotal = calcularPagoTotal(e);
+                    const estadoPago = pagoTotal >= total ? '✅ Pagado' : (pagoTotal > 0 ? '⚠️ Parcial' : '❌ Pendiente');
+                    const plantaNombre = obtenerNombrePlanta(e.planta);
+                    html += `<div class="report-item">
+                        <strong>${fecha}</strong> - Planta: ${plantaNombre}<br>
+                        P:${e.pequenos} M:${e.medianos} G:${e.grandes} - Total: $${total.toFixed(2)} - ${estadoPago}
+                        ${e.exonerados && e.exonerados.length > 0 ? `<br>🎓 Exonerados: ${e.exonerados.map(ex => `${ex.institucion} (${ex.pequenos+ex.medianos+ex.grandes})`).join(', ')}` : ''}
+                    </div>`;
+                });
+            }
+
+            if (ventas.length > 0) {
+                html += `<h5>🏪 Ventas directas (${ventas.length})</h5>`;
+                ventas.forEach(v => {
+                    const fecha = new Date(v.fecha).toLocaleDateString();
+                    const total = (v.pequenos * v.precio_unitario.pequeno) + (v.medianos * v.precio_unitario.mediano) + (v.grandes * v.precio_unitario.grande);
+                    html += `<div class="report-item">${fecha} - P:${v.pequenos} M:${v.medianos} G:${v.grandes} - Total: $${total.toFixed(2)}</div>`;
+                });
+            }
+
+            return html;
+        }
+
+        function generarReporteCargasDetalle(datos) {
+            const cargas = datos.cargas || [];
+            if (cargas.length === 0) return '<p style="color:#999;">No hay cargas registradas.</p>';
+            
+            let html = `<table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#0d47a1; color:white;">
+                        <th style="padding:6px; border:1px solid #ddd;">Carga</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Fecha</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Planta</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Comunidades</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Total</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Exonerados</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            cargas.forEach(c => {
+                const fecha = new Date(c.fecha).toLocaleDateString();
+                const planta = obtenerNombrePlanta(c.planta);
+                const resumen = obtenerResumenCarga(c.id);
+                const total = resumen ? resumen.totalP + resumen.totalM + resumen.totalG : 0;
+                const exoTotal = resumen ? resumen.totalExonerados : 0;
+                const comunidades = c.items.map(item => {
+                    const rec = datos.recogidas.find(r => r.id === item.recogidaId);
+                    return rec ? rec.comunidad : '?';
+                }).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+                html += `<tr>
+                    <td style="padding:6px; border:1px solid #ddd;">#${c.id}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${fecha}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${planta}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${comunidades}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${total}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${exoTotal}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${c.estado === 'activa' ? '🟢 Activa' : '✅ Completada'}</td>
+                </tr>`;
+            });
+
+            const totalCilindros = cargas.reduce((sum, c) => {
+                const res = obtenerResumenCarga(c.id);
+                return sum + (res ? res.totalP + res.totalM + res.totalG : 0);
+            }, 0);
+            html += `<tr style="background:#e3f2fd; font-weight:bold;">
+                <td colspan="4" style="padding:8px; border:1px solid #ddd; text-align:right;">TOTAL CILINDROS ENVIADOS</td>
+                <td style="padding:8px; border:1px solid #ddd;">${totalCilindros}</td>
+                <td style="padding:8px; border:1px solid #ddd;"></td>
+                <td style="padding:8px; border:1px solid #ddd;"></td>
+            </tr>`;
+
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        function generarResumenComunidades(datos) {
+            const recogidas = datos.recogidas || [];
+            if (recogidas.length === 0) return '<p style="color:#999;">No hay recogidas registradas.</p>';
+
+            const map = {};
+            recogidas.forEach(r => {
+                if (!map[r.comunidad]) {
+                    map[r.comunidad] = { recogido: { p:0, m:0, g:0 }, enviado: { p:0, m:0, g:0 } };
+                }
+                map[r.comunidad].recogido.p += r.pequenos || 0;
+                map[r.comunidad].recogido.m += r.medianos || 0;
+                map[r.comunidad].recogido.g += r.grandes || 0;
+                map[r.comunidad].enviado.p += r.enviado?.p || 0;
+                map[r.comunidad].enviado.m += r.enviado?.m || 0;
+                map[r.comunidad].enviado.g += r.enviado?.g || 0;
+            });
+
+            let html = `<table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#0d47a1; color:white;">
+                        <th style="padding:6px; border:1px solid #ddd;">Comunidad</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Recogido (P/M/G)</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Enviado (P/M/G)</th>
+                        <th style="padding:6px; border:1px solid #ddd;">Pendiente</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            for (const [comunidad, data] of Object.entries(map)) {
+                const rec = data.recogido;
+                const env = data.enviado;
+                const pendiente = (rec.p - env.p) + (rec.m - env.m) + (rec.g - env.g);
+                html += `<tr>
+                    <td style="padding:6px; border:1px solid #ddd;"><strong>${comunidad}</strong></td>
+                    <td style="padding:6px; border:1px solid #ddd;">${rec.p}/${rec.m}/${rec.g}</td>
+                    <td style="padding:6px; border:1px solid #ddd;">${env.p}/${env.m}/${env.g}</td>
+                    <td style="padding:6px; border:1px solid #ddd; font-weight:bold;">${pendiente}</td>
+                </tr>`;
+            }
+
+            html += `</tbody></table>`;
+            return html;
+        }
 
         function generarReporteExoneradosDetalle(datos) {
             const cargas = datos.cargas || [];
@@ -161,12 +656,11 @@
                 });
             });
 
-            // También incluir exoneraciones de entregas que no pasaron por carga (si las hay)
+            // También incluir exoneraciones de entregas que no pasaron por carga
             const entregas = datos.entregas || [];
             entregas.forEach(e => {
                 if (e.exonerados && e.exonerados.length > 0) {
                     e.exonerados.forEach(ex => {
-                        // Verificar si ya está incluido desde una carga
                         const existe = exonerados.some(ex2 => 
                             ex2.comunidad === e.comunidad && 
                             ex2.institucion === ex.institucion &&
@@ -222,7 +716,6 @@
                 totalCosto += ex.costo;
                 totalCilindros += totalEx;
                 const cargaLabel = ex.cargaId ? `#${ex.cargaId}` : 'Directa';
-                const plantaNombre = obtenerNombrePlanta(ex.planta);
                 html += `<tr>
                     <td style="padding:4px 6px; border:1px solid #ddd;">${fecha}</td>
                     <td style="padding:4px 6px; border:1px solid #ddd;">${ex.comunidad}</td>
@@ -330,13 +823,7 @@
         }
 
         // ============================================================
-        // LOS DEMÁS GENERADORES DE REPORTES (ya existentes)
-        // ============================================================
-        // Nota: Mantén tus funciones existentes para los demás reportes.
-        // Aquí solo incluimos las nuevas.
-
-        // ============================================================
-        // EXPORTAR EXCEL Y PDF (con nueva opción)
+        // EXPORTAR EXCEL
         // ============================================================
 
         function generarExcel() {
@@ -345,7 +832,243 @@
             let datosExcel = [];
 
             switch(tipo) {
-                // ... (casos existentes)
+                case 'cargas':
+                    (datos.entregas || []).forEach(e => {
+                        const total = calcularTotalEntrega(e);
+                        const pagoTotal = calcularPagoTotal(e);
+                        const estadoPago = pagoTotal >= total ? 'Pagado' : (pagoTotal > 0 ? 'Parcial' : 'Pendiente');
+                        datosExcel.push({
+                            'Comunidad': e.comunidad,
+                            'Fecha': new Date(e.fecha).toLocaleDateString(),
+                            'Planta': obtenerNombrePlanta(e.planta),
+                            'Pequeños': e.pequenos,
+                            'Medianos': e.medianos,
+                            'Grandes': e.grandes,
+                            'Total $': total.toFixed(2),
+                            'Estado Pago': estadoPago
+                        });
+                    });
+                    break;
+
+                case 'inventario':
+                    const recogidas = datos.recogidas || [];
+                    const entregas = datos.entregas || [];
+                    let totalRecogidos = { p:0, m:0, g:0 };
+                    let totalEntregados = { p:0, m:0, g:0 };
+                    let totalEnPlanta = { p:0, m:0, g:0 };
+                    recogidas.forEach(r => {
+                        if (r.estado === 'pendiente' || r.estado === 'parcial') {
+                            const saldo = obtenerSaldoRecogida(r);
+                            totalEnPlanta.p += r.enviado?.p || 0;
+                            totalEnPlanta.m += r.enviado?.m || 0;
+                            totalEnPlanta.g += r.enviado?.g || 0;
+                            totalRecogidos.p += saldo.p;
+                            totalRecogidos.m += saldo.m;
+                            totalRecogidos.g += saldo.g;
+                        } else if (r.estado === 'completa') {
+                            totalEnPlanta.p += r.pequenos || 0;
+                            totalEnPlanta.m += r.medianos || 0;
+                            totalEnPlanta.g += r.grandes || 0;
+                        }
+                    });
+                    entregas.forEach(e => {
+                        totalEntregados.p += e.pequenos || 0;
+                        totalEntregados.m += e.medianos || 0;
+                        totalEntregados.g += e.grandes || 0;
+                    });
+                    const vacios = {
+                        p: totalRecogidos.p,
+                        m: totalRecogidos.m,
+                        g: totalRecogidos.g
+                    };
+                    datosExcel = [
+                        { 'Estado': 'Vacios en resguardo', 'Pequeños': vacios.p, 'Medianos': vacios.m, 'Grandes': vacios.g, 'Total': vacios.p + vacios.m + vacios.g },
+                        { 'Estado': 'Llenos en almacén', 'Pequeños': totalEntregados.p, 'Medianos': totalEntregados.m, 'Grandes': totalEntregados.g, 'Total': totalEntregados.p + totalEntregados.m + totalEntregados.g },
+                        { 'Estado': 'En planta', 'Pequeños': totalEnPlanta.p, 'Medianos': totalEnPlanta.m, 'Grandes': totalEnPlanta.g, 'Total': totalEnPlanta.p + totalEnPlanta.m + totalEnPlanta.g }
+                    ];
+                    break;
+
+                case 'exonerados':
+                    (datos.entregas || []).forEach(e => {
+                        if (e.exonerados && e.exonerados.length > 0) {
+                            e.exonerados.forEach(ex => {
+                                datosExcel.push({
+                                    'Comunidad': e.comunidad,
+                                    'Destino': ex.destino === 'galpon' ? 'Galpón' : 'Comunidad',
+                                    'Institución': ex.institucion || 'Sin institución',
+                                    'Pequeños': ex.pequenos || 0,
+                                    'Medianos': ex.medianos || 0,
+                                    'Grandes': ex.grandes || 0,
+                                    'Costo $': (ex.costo || 0).toFixed(2),
+                                    'Fecha': new Date(e.fecha).toLocaleDateString()
+                                });
+                            });
+                        }
+                    });
+                    break;
+
+                case 'ventas':
+                    (datos.ventas || []).forEach(v => {
+                        const total = (v.pequenos * v.precio_unitario.pequeno) + (v.medianos * v.precio_unitario.mediano) + (v.grandes * v.precio_unitario.grande);
+                        datosExcel.push({
+                            'Cliente': v.cliente,
+                            'Pequeños': v.pequenos,
+                            'Medianos': v.medianos,
+                            'Grandes': v.grandes,
+                            'Total $': total.toFixed(2),
+                            'Fecha': new Date(v.fecha).toLocaleDateString()
+                        });
+                    });
+                    break;
+
+                case 'gastos':
+                    (datos.gastos || []).forEach(g => {
+                        datosExcel.push({
+                            'Categoría': g.categoria,
+                            'Descripción': g.descripcion || '-',
+                            'Monto': g.monto.toFixed(2),
+                            'Fecha': new Date(g.fecha).toLocaleDateString()
+                        });
+                    });
+                    break;
+
+                case 'mensual':
+                    const ahora = new Date();
+                    const mes = ahora.getMonth();
+                    const anio = ahora.getFullYear();
+                    const gastosMes = (datos.gastos || []).filter(g => {
+                        const d = new Date(g.fecha);
+                        return d.getMonth() === mes && d.getFullYear() === anio;
+                    });
+                    const ventasMes = (datos.ventas || []).filter(v => {
+                        const d = new Date(v.fecha);
+                        return d.getMonth() === mes && d.getFullYear() === anio;
+                    });
+                    const entregasMes = (datos.entregas || []).filter(e => {
+                        const d = new Date(e.fecha);
+                        return d.getMonth() === mes && d.getFullYear() === anio;
+                    });
+                    const totalGastosMes = gastosMes.reduce((sum, g) => sum + g.monto, 0);
+                    const totalVentasMes = ventasMes.reduce((sum, v) => {
+                        return sum + (v.pequenos * v.precio_unitario.pequeno) + (v.medianos * v.precio_unitario.mediano) + (v.grandes * v.precio_unitario.grande);
+                    }, 0);
+                    const ingresosEntregasMes = entregasMes.reduce((sum, e) => sum + calcularTotalEntrega(e), 0);
+                    const totalEntregasMes = entregasMes.reduce((sum, e) => sum + e.pequenos + e.medianos + e.grandes, 0);
+                    datosExcel = [
+                        { 'Indicador': 'Ingresos por entregas', 'Valor': ingresosEntregasMes.toFixed(2) },
+                        { 'Indicador': 'Ventas directas (almacén)', 'Valor': totalVentasMes.toFixed(2) },
+                        { 'Indicador': 'Ingresos totales', 'Valor': (ingresosEntregasMes + totalVentasMes).toFixed(2) },
+                        { 'Indicador': 'Gastos totales', 'Valor': totalGastosMes.toFixed(2) },
+                        { 'Indicador': 'Ganancia neta', 'Valor': (ingresosEntregasMes + totalVentasMes - totalGastosMes).toFixed(2) },
+                        { 'Indicador': 'Cilindros entregados', 'Valor': totalEntregasMes }
+                    ];
+                    break;
+
+                case 'historial_comunidad':
+                    const selectCom = document.getElementById('selectComunidad');
+                    const comunidad = selectCom ? selectCom.value : '';
+                    if (!comunidad) {
+                        alert('Selecciona una comunidad primero.');
+                        return;
+                    }
+                    const recogidasCom = datos.recogidas.filter(r => r.comunidad === comunidad);
+                    const entregasCom = datos.entregas.filter(e => e.comunidad === comunidad);
+                    const ventasCom = datos.ventas.filter(v => v.cliente === comunidad);
+                    recogidasCom.forEach(r => {
+                        datosExcel.push({
+                            'Tipo': 'Recogida',
+                            'Fecha': new Date(r.fecha).toLocaleDateString(),
+                            'Pequeños': r.pequenos,
+                            'Medianos': r.medianos,
+                            'Grandes': r.grandes,
+                            'Observaciones': r.observaciones || ''
+                        });
+                    });
+                    entregasCom.forEach(e => {
+                        const total = calcularTotalEntrega(e);
+                        datosExcel.push({
+                            'Tipo': 'Entrega',
+                            'Fecha': new Date(e.fecha).toLocaleDateString(),
+                            'Pequeños': e.pequenos,
+                            'Medianos': e.medianos,
+                            'Grandes': e.grandes,
+                            'Total $': total.toFixed(2),
+                            'Observaciones': `Pago: ${calcularPagoTotal(e) >= total ? 'Pagado' : (calcularPagoTotal(e) > 0 ? 'Parcial' : 'Pendiente')}`
+                        });
+                    });
+                    ventasCom.forEach(v => {
+                        const total = (v.pequenos * v.precio_unitario.pequeno) + (v.medianos * v.precio_unitario.mediano) + (v.grandes * v.precio_unitario.grande);
+                        datosExcel.push({
+                            'Tipo': 'Venta directa',
+                            'Fecha': new Date(v.fecha).toLocaleDateString(),
+                            'Pequeños': v.pequenos,
+                            'Medianos': v.medianos,
+                            'Grandes': v.grandes,
+                            'Total $': total.toFixed(2),
+                            'Observaciones': `Cliente: ${v.cliente}`
+                        });
+                    });
+                    if (datosExcel.length === 0) {
+                        alert('No hay registros para esta comunidad.');
+                        return;
+                    }
+                    break;
+
+                case 'cargas_detalle':
+                    (datos.cargas || []).forEach(c => {
+                        const resumen = obtenerResumenCarga(c.id);
+                        const total = resumen ? resumen.totalP + resumen.totalM + resumen.totalG : 0;
+                        const exoTotal = resumen ? resumen.totalExonerados : 0;
+                        const comunidades = c.items.map(item => {
+                            const rec = datos.recogidas.find(r => r.id === item.recogidaId);
+                            return rec ? rec.comunidad : '?';
+                        }).join(', ');
+                        datosExcel.push({
+                            'Carga': `#${c.id}`,
+                            'Fecha': new Date(c.fecha).toLocaleDateString(),
+                            'Planta': obtenerNombrePlanta(c.planta),
+                            'Comunidades': comunidades,
+                            'Total': total,
+                            'Exonerados': exoTotal,
+                            'Estado': c.estado === 'activa' ? 'Activa' : 'Completada'
+                        });
+                    });
+                    break;
+
+                case 'resumen_comunidades':
+                    const recogidasR = datos.recogidas || [];
+                    const map = {};
+                    recogidasR.forEach(r => {
+                        if (!map[r.comunidad]) {
+                            map[r.comunidad] = { recogido: { p:0, m:0, g:0 }, enviado: { p:0, m:0, g:0 } };
+                        }
+                        map[r.comunidad].recogido.p += r.pequenos || 0;
+                        map[r.comunidad].recogido.m += r.medianos || 0;
+                        map[r.comunidad].recogido.g += r.grandes || 0;
+                        map[r.comunidad].enviado.p += r.enviado?.p || 0;
+                        map[r.comunidad].enviado.m += r.enviado?.m || 0;
+                        map[r.comunidad].enviado.g += r.enviado?.g || 0;
+                    });
+                    for (const [com, data] of Object.entries(map)) {
+                        const rec = data.recogido;
+                        const env = data.enviado;
+                        datosExcel.push({
+                            'Comunidad': com,
+                            'Recogido P': rec.p,
+                            'Recogido M': rec.m,
+                            'Recogido G': rec.g,
+                            'Enviado P': env.p,
+                            'Enviado M': env.m,
+                            'Enviado G': env.g,
+                            'Pendiente': (rec.p - env.p) + (rec.m - env.m) + (rec.g - env.g)
+                        });
+                    }
+                    if (datosExcel.length === 0) {
+                        alert('No hay recogidas registradas.');
+                        return;
+                    }
+                    break;
+
                 case 'exonerados_detalle':
                     const cargas = datos.cargas || [];
                     cargas.forEach(c => {
@@ -368,11 +1091,37 @@
                             }
                         });
                     });
+                    // Añadir exoneraciones de entregas directas
+                    const entregas2 = datos.entregas || [];
+                    entregas2.forEach(e => {
+                        if (e.exonerados && e.exonerados.length > 0) {
+                            e.exonerados.forEach(ex => {
+                                const existe = datosExcel.some(row => 
+                                    row.Comunidad === e.comunidad && 
+                                    row.Institución === ex.institucion &&
+                                    row.Fecha === new Date(e.fecha).toLocaleDateString()
+                                );
+                                if (!existe) {
+                                    datosExcel.push({
+                                        'Fecha': new Date(e.fecha).toLocaleDateString(),
+                                        'Comunidad': e.comunidad,
+                                        'Institución': ex.institucion || '',
+                                        'Pequeños': ex.pequenos || 0,
+                                        'Medianos': ex.medianos || 0,
+                                        'Grandes': ex.grandes || 0,
+                                        'Costo $': (ex.costo || 0).toFixed(2),
+                                        'Carga': 'Directa'
+                                    });
+                                }
+                            });
+                        }
+                    });
                     if (datosExcel.length === 0) {
                         alert('No hay exoneraciones para exportar.');
                         return;
                     }
                     break;
+
                 default:
                     alert('Tipo de reporte no soportado para Excel.');
                     return;
@@ -389,6 +1138,10 @@
             const filename = `Reporte_GAS_GUARIBE_${tipo}_${new Date().toISOString().slice(0,10)}.xlsx`;
             XLSX.writeFile(wb, filename);
         }
+
+        // ============================================================
+        // EXPORTAR PDF
+        // ============================================================
 
         function generarPDF() {
             const tipo = document.getElementById('tipoReporte').value;
