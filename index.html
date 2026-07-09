@@ -16,30 +16,31 @@
 
         <div class="dashboard">
             <div class="stats">
-                <div class="stat-card clickable" onclick="verDetalle('enRuta')">
-                    <span class="stat-number" id="enRuta">0</span>
-                    <span class="stat-label">🚛 En ruta a planta</span>
+                <div class="stat-card clickable" onclick="verDetalle('pendientes')">
+                    <span class="stat-number" id="recogidasPendientes">0</span>
+                    <span class="stat-label">📋 Recogidas pendientes</span>
                 </div>
-                <div class="stat-card clickable" onclick="verDetalle('llenos')">
-                    <span class="stat-number" id="llenos">0</span>
-                    <span class="stat-label">🏠 Llenos en almacén</span>
+                <div class="stat-card clickable" onclick="verDetalle('parciales')">
+                    <span class="stat-number" id="recogidasParciales">0</span>
+                    <span class="stat-label">📋 Recogidas parciales</span>
                 </div>
-                <div class="stat-card clickable" onclick="verDetalle('vacios')">
-                    <span class="stat-number" id="vacios">0</span>
-                    <span class="stat-label">📦 Vacíos en resguardo</span>
+                <div class="stat-card clickable" onclick="verDetalle('cargas')">
+                    <span class="stat-number" id="cargasActivas">0</span>
+                    <span class="stat-label">🛻 Cargas activas</span>
                 </div>
-                <div class="stat-card clickable" onclick="verDetalle('entregados')">
-                    <span class="stat-number" id="entregados">0</span>
-                    <span class="stat-label">✅ Entregados hoy</span>
+                <div class="stat-card clickable" onclick="verDetalle('entregas')">
+                    <span class="stat-number" id="entregasHoy">0</span>
+                    <span class="stat-label">✅ Entregas hoy</span>
                 </div>
             </div>
 
-            <div id="ultimaCarga" style="margin:12px 0; padding:12px; background:#f0f4ff; border-radius:8px; text-align:center; font-size:14px; color:#555;">
-                Última carga: <span id="ultimaCargaTexto">No hay cargas registradas</span>
+            <div id="resumenPendientes" style="margin:12px 0; padding:12px; background:#fff3e0; border-radius:8px; font-size:14px; color:#e65100;">
+                <strong>📦 Pendientes de enviar a planta:</strong> <span id="totalPendientes">0</span> cilindros
             </div>
 
             <div class="menu-grid">
                 <a href="recogidas.html" class="menu-btn">📋 Nueva recogida</a>
+                <a href="cargas.html" class="menu-btn">🛻 Armar carga</a>
                 <a href="entregas.html" class="menu-btn">💰 Registrar entrega</a>
                 <a href="inventario.html" class="menu-btn">📦 Ver inventario</a>
                 <a href="ventas.html" class="menu-btn">🏪 Ventas almacén</a>
@@ -59,15 +60,65 @@
         // Mostrar fecha actual
         document.getElementById('fechaActual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-        // Cargar datos al iniciar
+        function actualizarDashboard() {
+            cargarDatos();
+            const recogidas = datos.recogidas || [];
+            const cargas = datos.cargas || [];
+            const entregas = datos.entregas || [];
+
+            // Recogidas pendientes (estado 'pendiente')
+            const pendientes = recogidas.filter(r => r.estado === 'pendiente');
+            document.getElementById('recogidasPendientes').textContent = pendientes.length;
+
+            // Recogidas parciales (estado 'parcial')
+            const parciales = recogidas.filter(r => r.estado === 'parcial');
+            document.getElementById('recogidasParciales').textContent = parciales.length;
+
+            // Cargas activas
+            const activas = cargas.filter(c => c.estado === 'activa');
+            document.getElementById('cargasActivas').textContent = activas.length;
+
+            // Entregas hoy
+            const hoy = new Date().toDateString();
+            const entregasHoy = entregas.filter(e => new Date(e.fecha).toDateString() === hoy);
+            const totalEntregadosHoy = entregasHoy.reduce((sum, e) => sum + e.pequenos + e.medianos + e.grandes, 0);
+            document.getElementById('entregasHoy').textContent = totalEntregadosHoy;
+
+            // Total pendiente de enviar a planta (suma de saldos de recogidas no completas)
+            let totalPendiente = 0;
+            recogidas.forEach(r => {
+                if (r.estado !== 'completa') {
+                    const saldo = obtenerSaldoRecogida(r);
+                    totalPendiente += saldo.total;
+                }
+            });
+            document.getElementById('totalPendientes').textContent = totalPendiente;
+        }
+
+        function verDetalle(tipo) {
+            switch(tipo) {
+                case 'pendientes':
+                    window.location.href = 'recogidas.html?filtro=pendiente';
+                    break;
+                case 'parciales':
+                    window.location.href = 'recogidas.html?filtro=parcial';
+                    break;
+                case 'cargas':
+                    window.location.href = 'cargas.html';
+                    break;
+                case 'entregas':
+                    window.location.href = 'entregas.html';
+                    break;
+                default:
+                    break;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             actualizarDashboard();
+            // Actualizar cada 30 segundos
+            setInterval(actualizarDashboard, 30000);
         });
-
-        // Función para ver detalle (redirige a inventario con filtro)
-        function verDetalle(tipo) {
-            window.location.href = `inventario.html?filtro=${tipo}`;
-        }
     </script>
 </body>
 </html>
