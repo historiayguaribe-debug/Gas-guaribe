@@ -11,18 +11,16 @@
     <div class="container">
         <header>
             <h1>📋 Nueva recogida</h1>
-            <a href="recogidas.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
+            <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
         <form id="formRecogida">
-            <!-- Comunidad -->
             <div class="form-group">
                 <label for="comunidad">Comunidad o cliente</label>
                 <input type="text" id="comunidad" list="listaComunidades" placeholder="Escribe o selecciona" required>
                 <datalist id="listaComunidades"></datalist>
             </div>
 
-            <!-- Planta -->
             <div class="form-group">
                 <label for="planta">Planta de llenado</label>
                 <select id="planta" required>
@@ -30,7 +28,6 @@
                 </select>
             </div>
 
-            <!-- Cilindros recogidos -->
             <div class="form-group">
                 <label>Cilindros recogidos</label>
                 <div style="display:flex; gap:8px;">
@@ -50,7 +47,6 @@
                 <div id="subtotal" class="subtotal-box">Total: 0 cilindros</div>
             </div>
 
-            <!-- Exoneraciones planificadas -->
             <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
                 <label style="font-weight:700;">🎓 Exoneraciones planificadas</label>
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
@@ -84,7 +80,6 @@
                 <div id="listaExoneradosPlanificados" style="margin-top:8px; font-size:13px;"></div>
             </div>
 
-            <!-- Fecha y observaciones -->
             <div class="form-group">
                 <label for="fecha">Fecha</label>
                 <input type="date" id="fecha">
@@ -107,7 +102,6 @@
     <script>
         let exoneradosPlanificados = [];
 
-        // Cargar comunidades y plantas
         function cargarComunidades() {
             const comunidades = obtenerComunidades();
             const datalist = document.getElementById('listaComunidades');
@@ -138,7 +132,6 @@
             document.getElementById('subtotal').textContent = `Total: ${p + m + g} cilindros`;
         }
 
-        // Exoneraciones planificadas
         function agregarExoneradoPlanificado() {
             const destino = document.getElementById('exo_destino').value;
             const institucion = document.getElementById('exo_institucion').value.trim();
@@ -155,7 +148,6 @@
                 return;
             }
 
-            // Calcular costo estimado
             const plantaId = document.getElementById('planta').value;
             const plantas = obtenerPlantas();
             const planta = plantas.find(p => p.id === plantaId);
@@ -205,7 +197,6 @@
             renderExoneradosPlanificados();
         }
 
-        // Cargar datos para edición
         function cargarParaEdicion(id) {
             cargarDatos();
             const recogida = datos.recogidas.find(r => r.id === id);
@@ -228,7 +219,6 @@
             actualizarSubtotal();
         }
 
-        // Inicializar
         const urlParams = new URLSearchParams(window.location.search);
         const editId = urlParams.get('edit');
         if (editId) {
@@ -244,7 +234,6 @@
             actualizarSubtotal();
         });
 
-        // Guardar recogida
         document.getElementById('formRecogida').addEventListener('submit', function(e) {
             e.preventDefault();
             const id = parseInt(document.getElementById('editId').value);
