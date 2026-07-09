@@ -51,7 +51,7 @@
     </div>
 
     <script>
-        function cargarPlantas() {
+        function cargarPlantasCarga() {
             const plantas = obtenerPlantas();
             const select = document.getElementById('plantaCarga');
             select.innerHTML = '<option value="">Selecciona una planta</option>';
@@ -278,7 +278,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            cargarPlantas();
+            cargarPlantasCarga();
             if (!document.getElementById('fechaCarga').value) {
                 document.getElementById('fechaCarga').value = new Date().toISOString().slice(0,10);
             }
