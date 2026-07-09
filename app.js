@@ -1,6 +1,5 @@
 // ============================================================
-// GAS GUARIBE v2.1 - app.js
-// Lógica completa con exoneraciones planificadas y gestión en cargas
+// GAS GUARIBE v2.1 - app.js (Limpio y completo)
 // ============================================================
 
 // ------------------------------------------------------------
@@ -31,8 +30,7 @@ const CONFIG_DEFAULT = {
         comercio: { pequeno: 3.00, mediano: 4.50, grande: 6.50 },
         galpon: { pequeno: 2.50, mediano: 3.80, grande: 5.20 }
     },
-    capacidad_camion: 50,
-    gastos_generales: { nomina: 0, alquiler: 0, mantenimiento: 0, repuestos: 0, varios: 0 }
+    capacidad_camion: 50
 };
 
 let datos = {
@@ -46,7 +44,7 @@ let datos = {
 };
 
 // ------------------------------------------------------------
-// 2. FUNCIONES DE PERSISTENCIA
+// 2. PERSISTENCIA
 // ------------------------------------------------------------
 
 function guardarDatos() {
@@ -103,7 +101,7 @@ function resetearDatos() {
 }
 
 // ------------------------------------------------------------
-// 3. FUNCIONES DE COMUNIDADES Y PLANTAS
+// 3. COMUNIDADES Y PLANTAS
 // ------------------------------------------------------------
 
 function obtenerComunidades() {
@@ -135,7 +133,7 @@ function guardarPlantas(plantas) {
 }
 
 // ------------------------------------------------------------
-// 4. FUNCIONES DE RECOGIDAS
+// 4. RECOGIDAS
 // ------------------------------------------------------------
 
 function registrarRecogida(comunidad, planta, pequenos, medianos, grandes, fecha, observaciones, exonerados_planificados) {
@@ -199,7 +197,7 @@ function actualizarEstadoRecogida(recogida) {
 }
 
 // ------------------------------------------------------------
-// 5. FUNCIONES DE CARGAS
+// 5. CARGAS
 // ------------------------------------------------------------
 
 function crearCarga(planta, fecha, items) {
@@ -300,7 +298,7 @@ function obtenerResumenCarga(cargaId) {
 }
 
 // ------------------------------------------------------------
-// 6. FUNCIONES DE ENTREGAS
+// 6. ENTREGAS
 // ------------------------------------------------------------
 
 function registrarEntrega(comunidad, pequenos, medianos, grandes, precios, pago_efectivo, pago_transferencia, pago_punto_venta, exonerados, planta, fecha) {
@@ -338,7 +336,7 @@ function eliminarEntrega(id) {
 }
 
 // ------------------------------------------------------------
-// 7. FUNCIONES DE VENTAS Y GASTOS
+// 7. VENTAS Y GASTOS
 // ------------------------------------------------------------
 
 function registrarVenta(cliente, pequenos, medianos, grandes, precio_unitario, fecha) {
@@ -381,7 +379,7 @@ function eliminarGasto(id) {
 }
 
 // ------------------------------------------------------------
-// 8. FUNCIONES DE DESHACER
+// 8. DESHACER ÚLTIMA ACCIÓN
 // ------------------------------------------------------------
 
 let ultimoId = null;
@@ -422,7 +420,7 @@ function deshacerUltimo() {
 }
 
 // ------------------------------------------------------------
-// 9. FUNCIONES DE CÁLCULO Y PRECIOS
+// 9. CÁLCULOS Y PRECIOS
 // ------------------------------------------------------------
 
 function calcularTotalEntrega(entrega) {
@@ -503,7 +501,7 @@ function obtenerNombrePlanta(plantaId) {
 cargarDatos();
 
 // ------------------------------------------------------------
-// 11. EXPORTAR FUNCIONES
+// 11. EXPORTAR FUNCIONES (para usar en HTML)
 // ------------------------------------------------------------
 
 window.obtenerComunidades = obtenerComunidades;
