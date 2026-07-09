@@ -15,19 +15,22 @@
         </header>
 
         <form id="formRecogida">
+            <!-- Comunidad -->
             <div class="form-group">
                 <label for="comunidad">Comunidad o cliente</label>
                 <input type="text" id="comunidad" list="listaComunidades" placeholder="Escribe o selecciona" required>
                 <datalist id="listaComunidades"></datalist>
             </div>
 
+            <!-- Planta -->
             <div class="form-group">
-                <label for="planta">Planta de llenado (destino habitual)</label>
+                <label for="planta">Planta de llenado</label>
                 <select id="planta" required>
                     <option value="">Selecciona una planta</option>
                 </select>
             </div>
 
+            <!-- Cilindros recogidos -->
             <div class="form-group">
                 <label>Cilindros recogidos</label>
                 <div style="display:flex; gap:8px;">
@@ -47,6 +50,41 @@
                 <div id="subtotal" class="subtotal-box">Total: 0 cilindros</div>
             </div>
 
+            <!-- Exoneraciones planificadas -->
+            <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
+                <label style="font-weight:700;">🎓 Exoneraciones planificadas</label>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:120px;">
+                        <label style="font-size:12px;">Destino</label>
+                        <select id="exo_destino" style="padding:8px;">
+                            <option value="comunidad">Comunidad</option>
+                            <option value="galpon">Galpón</option>
+                        </select>
+                    </div>
+                    <div style="flex:2; min-width:150px;">
+                        <label style="font-size:12px;">Institución</label>
+                        <input type="text" id="exo_institucion" placeholder="Nombre de la institución" style="padding:8px;">
+                    </div>
+                    <div style="flex:1; min-width:60px;">
+                        <label style="font-size:12px;">P</label>
+                        <input type="number" id="exo_pequenos" min="0" value="0" style="padding:8px; width:100%;">
+                    </div>
+                    <div style="flex:1; min-width:60px;">
+                        <label style="font-size:12px;">M</label>
+                        <input type="number" id="exo_medianos" min="0" value="0" style="padding:8px; width:100%;">
+                    </div>
+                    <div style="flex:1; min-width:60px;">
+                        <label style="font-size:12px;">G</label>
+                        <input type="number" id="exo_grandes" min="0" value="0" style="padding:8px; width:100%;">
+                    </div>
+                    <div style="flex:0 0 auto; display:flex; align-items:flex-end;">
+                        <button type="button" class="btn-secondary" style="padding:8px 16px; margin:0;" onclick="agregarExoneradoPlanificado()">+</button>
+                    </div>
+                </div>
+                <div id="listaExoneradosPlanificados" style="margin-top:8px; font-size:13px;"></div>
+            </div>
+
+            <!-- Fecha y observaciones -->
             <div class="form-group">
                 <label for="fecha">Fecha</label>
                 <input type="date" id="fecha">
@@ -58,6 +96,7 @@
             </div>
 
             <input type="hidden" id="editId" value="">
+            <input type="hidden" id="exoneradosPlanificadosData" value="[]">
             <button type="submit" class="btn-primary" id="btnGuardar">Guardar recogida</button>
             <button type="button" class="btn-danger" id="btnEliminar" style="display:none;">Eliminar</button>
         </form>
@@ -66,6 +105,9 @@
     </div>
 
     <script>
+        let exoneradosPlanificados = [];
+
+        // Cargar comunidades y plantas
         function cargarComunidades() {
             const comunidades = obtenerComunidades();
             const datalist = document.getElementById('listaComunidades');
@@ -96,6 +138,74 @@
             document.getElementById('subtotal').textContent = `Total: ${p + m + g} cilindros`;
         }
 
+        // Exoneraciones planificadas
+        function agregarExoneradoPlanificado() {
+            const destino = document.getElementById('exo_destino').value;
+            const institucion = document.getElementById('exo_institucion').value.trim();
+            const pequenos = parseInt(document.getElementById('exo_pequenos').value) || 0;
+            const medianos = parseInt(document.getElementById('exo_medianos').value) || 0;
+            const grandes = parseInt(document.getElementById('exo_grandes').value) || 0;
+
+            if (pequenos === 0 && medianos === 0 && grandes === 0) {
+                mostrarMensaje('Indica al menos un cilindro exonerado', 'error');
+                return;
+            }
+            if (destino === 'comunidad' && !institucion) {
+                mostrarMensaje('Indica la institución', 'error');
+                return;
+            }
+
+            // Calcular costo estimado
+            const plantaId = document.getElementById('planta').value;
+            const plantas = obtenerPlantas();
+            const planta = plantas.find(p => p.id === plantaId);
+            const costos = planta ? planta.costos : { pequeno: 0, mediano: 0, grande: 0 };
+            const costo = (pequenos * costos.pequeno) + (medianos * costos.mediano) + (grandes * costos.grande);
+
+            const exo = {
+                destino: destino,
+                institucion: destino === 'comunidad' ? institucion : 'Galpón',
+                pequenos,
+                medianos,
+                grandes,
+                costo: costo
+            };
+
+            exoneradosPlanificados.push(exo);
+            document.getElementById('exoneradosPlanificadosData').value = JSON.stringify(exoneradosPlanificados);
+            renderExoneradosPlanificados();
+            
+            document.getElementById('exo_institucion').value = '';
+            document.getElementById('exo_pequenos').value = 0;
+            document.getElementById('exo_medianos').value = 0;
+            document.getElementById('exo_grandes').value = 0;
+            mostrarMensaje('✅ Exoneración planificada agregada', 'exito');
+        }
+
+        function renderExoneradosPlanificados() {
+            const container = document.getElementById('listaExoneradosPlanificados');
+            if (exoneradosPlanificados.length === 0) {
+                container.innerHTML = '<p style="color:#999; font-size:13px;">No hay exoneraciones planificadas</p>';
+                return;
+            }
+            let html = '';
+            exoneradosPlanificados.forEach((ex, idx) => {
+                const destinoLabel = ex.destino === 'comunidad' ? '🏘️' : '🏭';
+                html += `<div style="background:#fff3e0; padding:8px; border-radius:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #ff9800;">
+                    <span><strong>${destinoLabel} ${ex.institucion}</strong> - P:${ex.pequenos} M:${ex.medianos} G:${ex.grandes} (costo: $${ex.costo.toFixed(2)})</span>
+                    <button type="button" onclick="eliminarExoneradoPlanificado(${idx})" style="background:#d32f2f; color:white; border:none; border-radius:4px; padding:4px 8px;">✕</button>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function eliminarExoneradoPlanificado(idx) {
+            exoneradosPlanificados.splice(idx, 1);
+            document.getElementById('exoneradosPlanificadosData').value = JSON.stringify(exoneradosPlanificados);
+            renderExoneradosPlanificados();
+        }
+
+        // Cargar datos para edición
         function cargarParaEdicion(id) {
             cargarDatos();
             const recogida = datos.recogidas.find(r => r.id === id);
@@ -110,9 +220,15 @@
             document.getElementById('editId').value = recogida.id;
             document.getElementById('btnGuardar').textContent = 'Actualizar recogida';
             document.getElementById('btnEliminar').style.display = 'block';
+            if (recogida.exonerados_planificados) {
+                exoneradosPlanificados = recogida.exonerados_planificados;
+                document.getElementById('exoneradosPlanificadosData').value = JSON.stringify(exoneradosPlanificados);
+                renderExoneradosPlanificados();
+            }
             actualizarSubtotal();
         }
 
+        // Inicializar
         const urlParams = new URLSearchParams(window.location.search);
         const editId = urlParams.get('edit');
         if (editId) {
@@ -128,6 +244,7 @@
             actualizarSubtotal();
         });
 
+        // Guardar recogida
         document.getElementById('formRecogida').addEventListener('submit', function(e) {
             e.preventDefault();
             const id = parseInt(document.getElementById('editId').value);
@@ -138,6 +255,7 @@
             const grandes = parseInt(document.getElementById('grandes').value) || 0;
             const fecha = document.getElementById('fecha').value;
             const observaciones = document.getElementById('observaciones').value;
+            const exonerados = JSON.parse(document.getElementById('exoneradosPlanificadosData').value || '[]');
 
             if (!comunidad) {
                 mostrarMensaje('Indica la comunidad o cliente', 'error');
@@ -163,7 +281,8 @@
                     medianos,
                     grandes,
                     fecha: fecha ? new Date(fecha).toISOString() : new Date().toISOString(),
-                    observaciones
+                    observaciones,
+                    exonerados_planificados: exonerados
                 });
                 if (resultado) {
                     mostrarMensaje('✅ Recogida actualizada', 'exito');
@@ -171,7 +290,7 @@
                     mostrarMensaje('❌ Error al actualizar', 'error');
                 }
             } else {
-                resultado = registrarRecogida(comunidad, planta, pequenos, medianos, grandes, fecha ? new Date(fecha).toISOString() : new Date().toISOString(), observaciones);
+                resultado = registrarRecogida(comunidad, planta, pequenos, medianos, grandes, fecha ? new Date(fecha).toISOString() : new Date().toISOString(), observaciones, exonerados);
                 if (resultado) {
                     setUltimo('recogida', resultado.id);
                     mostrarMensaje(`✅ Recogida guardada: ${comunidad} (${pequenos+medianos+grandes} cilindros)`, 'exito');
@@ -186,6 +305,9 @@
                 document.getElementById('btnGuardar').textContent = 'Guardar recogida';
                 document.getElementById('btnEliminar').style.display = 'none';
                 document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+                exoneradosPlanificados = [];
+                document.getElementById('exoneradosPlanificadosData').value = '[]';
+                renderExoneradosPlanificados();
                 actualizarSubtotal();
                 cargarComunidades();
                 if (window.opener) window.opener.actualizarDashboard();
@@ -203,6 +325,9 @@
                 document.getElementById('btnGuardar').textContent = 'Guardar recogida';
                 document.getElementById('btnEliminar').style.display = 'none';
                 document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+                exoneradosPlanificados = [];
+                document.getElementById('exoneradosPlanificadosData').value = '[]';
+                renderExoneradosPlanificados();
                 actualizarSubtotal();
                 if (window.opener) window.opener.actualizarDashboard();
             }
