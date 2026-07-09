@@ -193,15 +193,6 @@ input:focus, select:focus {
     background: #b71c1c;
 }
 
-/* Reportes y items */
-.report-item {
-    background: #f8f9fa;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    border-left: 4px solid #0d47a1;
-}
-
 .subtotal-box {
     background: #e3f2fd;
     padding: 12px;
@@ -212,11 +203,28 @@ input:focus, select:focus {
     color: #0d47a1;
 }
 
+/* Recogidas y cargas */
 .recogida-item, .carga-item {
     transition: background 0.2s;
 }
 .recogida-item:hover, .carga-item:hover {
     background: #f0f4ff !important;
+}
+
+/* Tablas responsivas */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+th, td {
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+th {
+    background: #0d47a1;
+    color: white;
 }
 
 /* Responsive */
@@ -236,20 +244,4 @@ input:focus, select:focus {
         font-size: 13px;
         padding: 12px 6px;
     }
-}
-
-/* Tablas responsivas */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-th, td {
-    padding: 6px 8px;
-    border: 1px solid #ddd;
-    text-align: center;
-}
-th {
-    background: #0d47a1;
-    color: white;
 }
