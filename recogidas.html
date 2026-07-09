@@ -3,230 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Nueva recogida - GAS GUARIBE</title>
+    <title>Recogidas - GAS GUARIBE</title>
     <link rel="stylesheet" href="style.css">
     <script src="app.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📋 Nueva recogida</h1>
+            <h1>📋 Recogidas</h1>
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <form id="formRecogida">
-            <div class="form-group">
-                <label for="comunidad">Comunidad o cliente</label>
-                <input type="text" id="comunidad" list="listaComunidades" placeholder="Escribe o selecciona" required>
-                <datalist id="listaComunidades"></datalist>
-            </div>
+        <div class="form-group">
+            <label for="filtroEstado">Filtrar por estado</label>
+            <select id="filtroEstado" onchange="cargarListaRecogidas()">
+                <option value="todas">Todas</option>
+                <option value="pendiente">Pendientes</option>
+                <option value="parcial">Parciales</option>
+                <option value="completa">Completas</option>
+            </select>
+        </div>
 
-            <div class="form-group">
-                <label for="planta">Planta de llenado</label>
-                <select id="planta" required>
-                    <option value="">Selecciona una planta</option>
-                </select>
-            </div>
+        <div id="listaRecogidas" style="margin-top:12px;"></div>
 
-            <div class="form-group">
-                <label>Cilindros recogidos</label>
-                <div style="display:flex; gap:8px;">
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Pequeños</label>
-                        <input type="number" id="pequenos" min="0" value="0" oninput="actualizarSubtotal()">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Medianos</label>
-                        <input type="number" id="medianos" min="0" value="0" oninput="actualizarSubtotal()">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Grandes</label>
-                        <input type="number" id="grandes" min="0" value="0" oninput="actualizarSubtotal()">
-                    </div>
-                </div>
-                <div id="subtotal" class="subtotal-box">Total: 0 cilindros</div>
-            </div>
-
-            <div class="form-group">
-                <label for="fecha">Fecha</label>
-                <input type="date" id="fecha">
-            </div>
-
-            <div class="form-group">
-                <label for="observaciones">Observaciones</label>
-                <textarea id="observaciones" rows="2"></textarea>
-            </div>
-
-            <input type="hidden" id="editId" value="">
-            <button type="submit" class="btn-primary" id="btnGuardar">Guardar recogida</button>
-            <button type="button" class="btn-danger" id="btnEliminar" style="display:none;">Eliminar</button>
-        </form>
-
-        <div id="mensaje" style="margin-top:16px; padding:12px; border-radius:8px; display:none;"></div>
+        <button class="btn-primary" onclick="window.location.href='recogida_nueva.html'" style="margin-top:12px;">➕ Nueva recogida</button>
     </div>
 
     <script>
-        // Cargar comunidades
-        function cargarComunidades() {
-            const comunidades = obtenerComunidades();
-            const datalist = document.getElementById('listaComunidades');
-            datalist.innerHTML = '';
-            comunidades.forEach(c => {
-                const option = document.createElement('option');
-                option.value = c;
-                datalist.appendChild(option);
+        function cargarListaRecogidas() {
+            cargarDatos();
+            const filtro = document.getElementById('filtroEstado').value;
+            let recogidas = datos.recogidas || [];
+            if (filtro !== 'todas') {
+                recogidas = recogidas.filter(r => r.estado === filtro);
+            }
+            // Ordenar por fecha descendente
+            recogidas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            const container = document.getElementById('listaRecogidas');
+            if (recogidas.length === 0) {
+                container.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">No hay recogidas</p>';
+                return;
+            }
+
+            let html = '';
+            recogidas.forEach(r => {
+                const fecha = new Date(r.fecha).toLocaleDateString();
+                const saldo = obtenerSaldoRecogida(r);
+                const plantaNombre = obtenerNombrePlanta(r.planta);
+                const estadoLabel = r.estado === 'completa' ? '✅ Completa' : (r.estado === 'parcial' ? '⚠️ Parcial' : '⏳ Pendiente');
+                html += `
+                    <div class="recogida-item" style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid ${r.estado === 'completa' ? '#4caf50' : (r.estado === 'parcial' ? '#ff9800' : '#2196f3')};">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>${r.comunidad}</strong>
+                            <span>${estadoLabel}</span>
+                        </div>
+                        <div style="font-size:13px; color:#555;">
+                            ${fecha} - Planta: ${plantaNombre}
+                            <br>Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes}
+                            <br>Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0}
+                            <br><strong>Saldo pendiente:</strong> P:${saldo.p} M:${saldo.m} G:${saldo.g}
+                            ${r.observaciones ? `<br><em>${r.observaciones}</em>` : ''}
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <button class="btn-secondary" style="padding:6px 12px; font-size:12px; flex:1;" onclick="editarRecogida(${r.id})">✏️ Editar</button>
+                            <button class="btn-danger" style="padding:6px 12px; font-size:12px; flex:1;" onclick="eliminarRecogida(${r.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
             });
+            container.innerHTML = html;
         }
 
-        // Cargar plantas
-        function cargarPlantas() {
-            const plantas = obtenerPlantas();
-            const select = document.getElementById('planta');
-            select.innerHTML = '<option value="">Selecciona una planta</option>';
-            plantas.forEach(p => {
-                const option = document.createElement('option');
-                option.value = p.id;
-                option.textContent = p.nombre;
-                select.appendChild(option);
-            });
+        function editarRecogida(id) {
+            window.location.href = `recogida_nueva.html?edit=${id}`;
         }
 
-        // Actualizar subtotal
-        function actualizarSubtotal() {
-            const p = parseInt(document.getElementById('pequenos').value) || 0;
-            const m = parseInt(document.getElementById('medianos').value) || 0;
-            const g = parseInt(document.getElementById('grandes').value) || 0;
-            document.getElementById('subtotal').textContent = `Total: ${p + m + g} cilindros`;
-        }
-
-        // Cargar datos para edición
-        function cargarParaEdicion(id) {
-            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos'));
-            const recogida = datos.recogidas.find(r => r.id === id);
-            if (!recogida) return;
-            document.getElementById('comunidad').value = recogida.comunidad || '';
-            document.getElementById('planta').value = recogida.planta || '';
-            document.getElementById('pequenos').value = recogida.pequenos || 0;
-            document.getElementById('medianos').value = recogida.medianos || 0;
-            document.getElementById('grandes').value = recogida.grandes || 0;
-            document.getElementById('fecha').value = recogida.fecha ? new Date(recogida.fecha).toISOString().slice(0,10) : '';
-            document.getElementById('observaciones').value = recogida.observaciones || '';
-            document.getElementById('editId').value = recogida.id;
-            document.getElementById('btnGuardar').textContent = 'Actualizar recogida';
-            document.getElementById('btnEliminar').style.display = 'block';
-            actualizarSubtotal();
-        }
-
-        // Verificar si hay parámetro de edición
-        const urlParams = new URLSearchParams(window.location.search);
-        const editId = urlParams.get('edit');
-        if (editId) {
-            cargarParaEdicion(parseInt(editId));
-        }
-
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', function() {
-            cargarComunidades();
-            cargarPlantas();
-            // Fecha por defecto
-            if (!document.getElementById('fecha').value) {
-                document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
-            }
-            actualizarSubtotal();
-        });
-
-        // Manejar envío
-        document.getElementById('formRecogida').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const id = parseInt(document.getElementById('editId').value);
-            const comunidad = document.getElementById('comunidad').value.trim();
-            const planta = document.getElementById('planta').value;
-            const pequenos = parseInt(document.getElementById('pequenos').value) || 0;
-            const medianos = parseInt(document.getElementById('medianos').value) || 0;
-            const grandes = parseInt(document.getElementById('grandes').value) || 0;
-            const fecha = document.getElementById('fecha').value;
-            const observaciones = document.getElementById('observaciones').value;
-
-            if (!comunidad) {
-                mostrarMensaje('Indica la comunidad o cliente', 'error');
-                return;
-            }
-            if (!planta) {
-                mostrarMensaje('Selecciona una planta', 'error');
-                return;
-            }
-            if (pequenos === 0 && medianos === 0 && grandes === 0) {
-                mostrarMensaje('Debes registrar al menos un cilindro', 'error');
-                return;
-            }
-
-            // Agregar comunidad si es nueva
-            agregarComunidad(comunidad);
-
-            let resultado;
-            if (id) {
-                // Editar
-                resultado = actualizarRecogida(id, {
-                    comunidad,
-                    planta,
-                    pequenos,
-                    medianos,
-                    grandes,
-                    fecha: fecha ? new Date(fecha).toISOString() : new Date().toISOString(),
-                    observaciones
-                });
-                if (resultado) {
-                    mostrarMensaje('✅ Recogida actualizada', 'exito');
-                } else {
-                    mostrarMensaje('❌ Error al actualizar', 'error');
-                }
-            } else {
-                // Nueva
-                resultado = registrarRecogida(comunidad, pequenos, medianos, grandes, observaciones, planta, fecha ? new Date(fecha).toISOString() : new Date().toISOString());
-                if (resultado) {
-                    setUltimo('recogida', resultado.id);
-                    mostrarMensaje(`✅ Recogida guardada: ${comunidad} (${pequenos+medianos+grandes} cilindros)`, 'exito');
-                } else {
-                    mostrarMensaje('❌ Error al guardar', 'error');
-                }
-            }
-
-            if (resultado) {
-                document.getElementById('formRecogida').reset();
-                document.getElementById('editId').value = '';
-                document.getElementById('btnGuardar').textContent = 'Guardar recogida';
-                document.getElementById('btnEliminar').style.display = 'none';
-                // Restaurar fecha
-                document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
-                actualizarSubtotal();
-                cargarComunidades();
-            }
-        });
-
-        // Eliminar
-        document.getElementById('btnEliminar').addEventListener('click', function() {
-            const id = parseInt(document.getElementById('editId').value);
-            if (!id) return;
+        function eliminarRecogida(id) {
             if (confirm('¿Eliminar esta recogida?')) {
                 eliminarRecogida(id);
-                mostrarMensaje('🗑️ Recogida eliminada', 'exito');
-                document.getElementById('formRecogida').reset();
-                document.getElementById('editId').value = '';
-                document.getElementById('btnGuardar').textContent = 'Guardar recogida';
-                document.getElementById('btnEliminar').style.display = 'none';
-                document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
-                actualizarSubtotal();
+                cargarListaRecogidas();
+                actualizarDashboard();
             }
-        });
-
-        function mostrarMensaje(texto, tipo) {
-            const msg = document.getElementById('mensaje');
-            msg.textContent = texto;
-            msg.style.display = 'block';
-            msg.style.backgroundColor = tipo === 'exito' ? '#d4edda' : '#f8d7da';
-            msg.style.color = tipo === 'exito' ? '#155724' : '#721c24';
-            setTimeout(() => { msg.style.display = 'none'; }, 4000);
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarListaRecogidas();
+        });
     </script>
 </body>
 </html>
