@@ -15,14 +15,14 @@
         </header>
 
         <form id="formEntrega">
-            <!-- Comunidad / Cliente -->
+            <!-- Comunidad -->
             <div class="form-group">
                 <label for="comunidad">Comunidad o cliente</label>
                 <input type="text" id="comunidad" list="listaComunidades" placeholder="Escribe o selecciona" required>
                 <datalist id="listaComunidades"></datalist>
             </div>
 
-            <!-- Tipo de cliente (se infiere automáticamente) -->
+            <!-- Tipo de cliente -->
             <div class="form-group">
                 <label>Tipo de cliente</label>
                 <div id="tipoClienteDisplay" style="padding:8px; background:#e3f2fd; border-radius:8px; font-weight:500; color:#0d47a1;">
@@ -31,11 +31,19 @@
                 <input type="hidden" id="tipoCliente" value="comunidad">
             </div>
 
-            <!-- Planta de llenado -->
+            <!-- Planta -->
             <div class="form-group">
                 <label for="planta">Planta de llenado</label>
                 <select id="planta" required>
                     <option value="">Selecciona una planta</option>
+                </select>
+            </div>
+
+            <!-- Seleccionar carga de origen (para precargar exoneraciones) -->
+            <div class="form-group">
+                <label for="cargaOrigen">Carga de origen (opcional)</label>
+                <select id="cargaOrigen" onchange="precargarExoneradosDesdeCarga()">
+                    <option value="">Selecciona una carga para precargar exoneraciones</option>
                 </select>
             </div>
 
@@ -58,7 +66,7 @@
                 </div>
             </div>
 
-            <!-- Precios aplicados (se precargan según tipo de cliente) -->
+            <!-- Precios -->
             <div class="form-group">
                 <label>Precios aplicados (por cilindro)</label>
                 <div style="display:flex; gap:8px;">
@@ -77,34 +85,33 @@
                 </div>
             </div>
 
-            <!-- Exonerados -->
+            <!-- Exonerados (precargados desde carga) -->
             <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
                 <label style="font-weight:700;">🎓 Exonerados</label>
-                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-                    <div style="flex:1;">
+                <div id="exoneradosPrecargados" style="margin-bottom:8px;"></div>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:120px;">
                         <label style="font-size:12px;">Destino</label>
-                        <select id="exo_destino">
+                        <select id="exo_destino" style="padding:8px;">
                             <option value="comunidad">Comunidad</option>
                             <option value="galpon">Galpón</option>
                         </select>
                     </div>
-                    <div style="flex:2;">
-                        <label style="font-size:12px;">Institución (si es comunidad)</label>
-                        <input type="text" id="exo_institucion" placeholder="Escuela X">
+                    <div style="flex:2; min-width:150px;">
+                        <label style="font-size:12px;">Institución</label>
+                        <input type="text" id="exo_institucion" placeholder="Nombre de la institución" style="padding:8px;">
                     </div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Pequeños</label>
-                        <input type="number" id="exo_pequenos" min="0" value="0">
+                    <div style="flex:1; min-width:60px;">
+                        <label style="font-size:12px;">P</label>
+                        <input type="number" id="exo_pequenos" min="0" value="0" style="padding:8px; width:100%;">
                     </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Medianos</label>
-                        <input type="number" id="exo_medianos" min="0" value="0">
+                    <div style="flex:1; min-width:60px;">
+                        <label style="font-size:12px;">M</label>
+                        <input type="number" id="exo_medianos" min="0" value="0" style="padding:8px; width:100%;">
                     </div>
-                    <div style="flex:1;">
-                        <label style="font-size:12px;">Grandes</label>
-                        <input type="number" id="exo_grandes" min="0" value="0">
+                    <div style="flex:1; min-width:60px;">
+                        <label style="font-size:12px;">G</label>
+                        <input type="number" id="exo_grandes" min="0" value="0" style="padding:8px; width:100%;">
                     </div>
                     <div style="flex:0 0 auto; display:flex; align-items:flex-end;">
                         <button type="button" class="btn-secondary" style="padding:8px 16px; margin:0;" onclick="agregarExonerado()">+</button>
@@ -151,14 +158,11 @@
     </div>
 
     <script>
-        // ============================================================
-        // 1. VARIABLES GLOBALES
-        // ============================================================
         let exoneradosList = [];
         let datosGlobales = {};
 
         // ============================================================
-        // 2. CARGAR COMUNIDADES Y PLANTAS
+        // 1. CARGAR COMUNIDADES, PLANTAS Y CARGAS
         // ============================================================
         function cargarComunidades() {
             const comunidades = obtenerComunidades();
@@ -183,8 +187,24 @@
             });
         }
 
+        function cargarCargas() {
+            cargarDatos();
+            const cargas = datos.cargas.filter(c => c.estado === 'completada');
+            const select = document.getElementById('cargaOrigen');
+            select.innerHTML = '<option value="">Selecciona una carga para precargar exoneraciones</option>';
+            cargas.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.id;
+                const fecha = new Date(c.fecha).toLocaleDateString();
+                const resumen = obtenerResumenCarga(c.id);
+                const total = resumen ? resumen.totalP + resumen.totalM + resumen.totalG : 0;
+                option.textContent = `Carga #${c.id} - ${fecha} (${total} cilindros)`;
+                select.appendChild(option);
+            });
+        }
+
         // ============================================================
-        // 3. INFERIR TIPO DE CLIENTE Y ACTUALIZAR PRECIOS
+        // 2. INFERIR TIPO DE CLIENTE Y ACTUALIZAR PRECIOS
         // ============================================================
         function inferirTipoCliente(comunidad) {
             if (!comunidad) return 'comunidad';
@@ -203,12 +223,10 @@
             const iconos = { comunidad: '🏘️', comercio: '🏪', galpon: '🏭' };
             const nombres = { comunidad: 'Comunidad', comercio: 'Comercio', galpon: 'Galpón' };
             display.textContent = `${iconos[tipo] || '🏘️'} ${nombres[tipo] || 'Comunidad'}`;
-            // Actualizar precios según tipo
             actualizarPreciosPorTipo(tipo);
         }
 
         function actualizarPreciosPorTipo(tipo) {
-            // Cargar configuración
             const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"config":{"precios_venta":{}}}');
             const precios = datos.config?.precios_venta || {
                 comunidad: { pequeno: 3.50, mediano: 5.00, grande: 7.50 },
@@ -223,7 +241,41 @@
         }
 
         // ============================================================
-        // 4. ACTUALIZAR TOTALES (PAGO Y EXONERADOS)
+        // 3. PRECARGAR EXONERACIONES DESDE CARGA
+        // ============================================================
+        function precargarExoneradosDesdeCarga() {
+            const cargaId = parseInt(document.getElementById('cargaOrigen').value);
+            if (!cargaId) return;
+
+            cargarDatos();
+            const carga = datos.cargas.find(c => c.id === cargaId);
+            if (!carga) return;
+
+            // Recolectar todos los exonerados de la carga
+            let exonerados = [];
+            carga.items.forEach(item => {
+                if (item.exonerados && item.exonerados.length > 0) {
+                    // Verificar si la comunidad coincide con la seleccionada
+                    const recogida = datos.recogidas.find(r => r.id === item.recogidaId);
+                    const comunidadSeleccionada = document.getElementById('comunidad').value.trim();
+                    if (recogida && recogida.comunidad === comunidadSeleccionada) {
+                        exonerados = exonerados.concat(item.exonerados);
+                    }
+                }
+            });
+
+            if (exonerados.length > 0) {
+                exoneradosList = exonerados;
+                document.getElementById('exoneradosData').value = JSON.stringify(exoneradosList);
+                renderExonerados();
+                mostrarMensaje(`✅ Se precargaron ${exonerados.length} exoneraciones desde la carga`, 'exito');
+            } else {
+                mostrarMensaje('⚠️ No hay exoneraciones para esta comunidad en la carga seleccionada', 'error');
+            }
+        }
+
+        // ============================================================
+        // 4. ACTUALIZAR TOTALES
         // ============================================================
         function actualizarTotales() {
             const p = parseInt(document.getElementById('pequenos').value) || 0;
@@ -259,18 +311,17 @@
                 return;
             }
             if (destino === 'comunidad' && !institucion) {
-                mostrarMensaje('Indica la institución para la comunidad', 'error');
+                mostrarMensaje('Indica la institución', 'error');
                 return;
             }
 
-            // Calcular costo (usando costos de planta)
             const plantaId = document.getElementById('planta').value;
             const plantas = obtenerPlantas();
             const planta = plantas.find(p => p.id === plantaId);
             const costos = planta ? planta.costos : { pequeno: 0, mediano: 0, grande: 0 };
 
             const exo = {
-                tipo: destino === 'comunidad' ? 'comunidad' : 'galpon',
+                destino: destino,
                 institucion: destino === 'comunidad' ? institucion : 'Galpón',
                 pequenos,
                 medianos,
@@ -282,7 +333,6 @@
             document.getElementById('exoneradosData').value = JSON.stringify(exoneradosList);
             renderExonerados();
             
-            // Limpiar campos
             document.getElementById('exo_institucion').value = '';
             document.getElementById('exo_pequenos').value = 0;
             document.getElementById('exo_medianos').value = 0;
@@ -298,8 +348,9 @@
             }
             let html = '';
             exoneradosList.forEach((ex, idx) => {
-                html += `<div style="background:#f8f9fa; padding:8px; border-radius:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                    <span><strong>${ex.institucion}</strong> - P:${ex.pequenos} M:${ex.medianos} G:${ex.grandes} ($${ex.costo.toFixed(2)})</span>
+                const destinoLabel = ex.destino === 'comunidad' ? '🏘️' : '🏭';
+                html += `<div style="background:#fff3e0; padding:8px; border-radius:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #ff9800;">
+                    <span><strong>${destinoLabel} ${ex.institucion}</strong> - P:${ex.pequenos} M:${ex.medianos} G:${ex.grandes} (costo: $${ex.costo.toFixed(2)})</span>
                     <button type="button" onclick="eliminarExonerado(${idx})" style="background:#d32f2f; color:white; border:none; border-radius:4px; padding:4px 8px;">✕</button>
                 </div>`;
             });
@@ -336,14 +387,12 @@
             document.getElementById('btnGuardar').textContent = 'Actualizar entrega';
             document.getElementById('btnEliminar').style.display = 'block';
 
-            // Cargar exonerados
             if (entrega.exonerados) {
                 exoneradosList = entrega.exonerados;
                 document.getElementById('exoneradosData').value = JSON.stringify(exoneradosList);
                 renderExonerados();
             }
 
-            // Actualizar tipo de cliente
             actualizarTipoCliente();
             actualizarTotales();
         }
@@ -354,16 +403,15 @@
         document.addEventListener('DOMContentLoaded', function() {
             cargarComunidades();
             cargarPlantas();
+            cargarCargas();
             if (!document.getElementById('fecha').value) {
                 document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
             }
             actualizarTotales();
 
-            // Evento para detectar cambio de comunidad
             document.getElementById('comunidad').addEventListener('input', actualizarTipoCliente);
             document.getElementById('comunidad').addEventListener('change', actualizarTipoCliente);
 
-            // Verificar parámetro de edición
             const urlParams = new URLSearchParams(window.location.search);
             const editId = urlParams.get('edit');
             if (editId) {
@@ -372,7 +420,7 @@
         });
 
         // ============================================================
-        // 8. GUARDAR ENTREGA (NUEVA O EDITADA)
+        // 8. GUARDAR ENTREGA
         // ============================================================
         document.getElementById('formEntrega').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -406,14 +454,12 @@
                 return;
             }
 
-            // Agregar comunidad si es nueva
             agregarComunidad(comunidad);
 
             const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"entregas":[]}');
 
             let resultado;
             if (id) {
-                // Editar entrega existente
                 const idx = datos.entregas.findIndex(e => e.id === id);
                 if (idx !== -1) {
                     datos.entregas[idx] = {
@@ -435,7 +481,6 @@
                     resultado = null;
                 }
             } else {
-                // Nueva entrega
                 const nuevaEntrega = {
                     id: Date.now(),
                     comunidad,
@@ -473,15 +518,13 @@
                     renderExonerados();
                     actualizarTotales();
                     cargarComunidades();
+                    cargarCargas();
                 }
             } else {
                 mostrarMensaje('❌ Error al guardar', 'error');
             }
         });
 
-        // ============================================================
-        // 9. ELIMINAR ENTREGA
-        // ============================================================
         document.getElementById('btnEliminar').addEventListener('click', function() {
             const id = parseInt(document.getElementById('editId').value);
             if (!id) return;
@@ -502,9 +545,6 @@
             }
         });
 
-        // ============================================================
-        // 10. UTILIDADES
-        // ============================================================
         function mostrarMensaje(texto, tipo) {
             const msg = document.getElementById('mensaje');
             msg.textContent = texto;
