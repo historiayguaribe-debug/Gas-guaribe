@@ -93,6 +93,7 @@
                 return;
             }
 
+            // Cargar datos de la versión 2.1
             const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"ventas":[]}');
             const venta = {
                 id: Date.now(),
