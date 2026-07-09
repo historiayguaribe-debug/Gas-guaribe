@@ -44,6 +44,7 @@
                     <p><strong>Planta:</strong> ${plantaNombre}</p>
                     <p><strong>Fecha:</strong> ${fecha}</p>
                     <p><strong>Total cilindros:</strong> ${total}</p>
+                    <p><strong>🎓 Exonerados:</strong> ${resumen ? resumen.totalExonerados : 0} (costo: $${resumen ? resumen.costoExonerados.toFixed(2) : '0.00'})</p>
                     <p><strong>Estado:</strong> ${carga.estado === 'activa' ? '🟢 Activa' : '✅ Completada'}</p>
                 </div>
                 <h4>Desglose por comunidad</h4>
@@ -55,6 +56,7 @@
                             <th style="padding:8px; border:1px solid #ddd;">M</th>
                             <th style="padding:8px; border:1px solid #ddd;">G</th>
                             <th style="padding:8px; border:1px solid #ddd;">Total</th>
+                            <th style="padding:8px; border:1px solid #ddd;">🎓 Exonerados</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -67,6 +69,7 @@
                 const p = item.pequenos || 0;
                 const m = item.medianos || 0;
                 const g = item.grandes || 0;
+                const exoTotal = (item.exonerados || []).reduce((sum, ex) => sum + ex.pequenos + ex.medianos + ex.grandes, 0);
                 totalP += p;
                 totalM += m;
                 totalG += g;
@@ -77,6 +80,7 @@
                         <td style="padding:6px; border:1px solid #ddd;">${m}</td>
                         <td style="padding:6px; border:1px solid #ddd;">${g}</td>
                         <td style="padding:6px; border:1px solid #ddd;"><strong>${p + m + g}</strong></td>
+                        <td style="padding:6px; border:1px solid #ddd;">${exoTotal}</td>
                     </tr>
                 `;
             });
@@ -88,11 +92,11 @@
                         <td style="padding:8px; border:1px solid #ddd;">${totalM}</td>
                         <td style="padding:8px; border:1px solid #ddd;">${totalG}</td>
                         <td style="padding:8px; border:1px solid #ddd;">${totalP + totalM + totalG}</td>
+                        <td style="padding:8px; border:1px solid #ddd;">${resumen ? resumen.totalExonerados : 0}</td>
                     </tr>
                 </tbody></table>
             `;
 
-            // Si la carga está activa, permitir marcar como completada
             if (carga.estado === 'activa') {
                 html += `
                     <button class="btn-primary" style="margin-top:16px;" onclick="completarCarga(${id})">✅ Marcar como completada</button>
@@ -105,19 +109,18 @@
         function completarCarga(id) {
             if (confirm('¿Marcar esta carga como completada? Las recogidas se actualizarán automáticamente.')) {
                 actualizarCarga(id, { estado: 'completada' });
-                mostrarMensaje('✅ Carga completada', 'exito');
+                mostrarMensaje('✅ Carga completada');
                 cargarDetalle();
-                if (window.opener) window.opener.actualizarDashboard();
             }
         }
 
-        function mostrarMensaje(texto, tipo) {
+        function mostrarMensaje(texto) {
             const msg = document.createElement('div');
             msg.textContent = texto;
             msg.style.padding = '12px';
             msg.style.borderRadius = '8px';
-            msg.style.backgroundColor = tipo === 'exito' ? '#d4edda' : '#f8d7da';
-            msg.style.color = tipo === 'exito' ? '#155724' : '#721c24';
+            msg.style.backgroundColor = '#d4edda';
+            msg.style.color = '#155724';
             msg.style.marginTop = '16px';
             document.getElementById('detalleCarga').appendChild(msg);
             setTimeout(() => { msg.remove(); }, 4000);
