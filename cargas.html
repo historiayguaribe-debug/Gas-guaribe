@@ -14,6 +14,7 @@
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
+        <!-- Cargas activas -->
         <div id="cargasActivas" style="margin-bottom:16px;">
             <h3>Cargas activas</h3>
             <div id="listaCargas"></div>
@@ -21,6 +22,7 @@
 
         <hr>
 
+        <!-- Nueva carga -->
         <h3>Nueva carga</h3>
         <form id="formCarga">
             <div class="form-group">
@@ -41,7 +43,7 @@
             </div>
 
             <div id="resumenCarga" class="subtotal-box" style="margin:12px 0;">
-                Total: 0 cilindros | Ingreso: $0.00 | Costo: $0.00 | Ganancia: $0.00
+                Total: 0 cilindros | Ingreso: $0.00 | Costo: $0.00 | Exonerados: 0 ($0.00) | Ganancia: $0.00
             </div>
 
             <button type="submit" class="btn-primary" id="btnCrearCarga">Crear carga</button>
@@ -51,6 +53,9 @@
     </div>
 
     <script>
+        // ============================================================
+        // 1. CARGAR PLANTAS
+        // ============================================================
         function cargarPlantas() {
             const plantas = obtenerPlantas();
             const select = document.getElementById('plantaCarga');
@@ -63,6 +68,9 @@
             });
         }
 
+        // ============================================================
+        // 2. CARGAS ACTIVAS
+        // ============================================================
         function cargarCargasActivas() {
             cargarDatos();
             const cargas = datos.cargas.filter(c => c.estado === 'activa');
@@ -77,6 +85,7 @@
                 const plantaNombre = obtenerNombrePlanta(c.planta);
                 const resumen = obtenerResumenCarga(c.id);
                 const total = resumen ? resumen.totalP + resumen.totalM + resumen.totalG : 0;
+                const exoTotal = resumen ? resumen.totalExonerados : 0;
                 html += `
                     <div style="background:#e3f2fd; padding:12px; border-radius:8px; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between;">
@@ -84,7 +93,7 @@
                             <span>${fecha}</span>
                         </div>
                         <div>Planta: ${plantaNombre}</div>
-                        <div>Cilindros: ${total}</div>
+                        <div>Cilindros: ${total} | 🎓 Exonerados: ${exoTotal}</div>
                         <div style="font-size:12px; color:#555;">
                             ${c.items.map(item => {
                                 const rec = datos.recogidas.find(r => r.id === item.recogidaId);
@@ -114,71 +123,105 @@
             }
         }
 
+        // ============================================================
+        // 3. RECOGIDAS DISPONIBLES CON EXONERACIONES
+        // ============================================================
         function cargarDisponibles() {
             cargarDatos();
+            
             const recogidasConSaldo = datos.recogidas.filter(r => {
                 const saldo = obtenerSaldoRecogida(r);
                 return saldo.total > 0;
             });
+
             const container = document.getElementById('listaDisponibles');
+            
             if (recogidasConSaldo.length === 0) {
-                container.innerHTML = '<p style="color:#999;">No hay recogidas con saldo disponible. Registra una recogida primero.</p>';
+                container.innerHTML = '<p style="color:#999;">No hay recogidas con saldo disponible.</p>';
                 return;
             }
+
             let html = '';
             recogidasConSaldo.forEach(r => {
                 const saldo = obtenerSaldoRecogida(r);
+                const plantaNombre = obtenerNombrePlanta(r.planta);
                 const tipoCliente = obtenerTipoClienteRecogida(r);
-                let icono = '🏘️', etiqueta = 'Comunidad';
+                const exoneradosPlan = r.exonerados_planificados || [];
+                const totalExoPlan = exoneradosPlan.reduce((sum, ex) => sum + ex.pequenos + ex.medianos + ex.grandes, 0);
+                
+                let icono = '🏘️';
+                let etiqueta = 'Comunidad';
                 if (tipoCliente === 'comercio') { icono = '🏪'; etiqueta = 'Comercio'; }
                 else if (tipoCliente === 'galpon') { icono = '🏭'; etiqueta = 'Galpón'; }
+
                 html += `
                     <div style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid ${tipoCliente === 'comunidad' ? '#2196f3' : (tipoCliente === 'comercio' ? '#ff9800' : '#4caf50')};">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
                             <span><strong>${icono} ${r.comunidad}</strong> <span style="font-size:12px; color:#666;">(${etiqueta})</span></span>
                             <span style="font-size:13px; background:#e3f2fd; padding:2px 8px; border-radius:12px;">
-                                Disponible: <strong>${saldo.total}</strong>
+                                Disponible: <strong>${saldo.total}</strong> cilindros
                             </span>
                         </div>
+                        ${totalExoPlan > 0 ? `
+                        <div style="background:#fff3e0; padding:6px 10px; border-radius:6px; margin:6px 0; font-size:13px;">
+                            <strong>🎓 Exoneraciones planificadas:</strong>
+                            ${exoneradosPlan.map(ex => 
+                                `${ex.institucion} (P:${ex.pequenos} M:${ex.medianos} G:${ex.grandes})`
+                            ).join(' | ')}
+                            <span style="color:#e65100; font-weight:500;">(costo estimado: $${exoneradosPlan.reduce((s, ex) => s + ex.costo, 0).toFixed(2)})</span>
+                        </div>
+                        ` : ''}
                         <div style="display:flex; gap:8px; margin-top:6px; align-items:center; flex-wrap:wrap;">
                             <label style="font-size:12px;">A cargar:</label>
-                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="${saldo.p}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="p" onchange="validarCantidad(this)">
+                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="${saldo.p}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="p">
                             <span style="font-size:12px;">P</span>
-                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="${saldo.m}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="m" onchange="validarCantidad(this)">
+                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="${saldo.m}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="m">
                             <span style="font-size:12px;">M</span>
-                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="${saldo.g}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="g" onchange="validarCantidad(this)">
+                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="${saldo.g}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="g">
                             <span style="font-size:12px;">G</span>
                             <span style="font-size:11px; color:#888;">(máx ${saldo.p}/${saldo.m}/${saldo.g})</span>
                         </div>
                         <div style="font-size:11px; color:#999; margin-top:4px;">
-                            Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes} | Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0}
+                            Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes} | Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0} | Saldo: ${saldo.total}
+                        </div>
+                        <!-- Checkbox para incluir exoneraciones planificadas en la carga -->
+                        <div style="margin-top:6px;">
+                            <label style="font-size:12px; display:flex; align-items:center; gap:6px;">
+                                <input type="checkbox" id="incluir_exo_${r.id}" class="incluir-exo" data-recogida="${r.id}" checked>
+                                Incluir exoneraciones planificadas en esta carga
+                            </label>
                         </div>
                     </div>
                 `;
             });
+
             container.innerHTML = html;
+
+            // Eventos
             document.querySelectorAll('.cargar-input').forEach(input => {
                 input.addEventListener('input', actualizarResumenCarga);
+            });
+            document.querySelectorAll('.incluir-exo').forEach(cb => {
+                cb.addEventListener('change', actualizarResumenCarga);
             });
             actualizarResumenCarga();
         }
 
-        function validarCantidad(input) {
-            const max = parseInt(input.max);
-            let val = parseInt(input.value);
-            if (isNaN(val) || val < 0) val = 0;
-            if (val > max) val = max;
-            input.value = val;
-        }
-
+        // ============================================================
+        // 4. ACTUALIZAR RESUMEN DE CARGA (CON EXONERACIONES)
+        // ============================================================
         function actualizarResumenCarga() {
             const plantaId = document.getElementById('plantaCarga').value;
             if (!plantaId) {
                 document.getElementById('resumenCarga').textContent = 'Selecciona una planta primero';
                 return;
             }
+
             let items = [];
             let totalCilindros = 0;
+            let totalExonerados = 0;
+            let costoExonerados = 0;
+
             document.querySelectorAll('.cargar-input').forEach(input => {
                 const cantidad = parseInt(input.value) || 0;
                 if (cantidad > 0) {
@@ -187,7 +230,22 @@
                     let item = items.find(i => i.recogidaId === recogidaId);
                     if (!item) {
                         const recogida = datos.recogidas.find(r => r.id === recogidaId);
-                        item = { recogidaId, pequenos: 0, medianos: 0, grandes: 0, tipoCliente: recogida ? obtenerTipoClienteRecogida(recogida) : 'comunidad' };
+                        const incluirExo = document.getElementById(`incluir_exo_${recogidaId}`).checked;
+                        let exonerados = [];
+                        if (incluirExo && recogida && recogida.exonerados_planificados) {
+                            exonerados = recogida.exonerados_planificados.map(ex => ({
+                                ...ex,
+                                costo: ex.costo || 0
+                            }));
+                        }
+                        item = {
+                            recogidaId,
+                            pequenos: 0,
+                            medianos: 0,
+                            grandes: 0,
+                            tipoCliente: recogida ? obtenerTipoClienteRecogida(recogida) : 'comunidad',
+                            exonerados: exonerados
+                        };
                         items.push(item);
                     }
                     if (tipo === 'p') item.pequenos = cantidad;
@@ -196,16 +254,28 @@
                     totalCilindros += cantidad;
                 }
             });
+
+            // Calcular exonerados totales (de todos los items)
+            items.forEach(item => {
+                (item.exonerados || []).forEach(ex => {
+                    totalExonerados += ex.pequenos + ex.medianos + ex.grandes;
+                    costoExonerados += ex.costo || 0;
+                });
+            });
+
             const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
             const resumenDiv = document.getElementById('resumenCarga');
             const btn = document.getElementById('btnCrearCarga');
-            let finanzas = { ingreso: 0, costo: 0, ganancia: 0 };
+
+            let finanzas = { ingreso: 0, costo: 0, ganancia: 0, exoneradosCosto: 0 };
             if (items.length > 0) {
                 finanzas = calcularGananciaEstimada(items, plantaId);
             }
-            resumenDiv.textContent = `Total: ${totalCilindros} cilindros | Ingreso: $${finanzas.ingreso.toFixed(2)} | Costo: $${finanzas.costo.toFixed(2)} | Ganancia: $${finanzas.ganancia.toFixed(2)}`;
+
+            resumenDiv.textContent = `Total: ${totalCilindros} cilindros | Ingreso: $${finanzas.ingreso.toFixed(2)} | Costo: $${finanzas.costo.toFixed(2)} | 🎓 Exonerados: ${totalExonerados} ($${costoExonerados.toFixed(2)}) | Ganancia: $${finanzas.ganancia.toFixed(2)}`;
             resumenDiv.style.color = '#0d47a1';
             resumenDiv.style.background = '#e3f2fd';
+
             if (totalCilindros === 0 || totalCilindros > capacidad) {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
@@ -222,14 +292,20 @@
             }
         }
 
+        // ============================================================
+        // 5. CREAR CARGA
+        // ============================================================
         document.getElementById('formCarga').addEventListener('submit', function(e) {
             e.preventDefault();
+            
             const planta = document.getElementById('plantaCarga').value;
             const fecha = document.getElementById('fechaCarga').value;
+
             if (!planta) {
                 mostrarMensaje('Selecciona una planta', 'error');
                 return;
             }
+
             const items = [];
             document.querySelectorAll('.cargar-input').forEach(input => {
                 const cantidad = parseInt(input.value) || 0;
@@ -239,7 +315,22 @@
                     let item = items.find(i => i.recogidaId === recogidaId);
                     if (!item) {
                         const recogida = datos.recogidas.find(r => r.id === recogidaId);
-                        item = { recogidaId, pequenos: 0, medianos: 0, grandes: 0, tipoCliente: recogida ? obtenerTipoClienteRecogida(recogida) : 'comunidad' };
+                        const incluirExo = document.getElementById(`incluir_exo_${recogidaId}`).checked;
+                        let exonerados = [];
+                        if (incluirExo && recogida && recogida.exonerados_planificados) {
+                            exonerados = recogida.exonerados_planificados.map(ex => ({
+                                ...ex,
+                                costo: ex.costo || 0
+                            }));
+                        }
+                        item = {
+                            recogidaId,
+                            pequenos: 0,
+                            medianos: 0,
+                            grandes: 0,
+                            tipoCliente: recogida ? obtenerTipoClienteRecogida(recogida) : 'comunidad',
+                            exonerados: exonerados
+                        };
                         items.push(item);
                     }
                     if (tipo === 'p') item.pequenos = cantidad;
@@ -247,16 +338,19 @@
                     else if (tipo === 'g') item.grandes = cantidad;
                 }
             });
+
             if (items.length === 0) {
                 mostrarMensaje('Selecciona al menos un cilindro para cargar', 'error');
                 return;
             }
+
             const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
             const total = items.reduce((sum, i) => sum + i.pequenos + i.medianos + i.grandes, 0);
             if (total > capacidad) {
                 mostrarMensaje(`⚠️ Excedes la capacidad del camión (${capacidad} cilindros)`, 'error');
                 return;
             }
+
             const carga = crearCarga(planta, fecha ? new Date(fecha).toISOString() : new Date().toISOString(), items);
             if (carga) {
                 setUltimo('carga', carga.id);
@@ -271,6 +365,9 @@
             }
         });
 
+        // ============================================================
+        // 6. UTILIDADES E INICIO
+        // ============================================================
         function mostrarMensaje(texto, tipo) {
             const msg = document.getElementById('mensaje');
             msg.textContent = texto;
