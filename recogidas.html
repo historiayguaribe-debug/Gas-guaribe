@@ -18,9 +18,9 @@
             <label for="filtroEstado">Filtrar por estado</label>
             <select id="filtroEstado" onchange="cargarListaRecogidas()">
                 <option value="todas">Todas</option>
-                <option value="pendiente">Pendientes</option>
-                <option value="parcial">Parciales</option>
-                <option value="completa">Completas</option>
+                <option value="pendiente">⏳ Pendientes</option>
+                <option value="parcial">⚠️ Parciales</option>
+                <option value="completa">✅ Completas</option>
             </select>
         </div>
 
@@ -37,7 +37,6 @@
             if (filtro !== 'todas') {
                 recogidas = recogidas.filter(r => r.estado === filtro);
             }
-            // Ordenar por fecha descendente
             recogidas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
             const container = document.getElementById('listaRecogidas');
@@ -51,9 +50,12 @@
                 const fecha = new Date(r.fecha).toLocaleDateString();
                 const saldo = obtenerSaldoRecogida(r);
                 const plantaNombre = obtenerNombrePlanta(r.planta);
-                const estadoLabel = r.estado === 'completa' ? '✅ Completa' : (r.estado === 'parcial' ? '⚠️ Parcial' : '⏳ Pendiente');
+                let estadoLabel = '', estadoColor = '';
+                if (r.estado === 'completa') { estadoLabel = '✅ Completa'; estadoColor = '#4caf50'; }
+                else if (r.estado === 'parcial') { estadoLabel = '⚠️ Parcial'; estadoColor = '#ff9800'; }
+                else { estadoLabel = '⏳ Pendiente'; estadoColor = '#2196f3'; }
                 html += `
-                    <div class="recogida-item" style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid ${r.estado === 'completa' ? '#4caf50' : (r.estado === 'parcial' ? '#ff9800' : '#2196f3')};">
+                    <div style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid ${estadoColor};">
                         <div style="display:flex; justify-content:space-between;">
                             <strong>${r.comunidad}</strong>
                             <span>${estadoLabel}</span>
@@ -62,7 +64,7 @@
                             ${fecha} - Planta: ${plantaNombre}
                             <br>Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes}
                             <br>Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0}
-                            <br><strong>Saldo pendiente:</strong> P:${saldo.p} M:${saldo.m} G:${saldo.g}
+                            <br><strong>Saldo pendiente:</strong> P:${saldo.p} M:${saldo.m} G:${saldo.g} (${saldo.total} total)
                             ${r.observaciones ? `<br><em>${r.observaciones}</em>` : ''}
                         </div>
                         <div style="display:flex; gap:8px; margin-top:8px;">
