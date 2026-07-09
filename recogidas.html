@@ -3,94 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Recogidas - GAS GUARIBE</title>
+    <title>GAS GUARIBE</title>
     <link rel="stylesheet" href="style.css">
-    <script src="app.js"></script>
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📋 Recogidas</h1>
-            <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
+            <h1>🏠 GAS GUARIBE</h1>
+            <p class="subtitle"><span id="fechaActual"></span></p>
         </header>
 
-        <div class="form-group">
-            <label for="filtroEstado">Filtrar por estado</label>
-            <select id="filtroEstado" onchange="cargarListaRecogidas()">
-                <option value="todas">Todas</option>
-                <option value="pendiente">⏳ Pendientes</option>
-                <option value="parcial">⚠️ Parciales</option>
-                <option value="completa">✅ Completas</option>
-            </select>
+        <div class="dashboard">
+            <div class="stats">
+                <div class="stat-card clickable" onclick="verDetalle('pendientes')">
+                    <span class="stat-number" id="recogidasPendientes">0</span>
+                    <span class="stat-label">⏳ Recogidas pendientes</span>
+                </div>
+                <div class="stat-card clickable" onclick="verDetalle('parciales')">
+                    <span class="stat-number" id="recogidasParciales">0</span>
+                    <span class="stat-label">⚠️ Recogidas parciales</span>
+                </div>
+                <div class="stat-card clickable" onclick="verDetalle('cargas')">
+                    <span class="stat-number" id="cargasActivas">0</span>
+                    <span class="stat-label">🛻 Cargas activas</span>
+                </div>
+                <div class="stat-card clickable" onclick="verDetalle('entregas')">
+                    <span class="stat-number" id="entregasHoy">0</span>
+                    <span class="stat-label">✅ Entregas hoy</span>
+                </div>
+            </div>
+
+            <div id="resumenPendientes" style="margin:12px 0; padding:12px; background:#fff3e0; border-radius:8px; font-size:14px; color:#e65100; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                <span><strong>📦 Pendientes de enviar:</strong> <span id="totalPendientes">0</span> cilindros</span>
+                <button class="btn-secondary" style="padding:6px 12px; font-size:12px; width:auto; margin:0;" onclick="window.location.href='cargas.html'">🛻 Armar carga ahora</button>
+            </div>
+
+            <div class="menu-grid">
+                <a href="recogidas.html" class="menu-btn">📋 Recogidas</a>
+                <a href="cargas.html" class="menu-btn">🛻 Armar carga</a>
+                <a href="entregas.html" class="menu-btn">💰 Registrar entrega</a>
+                <a href="inventario.html" class="menu-btn">📦 Ver inventario</a>
+                <a href="ventas.html" class="menu-btn">🏪 Ventas almacén</a>
+                <a href="gastos.html" class="menu-btn">💸 Gastos</a>
+                <a href="reportes.html" class="menu-btn">📊 Reportes</a>
+                <a href="configuracion.html" class="menu-btn">⚙️ Configurar</a>
+            </div>
         </div>
 
-        <div id="listaRecogidas" style="margin-top:12px;"></div>
-
-        <button class="btn-primary" onclick="window.location.href='recogida_nueva.html'" style="margin-top:12px;">➕ Nueva recogida</button>
+        <footer>
+            <p>GAS GUARIBE v2.0</p>
+        </footer>
     </div>
 
+    <script src="app.js"></script>
     <script>
-        function cargarListaRecogidas() {
-            cargarDatos();
-            const filtro = document.getElementById('filtroEstado').value;
-            let recogidas = datos.recogidas || [];
-            if (filtro !== 'todas') {
-                recogidas = recogidas.filter(r => r.estado === filtro);
-            }
-            recogidas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        document.getElementById('fechaActual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-            const container = document.getElementById('listaRecogidas');
-            if (recogidas.length === 0) {
-                container.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">No hay recogidas</p>';
-                return;
-            }
-
-            let html = '';
-            recogidas.forEach(r => {
-                const fecha = new Date(r.fecha).toLocaleDateString();
-                const saldo = obtenerSaldoRecogida(r);
-                const plantaNombre = obtenerNombrePlanta(r.planta);
-                let estadoLabel = '', estadoColor = '';
-                if (r.estado === 'completa') { estadoLabel = '✅ Completa'; estadoColor = '#4caf50'; }
-                else if (r.estado === 'parcial') { estadoLabel = '⚠️ Parcial'; estadoColor = '#ff9800'; }
-                else { estadoLabel = '⏳ Pendiente'; estadoColor = '#2196f3'; }
-                html += `
-                    <div style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid ${estadoColor};">
-                        <div style="display:flex; justify-content:space-between;">
-                            <strong>${r.comunidad}</strong>
-                            <span>${estadoLabel}</span>
-                        </div>
-                        <div style="font-size:13px; color:#555;">
-                            ${fecha} - Planta: ${plantaNombre}
-                            <br>Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes}
-                            <br>Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0}
-                            <br><strong>Saldo pendiente:</strong> P:${saldo.p} M:${saldo.m} G:${saldo.g} (${saldo.total} total)
-                            ${r.observaciones ? `<br><em>${r.observaciones}</em>` : ''}
-                        </div>
-                        <div style="display:flex; gap:8px; margin-top:8px;">
-                            <button class="btn-secondary" style="padding:6px 12px; font-size:12px; flex:1;" onclick="editarRecogida(${r.id})">✏️ Editar</button>
-                            <button class="btn-danger" style="padding:6px 12px; font-size:12px; flex:1;" onclick="eliminarRecogida(${r.id})">🗑️</button>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        }
-
-        function editarRecogida(id) {
-            window.location.href = `recogida_nueva.html?edit=${id}`;
-        }
-
-        function eliminarRecogida(id) {
-            if (confirm('¿Eliminar esta recogida?')) {
-                eliminarRecogida(id);
-                cargarListaRecogidas();
-                actualizarDashboard();
+        function verDetalle(tipo) {
+            switch(tipo) {
+                case 'pendientes': window.location.href = 'recogidas.html?filtro=pendiente'; break;
+                case 'parciales': window.location.href = 'recogidas.html?filtro=parcial'; break;
+                case 'cargas': window.location.href = 'cargas.html'; break;
+                case 'entregas': window.location.href = 'entregas.html'; break;
+                default: break;
             }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            cargarListaRecogidas();
+            actualizarDashboard();
+            setInterval(actualizarDashboard, 30000);
         });
     </script>
 </body>
