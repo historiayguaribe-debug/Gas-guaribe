@@ -57,7 +57,6 @@
 
     <script src="app.js"></script>
     <script>
-        // Mostrar fecha actual
         document.getElementById('fechaActual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
         function actualizarDashboard() {
@@ -66,14 +65,9 @@
             const cargas = datos.cargas || [];
             const entregas = datos.entregas || [];
 
-            const pendientes = recogidas.filter(r => r.estado === 'pendiente');
-            document.getElementById('recogidasPendientes').textContent = pendientes.length;
-
-            const parciales = recogidas.filter(r => r.estado === 'parcial');
-            document.getElementById('recogidasParciales').textContent = parciales.length;
-
-            const activas = cargas.filter(c => c.estado === 'activa');
-            document.getElementById('cargasActivas').textContent = activas.length;
+            document.getElementById('recogidasPendientes').textContent = recogidas.filter(r => r.estado === 'pendiente').length;
+            document.getElementById('recogidasParciales').textContent = recogidas.filter(r => r.estado === 'parcial').length;
+            document.getElementById('cargasActivas').textContent = cargas.filter(c => c.estado === 'activa').length;
 
             const hoy = new Date().toDateString();
             const entregasHoy = entregas.filter(e => new Date(e.fecha).toDateString() === hoy);
@@ -91,21 +85,10 @@
         }
 
         function verDetalle(tipo) {
-            switch(tipo) {
-                case 'pendientes':
-                    window.location.href = 'recogidas.html?filtro=pendiente';
-                    break;
-                case 'parciales':
-                    window.location.href = 'recogidas.html?filtro=parcial';
-                    break;
-                case 'cargas':
-                    window.location.href = 'cargas.html';
-                    break;
-                case 'entregas':
-                    window.location.href = 'entregas.html';
-                    break;
-                default:
-                    break;
+            if (tipo === 'cargas') {
+                window.location.href = 'cargas.html';
+            } else {
+                window.location.href = `recogidas.html?filtro=${tipo}`;
             }
         }
 
