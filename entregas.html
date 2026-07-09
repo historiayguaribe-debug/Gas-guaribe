@@ -15,14 +15,12 @@
         </header>
 
         <form id="formEntrega">
-            <!-- Comunidad -->
             <div class="form-group">
                 <label for="comunidad">Comunidad o cliente</label>
                 <input type="text" id="comunidad" list="listaComunidades" placeholder="Escribe o selecciona" required>
                 <datalist id="listaComunidades"></datalist>
             </div>
 
-            <!-- Tipo de cliente -->
             <div class="form-group">
                 <label>Tipo de cliente</label>
                 <div id="tipoClienteDisplay" style="padding:8px; background:#e3f2fd; border-radius:8px; font-weight:500; color:#0d47a1;">
@@ -31,7 +29,6 @@
                 <input type="hidden" id="tipoCliente" value="comunidad">
             </div>
 
-            <!-- Planta -->
             <div class="form-group">
                 <label for="planta">Planta de llenado</label>
                 <select id="planta" required>
@@ -39,7 +36,6 @@
                 </select>
             </div>
 
-            <!-- Seleccionar carga de origen (para precargar exoneraciones) -->
             <div class="form-group">
                 <label for="cargaOrigen">Carga de origen (opcional)</label>
                 <select id="cargaOrigen" onchange="precargarExoneradosDesdeCarga()">
@@ -47,7 +43,6 @@
                 </select>
             </div>
 
-            <!-- Cilindros entregados -->
             <div class="form-group">
                 <label>Cilindros entregados</label>
                 <div style="display:flex; gap:8px;">
@@ -66,7 +61,6 @@
                 </div>
             </div>
 
-            <!-- Precios -->
             <div class="form-group">
                 <label>Precios aplicados (por cilindro)</label>
                 <div style="display:flex; gap:8px;">
@@ -85,7 +79,6 @@
                 </div>
             </div>
 
-            <!-- Exonerados (precargados desde carga) -->
             <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
                 <label style="font-weight:700;">🎓 Exonerados</label>
                 <div id="exoneradosPrecargados" style="margin-bottom:8px;"></div>
@@ -120,7 +113,6 @@
                 <div id="listaExonerados" style="margin-top:8px; font-size:13px;"></div>
             </div>
 
-            <!-- Pago mixto -->
             <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
                 <label style="font-weight:700;">💵 Pago recibido</label>
                 <div style="display:flex; gap:8px;">
@@ -142,7 +134,6 @@
                 </div>
             </div>
 
-            <!-- Fecha -->
             <div class="form-group">
                 <label for="fecha">Fecha</label>
                 <input type="date" id="fecha">
@@ -159,11 +150,7 @@
 
     <script>
         let exoneradosList = [];
-        let datosGlobales = {};
 
-        // ============================================================
-        // 1. CARGAR COMUNIDADES, PLANTAS Y CARGAS
-        // ============================================================
         function cargarComunidades() {
             const comunidades = obtenerComunidades();
             const datalist = document.getElementById('listaComunidades');
@@ -203,46 +190,6 @@
             });
         }
 
-        // ============================================================
-        // 2. INFERIR TIPO DE CLIENTE Y ACTUALIZAR PRECIOS
-        // ============================================================
-        function inferirTipoCliente(comunidad) {
-            if (!comunidad) return 'comunidad';
-            const comercios = ['Abasto el Llanero', 'Distribuidora Caridad', 'Queseras'];
-            const galpones = ['Galpón'];
-            if (comercios.includes(comunidad)) return 'comercio';
-            if (galpones.includes(comunidad)) return 'galpon';
-            return 'comunidad';
-        }
-
-        function actualizarTipoCliente() {
-            const comunidad = document.getElementById('comunidad').value.trim();
-            const tipo = inferirTipoCliente(comunidad);
-            document.getElementById('tipoCliente').value = tipo;
-            const display = document.getElementById('tipoClienteDisplay');
-            const iconos = { comunidad: '🏘️', comercio: '🏪', galpon: '🏭' };
-            const nombres = { comunidad: 'Comunidad', comercio: 'Comercio', galpon: 'Galpón' };
-            display.textContent = `${iconos[tipo] || '🏘️'} ${nombres[tipo] || 'Comunidad'}`;
-            actualizarPreciosPorTipo(tipo);
-        }
-
-        function actualizarPreciosPorTipo(tipo) {
-            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"config":{"precios_venta":{}}}');
-            const precios = datos.config?.precios_venta || {
-                comunidad: { pequeno: 3.50, mediano: 5.00, grande: 7.50 },
-                comercio: { pequeno: 3.00, mediano: 4.50, grande: 6.50 },
-                galpon: { pequeno: 2.50, mediano: 3.80, grande: 5.20 }
-            };
-            const preciosTipo = precios[tipo] || precios.comunidad;
-            document.getElementById('precio_pequeno').value = preciosTipo.pequeno || 0;
-            document.getElementById('precio_mediano').value = preciosTipo.mediano || 0;
-            document.getElementById('precio_grande').value = preciosTipo.grande || 0;
-            actualizarTotales();
-        }
-
-        // ============================================================
-        // 3. PRECARGAR EXONERACIONES DESDE CARGA
-        // ============================================================
         function precargarExoneradosDesdeCarga() {
             const cargaId = parseInt(document.getElementById('cargaOrigen').value);
             if (!cargaId) return;
@@ -251,11 +198,9 @@
             const carga = datos.cargas.find(c => c.id === cargaId);
             if (!carga) return;
 
-            // Recolectar todos los exonerados de la carga
             let exonerados = [];
             carga.items.forEach(item => {
                 if (item.exonerados && item.exonerados.length > 0) {
-                    // Verificar si la comunidad coincide con la seleccionada
                     const recogida = datos.recogidas.find(r => r.id === item.recogidaId);
                     const comunidadSeleccionada = document.getElementById('comunidad').value.trim();
                     if (recogida && recogida.comunidad === comunidadSeleccionada) {
@@ -274,9 +219,6 @@
             }
         }
 
-        // ============================================================
-        // 4. ACTUALIZAR TOTALES
-        // ============================================================
         function actualizarTotales() {
             const p = parseInt(document.getElementById('pequenos').value) || 0;
             const m = parseInt(document.getElementById('medianos').value) || 0;
@@ -296,9 +238,6 @@
                 `Total a pagar: $${total.toFixed(2)} | Recibido: $${recibido.toFixed(2)} | Pendiente: $${pendiente.toFixed(2)}`;
         }
 
-        // ============================================================
-        // 5. EXONERADOS
-        // ============================================================
         function agregarExonerado() {
             const destino = document.getElementById('exo_destino').value;
             const institucion = document.getElementById('exo_institucion').value.trim();
@@ -363,9 +302,6 @@
             renderExonerados();
         }
 
-        // ============================================================
-        // 6. CARGAR DATOS PARA EDICIÓN
-        // ============================================================
         function cargarParaEdicion(id) {
             const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"entregas":[]}');
             const entrega = datos.entregas.find(e => e.id === id);
@@ -397,9 +333,40 @@
             actualizarTotales();
         }
 
-        // ============================================================
-        // 7. INICIALIZACIÓN
-        // ============================================================
+        function inferirTipoCliente(comunidad) {
+            if (!comunidad) return 'comunidad';
+            const comercios = ['Abasto el Llanero', 'Distribuidora Caridad', 'Queseras'];
+            const galpones = ['Galpón'];
+            if (comercios.includes(comunidad)) return 'comercio';
+            if (galpones.includes(comunidad)) return 'galpon';
+            return 'comunidad';
+        }
+
+        function actualizarTipoCliente() {
+            const comunidad = document.getElementById('comunidad').value.trim();
+            const tipo = inferirTipoCliente(comunidad);
+            document.getElementById('tipoCliente').value = tipo;
+            const display = document.getElementById('tipoClienteDisplay');
+            const iconos = { comunidad: '🏘️', comercio: '🏪', galpon: '🏭' };
+            const nombres = { comunidad: 'Comunidad', comercio: 'Comercio', galpon: 'Galpón' };
+            display.textContent = `${iconos[tipo] || '🏘️'} ${nombres[tipo] || 'Comunidad'}`;
+            actualizarPreciosPorTipo(tipo);
+        }
+
+        function actualizarPreciosPorTipo(tipo) {
+            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"config":{"precios_venta":{}}}');
+            const precios = datos.config?.precios_venta || {
+                comunidad: { pequeno: 3.50, mediano: 5.00, grande: 7.50 },
+                comercio: { pequeno: 3.00, mediano: 4.50, grande: 6.50 },
+                galpon: { pequeno: 2.50, mediano: 3.80, grande: 5.20 }
+            };
+            const preciosTipo = precios[tipo] || precios.comunidad;
+            document.getElementById('precio_pequeno').value = preciosTipo.pequeno || 0;
+            document.getElementById('precio_mediano').value = preciosTipo.mediano || 0;
+            document.getElementById('precio_grande').value = preciosTipo.grande || 0;
+            actualizarTotales();
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             cargarComunidades();
             cargarPlantas();
@@ -419,9 +386,6 @@
             }
         });
 
-        // ============================================================
-        // 8. GUARDAR ENTREGA
-        // ============================================================
         document.getElementById('formEntrega').addEventListener('submit', function(e) {
             e.preventDefault();
             const id = parseInt(document.getElementById('editId').value);
