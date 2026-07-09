@@ -14,13 +14,6 @@
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <div class="form-group">
-            <label for="filtroPlanta">Filtrar por planta</label>
-            <select id="filtroPlanta" onchange="actualizarInventario()">
-                <option value="todas">Todas las plantas</option>
-            </select>
-        </div>
-
         <div id="inventario">
             <div class="stats" style="grid-template-columns: 1fr 1fr 1fr;">
                 <div class="stat-card" style="background:#e3f2fd;">
@@ -43,50 +36,32 @@
                 <p><strong>Llenos:</strong> <span id="llenosP">0</span> P, <span id="llenosM">0</span> M, <span id="llenosG">0</span> G</p>
                 <p><strong>En planta:</strong> <span id="plantaP">0</span> P, <span id="plantaM">0</span> M, <span id="plantaG">0</span> G</p>
             </div>
-
-            <button class="btn-secondary" onclick="actualizarInventario()">🔄 Actualizar</button>
         </div>
     </div>
 
     <script>
-        // Cargar plantas para el filtro
-        function cargarFiltroPlantas() {
-            const plantas = obtenerPlantas();
-            const select = document.getElementById('filtroPlanta');
-            select.innerHTML = '<option value="todas">Todas las plantas</option>';
-            plantas.forEach(p => {
-                const option = document.createElement('option');
-                option.value = p.id;
-                option.textContent = p.nombre;
-                select.appendChild(option);
-            });
-        }
-
         function actualizarInventario() {
-            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos') || '{"recogidas":[],"entregas":[]}');
-            const filtroPlanta = document.getElementById('filtroPlanta').value;
-            
-            let recogidas = datos.recogidas || [];
-            let entregas = datos.entregas || [];
-
-            if (filtroPlanta !== 'todas') {
-                recogidas = recogidas.filter(r => r.planta === filtroPlanta);
-                entregas = entregas.filter(e => e.planta === filtroPlanta);
-            }
+            cargarDatos();
+            const recogidas = datos.recogidas || [];
+            const entregas = datos.entregas || [];
 
             let totalRecogidos = { p:0, m:0, g:0 };
             let totalEntregados = { p:0, m:0, g:0 };
             let totalEnPlanta = { p:0, m:0, g:0 };
 
             recogidas.forEach(r => {
-                if (r.estado === 'en_planta') {
+                if (r.estado === 'pendiente' || r.estado === 'parcial') {
+                    const saldo = obtenerSaldoRecogida(r);
+                    totalRecogidos.p += saldo.p;
+                    totalRecogidos.m += saldo.m;
+                    totalRecogidos.g += saldo.g;
+                    totalEnPlanta.p += r.enviado?.p || 0;
+                    totalEnPlanta.m += r.enviado?.m || 0;
+                    totalEnPlanta.g += r.enviado?.g || 0;
+                } else if (r.estado === 'completa') {
                     totalEnPlanta.p += r.pequenos || 0;
                     totalEnPlanta.m += r.medianos || 0;
                     totalEnPlanta.g += r.grandes || 0;
-                } else {
-                    totalRecogidos.p += r.pequenos || 0;
-                    totalRecogidos.m += r.medianos || 0;
-                    totalRecogidos.g += r.grandes || 0;
                 }
             });
 
@@ -96,19 +71,13 @@
                 totalEntregados.g += e.grandes || 0;
             });
 
-            const vacios = {
-                p: totalRecogidos.p - totalEntregados.p,
-                m: totalRecogidos.m - totalEntregados.m,
-                g: totalRecogidos.g - totalEntregados.g
-            };
-
-            document.getElementById('totalVacios').textContent = vacios.p + vacios.m + vacios.g;
+            document.getElementById('totalVacios').textContent = totalRecogidos.p + totalRecogidos.m + totalRecogidos.g;
             document.getElementById('totalLlenos').textContent = totalEntregados.p + totalEntregados.m + totalEntregados.g;
             document.getElementById('totalEnPlanta').textContent = totalEnPlanta.p + totalEnPlanta.m + totalEnPlanta.g;
 
-            document.getElementById('vaciosP').textContent = vacios.p;
-            document.getElementById('vaciosM').textContent = vacios.m;
-            document.getElementById('vaciosG').textContent = vacios.g;
+            document.getElementById('vaciosP').textContent = totalRecogidos.p;
+            document.getElementById('vaciosM').textContent = totalRecogidos.m;
+            document.getElementById('vaciosG').textContent = totalRecogidos.g;
 
             document.getElementById('llenosP').textContent = totalEntregados.p;
             document.getElementById('llenosM').textContent = totalEntregados.m;
@@ -119,10 +88,7 @@
             document.getElementById('plantaG').textContent = totalEnPlanta.g;
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            cargarFiltroPlantas();
-            actualizarInventario();
-        });
+        document.addEventListener('DOMContentLoaded', actualizarInventario);
     </script>
 </body>
 </html>
