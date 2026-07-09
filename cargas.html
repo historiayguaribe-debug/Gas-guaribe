@@ -51,6 +51,9 @@
     </div>
 
     <script>
+        // ============================================================
+        // 1. CARGAR PLANTAS
+        // ============================================================
         function cargarPlantas() {
             const plantas = obtenerPlantas();
             const select = document.getElementById('plantaCarga');
@@ -63,6 +66,9 @@
             });
         }
 
+        // ============================================================
+        // 2. CARGAS ACTIVAS
+        // ============================================================
         function cargarCargasActivas() {
             cargarDatos();
             const cargas = datos.cargas.filter(c => c.estado === 'activa');
@@ -115,9 +121,13 @@
             }
         }
 
+        // ============================================================
+        // 3. CARGAR RECOGIDAS DISPONIBLES
+        // ============================================================
         function cargarDisponibles() {
             cargarDatos();
             
+            // Obtener recogidas con saldo > 0
             const recogidasConSaldo = datos.recogidas.filter(r => {
                 const saldo = obtenerSaldoRecogida(r);
                 return saldo.total > 0;
@@ -126,7 +136,7 @@
             const container = document.getElementById('listaDisponibles');
             
             if (recogidasConSaldo.length === 0) {
-                container.innerHTML = '<p style="color:#999;">No hay recogidas con saldo disponible.</p>';
+                container.innerHTML = '<p style="color:#999;">No hay recogidas con saldo disponible. Registra una recogida primero.</p>';
                 return;
             }
 
@@ -185,6 +195,7 @@
 
             container.innerHTML = html;
 
+            // Eventos para actualizar resumen
             document.querySelectorAll('.cargar-input').forEach(input => {
                 input.addEventListener('input', actualizarResumenCarga);
             });
@@ -194,6 +205,9 @@
             actualizarResumenCarga();
         }
 
+        // ============================================================
+        // 4. ACTUALIZAR RESUMEN DE CARGA
+        // ============================================================
         function actualizarResumenCarga() {
             const plantaId = document.getElementById('plantaCarga').value;
             if (!plantaId) {
@@ -239,6 +253,7 @@
                 }
             });
 
+            // Calcular exonerados totales
             items.forEach(item => {
                 (item.exonerados || []).forEach(ex => {
                     totalExonerados += ex.pequenos + ex.medianos + ex.grandes;
@@ -275,6 +290,9 @@
             }
         }
 
+        // ============================================================
+        // 5. CREAR CARGA
+        // ============================================================
         document.getElementById('formCarga').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -345,6 +363,9 @@
             }
         });
 
+        // ============================================================
+        // 6. UTILIDADES E INICIO
+        // ============================================================
         function mostrarMensaje(texto, tipo) {
             const msg = document.getElementById('mensaje');
             msg.textContent = texto;
