@@ -14,23 +14,40 @@
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <h3>Precios de venta generales</h3>
-        <div class="form-group">
-            <label>Pequeño ($)</label>
-            <input type="number" id="precio_pequeno" step="0.01">
+        <h3>Precios de venta por tipo de cliente</h3>
+        <div style="background:#f5f5f5; padding:12px; border-radius:8px; margin-bottom:16px;">
+            <h4>🏘️ Comunidad</h4>
+            <div style="display:flex; gap:8px;">
+                <div><label style="font-size:12px;">Pequeño $</label><input type="number" id="precio_comunidad_p" step="0.01" value="3.50"></div>
+                <div><label style="font-size:12px;">Mediano $</label><input type="number" id="precio_comunidad_m" step="0.01" value="5.00"></div>
+                <div><label style="font-size:12px;">Grande $</label><input type="number" id="precio_comunidad_g" step="0.01" value="7.50"></div>
+            </div>
         </div>
-        <div class="form-group">
-            <label>Mediano ($)</label>
-            <input type="number" id="precio_mediano" step="0.01">
+        <div style="background:#f5f5f5; padding:12px; border-radius:8px; margin-bottom:16px;">
+            <h4>🏪 Comercio</h4>
+            <div style="display:flex; gap:8px;">
+                <div><label style="font-size:12px;">Pequeño $</label><input type="number" id="precio_comercio_p" step="0.01" value="3.00"></div>
+                <div><label style="font-size:12px;">Mediano $</label><input type="number" id="precio_comercio_m" step="0.01" value="4.50"></div>
+                <div><label style="font-size:12px;">Grande $</label><input type="number" id="precio_comercio_g" step="0.01" value="6.50"></div>
+            </div>
         </div>
-        <div class="form-group">
-            <label>Grande ($)</label>
-            <input type="number" id="precio_grande" step="0.01">
+        <div style="background:#f5f5f5; padding:12px; border-radius:8px; margin-bottom:16px;">
+            <h4>🏭 Galpón</h4>
+            <div style="display:flex; gap:8px;">
+                <div><label style="font-size:12px;">Pequeño $</label><input type="number" id="precio_galpon_p" step="0.01" value="2.50"></div>
+                <div><label style="font-size:12px;">Mediano $</label><input type="number" id="precio_galpon_m" step="0.01" value="3.80"></div>
+                <div><label style="font-size:12px;">Grande $</label><input type="number" id="precio_galpon_g" step="0.01" value="5.20"></div>
+            </div>
         </div>
 
         <h3>Plantas de llenado</h3>
         <div id="listaPlantas"></div>
         <button class="btn-secondary" onclick="agregarPlanta()">➕ Agregar planta</button>
+
+        <div class="form-group" style="margin-top:16px;">
+            <label for="capacidadCamionConfig">Capacidad del camión (cilindros)</label>
+            <input type="number" id="capacidadCamionConfig" min="1" value="50">
+        </div>
 
         <button class="btn-primary" onclick="guardarConfiguracion()">Guardar configuración</button>
         <div id="mensaje" style="margin-top:16px; padding:12px; border-radius:8px; display:none;"></div>
@@ -40,11 +57,25 @@
         let plantasEditando = [];
 
         function cargarConfiguracion() {
-            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos') || '{"config":{}}');
+            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"config":{}}');
             const config = datos.config || {};
-            document.getElementById('precio_pequeno').value = config.precios_venta?.pequeno || 3.50;
-            document.getElementById('precio_mediano').value = config.precios_venta?.mediano || 5.00;
-            document.getElementById('precio_grande').value = config.precios_venta?.grande || 7.50;
+            
+            // Precios por tipo de cliente
+            const precios = config.precios_venta || {};
+            document.getElementById('precio_comunidad_p').value = precios.comunidad?.pequeno || 3.50;
+            document.getElementById('precio_comunidad_m').value = precios.comunidad?.mediano || 5.00;
+            document.getElementById('precio_comunidad_g').value = precios.comunidad?.grande || 7.50;
+            document.getElementById('precio_comercio_p').value = precios.comercio?.pequeno || 3.00;
+            document.getElementById('precio_comercio_m').value = precios.comercio?.mediano || 4.50;
+            document.getElementById('precio_comercio_g').value = precios.comercio?.grande || 6.50;
+            document.getElementById('precio_galpon_p').value = precios.galpon?.pequeno || 2.50;
+            document.getElementById('precio_galpon_m').value = precios.galpon?.mediano || 3.80;
+            document.getElementById('precio_galpon_g').value = precios.galpon?.grande || 5.20;
+            
+            // Capacidad camión
+            document.getElementById('capacidadCamionConfig').value = config.capacidad_camion || 50;
+            
+            // Plantas
             plantasEditando = config.plantas || PLANTAS_PREDEFINIDAS;
             renderPlantas();
         }
@@ -105,11 +136,6 @@
             };
             plantasEditando.push(nueva);
             renderPlantas();
-            // Scroll al final
-            setTimeout(() => {
-                const container = document.getElementById('listaPlantas');
-                container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }, 100);
         }
 
         function eliminarPlanta(idx) {
@@ -120,14 +146,29 @@
         }
 
         function guardarConfiguracion() {
-            // Guardar precios
-            const precios = {
-                pequeno: parseFloat(document.getElementById('precio_pequeno').value) || 3.50,
-                mediano: parseFloat(document.getElementById('precio_mediano').value) || 5.00,
-                grande: parseFloat(document.getElementById('precio_grande').value) || 7.50
+            // Precios por tipo de cliente
+            const precios_venta = {
+                comunidad: {
+                    pequeno: parseFloat(document.getElementById('precio_comunidad_p').value) || 3.50,
+                    mediano: parseFloat(document.getElementById('precio_comunidad_m').value) || 5.00,
+                    grande: parseFloat(document.getElementById('precio_comunidad_g').value) || 7.50
+                },
+                comercio: {
+                    pequeno: parseFloat(document.getElementById('precio_comercio_p').value) || 3.00,
+                    mediano: parseFloat(document.getElementById('precio_comercio_m').value) || 4.50,
+                    grande: parseFloat(document.getElementById('precio_comercio_g').value) || 6.50
+                },
+                galpon: {
+                    pequeno: parseFloat(document.getElementById('precio_galpon_p').value) || 2.50,
+                    mediano: parseFloat(document.getElementById('precio_galpon_m').value) || 3.80,
+                    grande: parseFloat(document.getElementById('precio_galpon_g').value) || 5.20
+                }
             };
 
-            // Guardar plantas
+            // Capacidad camión
+            const capacidad_camion = parseInt(document.getElementById('capacidadCamionConfig').value) || 50;
+
+            // Plantas
             const plantas = [];
             plantasEditando.forEach((p, idx) => {
                 plantas.push({
@@ -146,10 +187,11 @@
                 });
             });
 
-            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos') || '{"config":{}}');
-            datos.config.precios_venta = precios;
+            const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"config":{}}');
+            datos.config.precios_venta = precios_venta;
             datos.config.plantas = plantas;
-            localStorage.setItem('gasguaribe_datos', JSON.stringify(datos));
+            datos.config.capacidad_camion = capacidad_camion;
+            localStorage.setItem('gasguaribe_datos_v2', JSON.stringify(datos));
 
             mostrarMensaje('✅ Configuración guardada', 'exito');
         }
