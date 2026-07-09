@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Armar carga - GAS GUARIBE</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛻 Armar carga a planta</h1>
+            <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
+        </header>
+
+        <div id="cargasActivas" style="margin-bottom:16px;">
+            <h3>Cargas activas</h3>
+            <div id="listaCargas"></div>
+        </div>
+
+        <hr>
+
+        <h3>Nueva carga</h3>
+        <form id="formCarga">
+            <div class="form-group">
+                <label for="plantaCarga">Planta de destino</label>
+                <select id="plantaCarga" required>
+                    <option value="">Selecciona una planta</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="fechaCarga">Fecha de salida</label>
+                <input type="date" id="fechaCarga">
+            </div>
+
+            <div class="form-group">
+                <label>Recogidas disponibles (pendientes o parciales)</label>
+                <div id="listaDisponibles"></div>
+            </div>
+
+            <div id="resumenCarga" class="subtotal-box" style="margin:12px 0;">
+                Total a cargar: 0 cilindros (Capacidad: <span id="capacidadCamion">50</span>)
+            </div>
+
+            <button type="submit" class="btn-primary">Crear carga</button>
+        </form>
+
+        <div id="mensaje" style="margin-top:16px; padding:12px; border-radius:8px; display:none;"></div>
+    </div>
+
+    <script>
+        function cargarPlantas() {
+            const plantas = obtenerPlantas();
+            const select = document.getElementById('plantaCarga');
+            select.innerHTML = '<option value="">Selecciona una planta</option>';
+            plantas.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.nombre;
+                select.appendChild(option);
+            });
+        }
+
+        function cargarCargasActivas() {
+            cargarDatos();
+            const cargas = datos.cargas.filter(c => c.estado === 'activa');
+            const container = document.getElementById('listaCargas');
+            if (cargas.length === 0) {
+                container.innerHTML = '<p style="color:#999;">No hay cargas activas</p>';
+                return;
+            }
+            let html = '';
+            cargas.forEach(c => {
+                const fecha = new Date(c.fecha).toLocaleDateString();
+                const plantaNombre = obtenerNombrePlanta(c.planta);
+                const resumen = obtenerResumenCarga(c.id);
+                const total = resumen ? resumen.totalP + resumen.totalM + resumen.totalG : 0;
+                html += `
+                    <div class="carga-item" style="background:#e3f2fd; padding:12px; border-radius:8px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>Carga #${c.id}</strong>
+                            <span>${fecha}</span>
+                        </div>
+                        <div>Planta: ${plantaNombre}</div>
+                        <div>Cilindros: ${total}</div>
+                        <div style="font-size:12px; color:#555;">
+                            ${c.items.map(item => {
+                                const rec = datos.recogidas.find(r => r.id === item.recogidaId);
+                                return rec ? `${rec.comunidad}: P:${item.pequenos} M:${item.medianos} G:${item.grandes}` : '';
+                            }).join(' | ')}
+                        </div>
+                        <button class="btn-secondary" style="margin-top:6px; padding:6px 12px; font-size:12px;" onclick="verDetalleCarga(${c.id})">📋 Ver detalle</button>
+                        <button class="btn-danger" style="margin-top:6px; padding:6px 12px; font-size:12px;" onclick="eliminarCarga(${c.id})">🗑️ Eliminar</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function verDetalleCarga(id) {
+            window.location.href = `detalle_carga.html?id=${id}`;
+        }
+
+        function eliminarCarga(id) {
+            if (confirm('¿Eliminar esta carga? Se revertirán los envíos.')) {
+                eliminarCarga(id);
+                cargarCargasActivas();
+                cargarDisponibles();
+                actualizarDashboard();
+            }
+        }
+
+        function cargarDisponibles() {
+            cargarDatos();
+            const recogidas = datos.recogidas.filter(r => r.estado !== 'completa');
+            const container = document.getElementById('listaDisponibles');
+            if (recogidas.length === 0) {
+                container.innerHTML = '<p style="color:#999;">No hay recogidas pendientes o parciales</p>';
+                return;
+            }
+            let html = '';
+            recogidas.forEach(r => {
+                const saldo = obtenerSaldoRecogida(r);
+                if (saldo.total === 0) return;
+                const plantaNombre = obtenerNombrePlanta(r.planta);
+                html += `
+                    <div style="background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span><strong>${r.comunidad}</strong> (${plantaNombre})</span>
+                            <span style="font-size:13px;">Saldo: P:${saldo.p} M:${saldo.m} G:${saldo.g}</span>
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:4px; align-items:center;">
+                            <label style="font-size:12px;">A cargar:</label>
+                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="0" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="p">
+                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="0" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="m">
+                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="0" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="g">
+                            <span style="font-size:12px; color:#666;">(máx P:${saldo.p} M:${saldo.m} G:${saldo.g})</span>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+            // Agregar eventos para actualizar resumen
+            document.querySelectorAll('.cargar-input').forEach(input => {
+                input.addEventListener('input', actualizarResumenCarga);
+            });
+            actualizarResumenCarga();
+        }
+
+        function actualizarResumenCarga() {
+            let total = 0;
+            document.querySelectorAll('.cargar-input').forEach(input => {
+                total += parseInt(input.value) || 0;
+            });
+            const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
+            document.getElementById('resumenCarga').textContent = `Total a cargar: ${total} cilindros (Capacidad: ${capacidad})`;
+            if (total > capacidad) {
+                document.getElementById('resumenCarga').style.color = '#c62828';
+                document.getElementById('resumenCarga').style.background = '#ffebee';
+            } else {
+                document.getElementById('resumenCarga').style.color = '#0d47a1';
+                document.getElementById('resumenCarga').style.background = '#e3f2fd';
+            }
+        }
+
+        document.getElementById('formCarga').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const planta = document.getElementById('plantaCarga').value;
+            const fecha = document.getElementById('fechaCarga').value;
+
+            if (!planta) {
+                mostrarMensaje('Selecciona una planta', 'error');
+                return;
+            }
+
+            const items = [];
+            let totalCarga = 0;
+            document.querySelectorAll('.cargar-input').forEach(input => {
+                const cantidad = parseInt(input.value) || 0;
+                if (cantidad > 0) {
+                    const recogidaId = parseInt(input.dataset.recogida);
+                    const tipo = input.dataset.tipo;
+                    let item = items.find(i => i.recogidaId === recogidaId);
+                    if (!item) {
+                        item = { recogidaId, pequenos: 0, medianos: 0, grandes: 0 };
+                        items.push(item);
+                    }
+                    if (tipo === 'p') item.pequenos = cantidad;
+                    else if (tipo === 'm') item.medianos = cantidad;
+                    else if (tipo === 'g') item.grandes = cantidad;
+                    totalCarga += cantidad;
+                }
+            });
+
+            if (items.length === 0) {
+                mostrarMensaje('Selecciona al menos un cilindro para cargar', 'error');
+                return;
+            }
+
+            const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
+            if (totalCarga > capacidad) {
+                mostrarMensaje(`⚠️ Excedes la capacidad del camión (${capacidad} cilindros)`, 'error');
+                return;
+            }
+
+            const carga = crearCarga(planta, fecha ? new Date(fecha).toISOString() : new Date().toISOString(), items);
+            if (carga) {
+                setUltimo('carga', carga.id);
+                mostrarMensaje(`✅ Carga #${carga.id} creada con ${totalCarga} cilindros`, 'exito');
+                document.getElementById('formCarga').reset();
+                document.getElementById('fechaCarga').value = new Date().toISOString().slice(0,10);
+                cargarCargasActivas();
+                cargarDisponibles();
+                actualizarDashboard();
+            } else {
+                mostrarMensaje('❌ Error al crear la carga', 'error');
+            }
+        });
+
+        function mostrarMensaje(texto, tipo) {
+            const msg = document.getElementById('mensaje');
+            msg.textContent = texto;
+            msg.style.display = 'block';
+            msg.style.backgroundColor = tipo === 'exito' ? '#d4edda' : '#f8d7da';
+            msg.style.color = tipo === 'exito' ? '#155724' : '#721c24';
+            setTimeout(() => { msg.style.display = 'none'; }, 5000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarPlantas();
+            if (!document.getElementById('fechaCarga').value) {
+                document.getElementById('fechaCarga').value = new Date().toISOString().slice(0,10);
+            }
+            // Cargar capacidad del camión desde configuración
+            cargarDatos();
+            const cap = datos.config.capacidad_camion || 50;
+            document.getElementById('capacidadCamion').textContent = cap;
+            cargarCargasActivas();
+            cargarDisponibles();
+        });
+    </script>
+</body>
+</html>
