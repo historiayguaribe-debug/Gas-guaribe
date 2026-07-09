@@ -36,12 +36,12 @@
             </div>
 
             <div class="form-group">
-                <label>Recogidas disponibles (pendientes o parciales)</label>
+                <label>Recogidas disponibles</label>
                 <div id="listaDisponibles"></div>
             </div>
 
             <div id="resumenCarga" class="subtotal-box" style="margin:12px 0;">
-                Total a cargar: 0 cilindros (Capacidad: <span id="capacidadCamion">50</span>)
+                Total: 0 cilindros | Ingreso: $0.00 | Costo: $0.00 | Ganancia: $0.00
             </div>
 
             <button type="submit" class="btn-primary" id="btnCrearCarga">Crear carga</button>
@@ -117,7 +117,7 @@
             const recogidas = datos.recogidas.filter(r => r.estado !== 'completa');
             const container = document.getElementById('listaDisponibles');
             if (recogidas.length === 0) {
-                container.innerHTML = '<p style="color:#999;">No hay recogidas pendientes o parciales</p>';
+                container.innerHTML = '<p style="color:#999;">No hay recogidas disponibles</p>';
                 return;
             }
             let html = '';
@@ -125,13 +125,15 @@
                 const saldo = obtenerSaldoRecogida(r);
                 if (saldo.total === 0) return;
                 const plantaNombre = obtenerNombrePlanta(r.planta);
+                const tipoCliente = obtenerTipoClienteRecogida(r);
+                const etiquetaTipo = tipoCliente === 'comunidad' ? '🏘️' : (tipoCliente === 'comercio' ? '🏪' : '🏭');
                 html += `
                     <div style="background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:6px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span><strong>${r.comunidad}</strong> (${plantaNombre})</span>
+                            <span><strong>${etiquetaTipo} ${r.comunidad}</strong> (${plantaNombre})</span>
                             <span style="font-size:13px;">Disponible: P:${saldo.p} M:${saldo.m} G:${saldo.g}</span>
                         </div>
-                        <div style="display:flex; gap:8px; margin-top:4px; align-items:center;">
+                        <div style="display:flex; gap:8px; margin-top:4px; align-items:center; flex-wrap:wrap;">
                             <label style="font-size:12px;">A cargar:</label>
                             <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="${saldo.p}" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="p">
                             <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="${saldo.m}" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="m">
@@ -143,7 +145,6 @@
             });
             container.innerHTML = html;
 
-            // Agregar eventos para actualizar resumen
             document.querySelectorAll('.cargar-input').forEach(input => {
                 input.addEventListener('input', actualizarResumenCarga);
             });
@@ -151,23 +152,59 @@
         }
 
         function actualizarResumenCarga() {
-            let total = 0;
+            const plantaId = document.getElementById('plantaCarga').value;
+            if (!plantaId) {
+                document.getElementById('resumenCarga').textContent = 'Selecciona una planta primero';
+                return;
+            }
+
+            let items = [];
             document.querySelectorAll('.cargar-input').forEach(input => {
-                total += parseInt(input.value) || 0;
+                const cantidad = parseInt(input.value) || 0;
+                if (cantidad > 0) {
+                    const recogidaId = parseInt(input.dataset.recogida);
+                    const tipo = input.dataset.tipo;
+                    let item = items.find(i => i.recogidaId === recogidaId);
+                    if (!item) {
+                        const recogida = datos.recogidas.find(r => r.id === recogidaId);
+                        item = { 
+                            recogidaId, 
+                            pequenos: 0, 
+                            medianos: 0, 
+                            grandes: 0,
+                            tipoCliente: recogida ? obtenerTipoClienteRecogida(recogida) : 'comunidad'
+                        };
+                        items.push(item);
+                    }
+                    if (tipo === 'p') item.pequenos = cantidad;
+                    else if (tipo === 'm') item.medianos = cantidad;
+                    else if (tipo === 'g') item.grandes = cantidad;
+                }
             });
+
+            const total = items.reduce((sum, i) => sum + i.pequenos + i.medianos + i.grandes, 0);
+            const finanzas = calcularGananciaEstimada(items, plantaId);
             const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
             const resumenDiv = document.getElementById('resumenCarga');
-            resumenDiv.textContent = `Total a cargar: ${total} cilindros (Capacidad: ${capacidad})`;
-            if (total > capacidad) {
-                resumenDiv.style.color = '#c62828';
-                resumenDiv.style.background = '#ffebee';
-                document.getElementById('btnCrearCarga').disabled = true;
-                document.getElementById('btnCrearCarga').style.opacity = '0.5';
+            
+            resumenDiv.textContent = `Total: ${total} cilindros | Ingreso: $${finanzas.ingreso.toFixed(2)} | Costo: $${finanzas.costo.toFixed(2)} | Ganancia: $${finanzas.ganancia.toFixed(2)}`;
+            resumenDiv.style.color = '#0d47a1';
+            resumenDiv.style.background = '#e3f2fd';
+
+            const btn = document.getElementById('btnCrearCarga');
+            if (total === 0 || total > capacidad) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                if (total === 0) {
+                    resumenDiv.textContent += ' ⚠️ No hay cilindros para cargar';
+                } else if (total > capacidad) {
+                    resumenDiv.textContent += ` ⚠️ Excede capacidad (${capacidad})`;
+                    resumenDiv.style.color = '#c62828';
+                    resumenDiv.style.background = '#ffebee';
+                }
             } else {
-                resumenDiv.style.color = '#0d47a1';
-                resumenDiv.style.background = '#e3f2fd';
-                document.getElementById('btnCrearCarga').disabled = false;
-                document.getElementById('btnCrearCarga').style.opacity = '1';
+                btn.disabled = false;
+                btn.style.opacity = '1';
             }
         }
 
@@ -182,7 +219,6 @@
             }
 
             const items = [];
-            let totalCarga = 0;
             document.querySelectorAll('.cargar-input').forEach(input => {
                 const cantidad = parseInt(input.value) || 0;
                 if (cantidad > 0) {
@@ -190,13 +226,19 @@
                     const tipo = input.dataset.tipo;
                     let item = items.find(i => i.recogidaId === recogidaId);
                     if (!item) {
-                        item = { recogidaId, pequenos: 0, medianos: 0, grandes: 0 };
+                        const recogida = datos.recogidas.find(r => r.id === recogidaId);
+                        item = { 
+                            recogidaId, 
+                            pequenos: 0, 
+                            medianos: 0, 
+                            grandes: 0,
+                            tipoCliente: recogida ? obtenerTipoClienteRecogida(recogida) : 'comunidad'
+                        };
                         items.push(item);
                     }
                     if (tipo === 'p') item.pequenos = cantidad;
                     else if (tipo === 'm') item.medianos = cantidad;
                     else if (tipo === 'g') item.grandes = cantidad;
-                    totalCarga += cantidad;
                 }
             });
 
@@ -206,7 +248,8 @@
             }
 
             const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
-            if (totalCarga > capacidad) {
+            const total = items.reduce((sum, i) => sum + i.pequenos + i.medianos + i.grandes, 0);
+            if (total > capacidad) {
                 mostrarMensaje(`⚠️ Excedes la capacidad del camión (${capacidad} cilindros)`, 'error');
                 return;
             }
@@ -214,7 +257,7 @@
             const carga = crearCarga(planta, fecha ? new Date(fecha).toISOString() : new Date().toISOString(), items);
             if (carga) {
                 setUltimo('carga', carga.id);
-                mostrarMensaje(`✅ Carga #${carga.id} creada con ${totalCarga} cilindros`, 'exito');
+                mostrarMensaje(`✅ Carga #${carga.id} creada con ${total} cilindros`, 'exito');
                 document.getElementById('formCarga').reset();
                 document.getElementById('fechaCarga').value = new Date().toISOString().slice(0,10);
                 cargarCargasActivas();
@@ -244,6 +287,8 @@
             document.getElementById('capacidadCamion').textContent = cap;
             cargarCargasActivas();
             cargarDisponibles();
+
+            document.getElementById('plantaCarga').addEventListener('change', actualizarResumenCarga);
         });
     </script>
 </body>
