@@ -60,7 +60,6 @@
             const datos = JSON.parse(localStorage.getItem('gasguaribe_datos_v2') || '{"config":{}}');
             const config = datos.config || {};
             
-            // Precios por tipo de cliente
             const precios = config.precios_venta || {};
             document.getElementById('precio_comunidad_p').value = precios.comunidad?.pequeno || 3.50;
             document.getElementById('precio_comunidad_m').value = precios.comunidad?.mediano || 5.00;
