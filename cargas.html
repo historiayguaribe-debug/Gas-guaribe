@@ -14,6 +14,7 @@
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
+        <!-- Cargas activas -->
         <div id="cargasActivas" style="margin-bottom:16px;">
             <h3>Cargas activas</h3>
             <div id="listaCargas"></div>
@@ -21,6 +22,7 @@
 
         <hr>
 
+        <!-- Nueva carga -->
         <h3>Nueva carga</h3>
         <form id="formCarga">
             <div class="form-group">
@@ -36,7 +38,7 @@
             </div>
 
             <div class="form-group">
-                <label>Recogidas disponibles</label>
+                <label>Recogidas disponibles para cargar</label>
                 <div id="listaDisponibles"></div>
             </div>
 
@@ -51,7 +53,10 @@
     </div>
 
     <script>
-        function cargarPlantasCarga() {
+        // ============================================================
+        // 1. CARGAR PLANTAS
+        // ============================================================
+        function cargarPlantas() {
             const plantas = obtenerPlantas();
             const select = document.getElementById('plantaCarga');
             select.innerHTML = '<option value="">Selecciona una planta</option>';
@@ -63,6 +68,9 @@
             });
         }
 
+        // ============================================================
+        // 2. CARGAS ACTIVAS
+        // ============================================================
         function cargarCargasActivas() {
             cargarDatos();
             const cargas = datos.cargas.filter(c => c.estado === 'activa');
@@ -78,7 +86,7 @@
                 const resumen = obtenerResumenCarga(c.id);
                 const total = resumen ? resumen.totalP + resumen.totalM + resumen.totalG : 0;
                 html += `
-                    <div class="carga-item" style="background:#e3f2fd; padding:12px; border-radius:8px; margin-bottom:8px;">
+                    <div style="background:#e3f2fd; padding:12px; border-radius:8px; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between;">
                             <strong>Carga #${c.id}</strong>
                             <span>${fecha}</span>
@@ -91,8 +99,10 @@
                                 return rec ? `${rec.comunidad}: P:${item.pequenos} M:${item.medianos} G:${item.grandes}` : '';
                             }).join(' | ')}
                         </div>
-                        <button class="btn-secondary" style="margin-top:6px; padding:6px 12px; font-size:12px;" onclick="verDetalleCarga(${c.id})">📋 Ver detalle</button>
-                        <button class="btn-danger" style="margin-top:6px; padding:6px 12px; font-size:12px;" onclick="eliminarCarga(${c.id})">🗑️ Eliminar</button>
+                        <div style="margin-top:6px;">
+                            <button class="btn-secondary" style="padding:6px 12px; font-size:12px; display:inline-block; width:auto;" onclick="verDetalleCarga(${c.id})">📋 Ver detalle</button>
+                            <button class="btn-danger" style="padding:6px 12px; font-size:12px; display:inline-block; width:auto;" onclick="eliminarCarga(${c.id})">🗑️</button>
+                        </div>
                     </div>
                 `;
             });
@@ -112,45 +122,78 @@
             }
         }
 
+        // ============================================================
+        // 3. RECOGIDAS DISPONIBLES
+        // ============================================================
         function cargarDisponibles() {
             cargarDatos();
-            const recogidas = datos.recogidas.filter(r => r.estado !== 'completa');
+            
+            // Obtener recogidas con saldo > 0 (independientemente del estado)
+            const recogidasConSaldo = datos.recogidas.filter(r => {
+                const saldo = obtenerSaldoRecogida(r);
+                return saldo.total > 0;
+            });
+
             const container = document.getElementById('listaDisponibles');
-            if (recogidas.length === 0) {
-                container.innerHTML = '<p style="color:#999;">No hay recogidas disponibles</p>';
+            
+            if (recogidasConSaldo.length === 0) {
+                container.innerHTML = '<p style="color:#999;">No hay recogidas con saldo disponible. Registra una recogida primero.</p>';
                 return;
             }
+
             let html = '';
-            recogidas.forEach(r => {
+            recogidasConSaldo.forEach(r => {
                 const saldo = obtenerSaldoRecogida(r);
-                if (saldo.total === 0) return;
                 const plantaNombre = obtenerNombrePlanta(r.planta);
                 const tipoCliente = obtenerTipoClienteRecogida(r);
-                const etiquetaTipo = tipoCliente === 'comunidad' ? '🏘️' : (tipoCliente === 'comercio' ? '🏪' : '🏭');
+                
+                let icono = '🏘️';
+                let etiqueta = 'Comunidad';
+                if (tipoCliente === 'comercio') {
+                    icono = '🏪';
+                    etiqueta = 'Comercio';
+                } else if (tipoCliente === 'galpon') {
+                    icono = '🏭';
+                    etiqueta = 'Galpón';
+                }
+
                 html += `
-                    <div style="background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:6px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span><strong>${etiquetaTipo} ${r.comunidad}</strong> (${plantaNombre})</span>
-                            <span style="font-size:13px;">Disponible: P:${saldo.p} M:${saldo.m} G:${saldo.g}</span>
+                    <div style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid ${tipoCliente === 'comunidad' ? '#2196f3' : (tipoCliente === 'comercio' ? '#ff9800' : '#4caf50')};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                            <span><strong>${icono} ${r.comunidad}</strong> <span style="font-size:12px; color:#666;">(${etiqueta})</span></span>
+                            <span style="font-size:13px; background:#e3f2fd; padding:2px 8px; border-radius:12px;">
+                                Disponible: <strong>${saldo.total}</strong> cilindros
+                            </span>
                         </div>
-                        <div style="display:flex; gap:8px; margin-top:4px; align-items:center; flex-wrap:wrap;">
+                        <div style="display:flex; gap:8px; margin-top:6px; align-items:center; flex-wrap:wrap;">
                             <label style="font-size:12px;">A cargar:</label>
-                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="${saldo.p}" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="p">
-                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="${saldo.m}" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="m">
-                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="${saldo.g}" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="g">
-                            <span style="font-size:12px; color:#666;">(máx ${saldo.p}/${saldo.m}/${saldo.g})</span>
+                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="${saldo.p}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="p">
+                            <span style="font-size:12px;">P</span>
+                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="${saldo.m}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="m">
+                            <span style="font-size:12px;">M</span>
+                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="${saldo.g}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="g">
+                            <span style="font-size:12px;">G</span>
+                            <span style="font-size:11px; color:#888;">(máx ${saldo.p}/${saldo.m}/${saldo.g})</span>
+                        </div>
+                        <div style="font-size:11px; color:#999; margin-top:4px;">
+                            Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes} | Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0} | Saldo: ${saldo.total}
                         </div>
                     </div>
                 `;
             });
+
             container.innerHTML = html;
 
+            // Eventos para actualizar resumen
             document.querySelectorAll('.cargar-input').forEach(input => {
                 input.addEventListener('input', actualizarResumenCarga);
             });
             actualizarResumenCarga();
         }
 
+        // ============================================================
+        // 4. ACTUALIZAR RESUMEN
+        // ============================================================
         function actualizarResumenCarga() {
             const plantaId = document.getElementById('plantaCarga').value;
             if (!plantaId) {
@@ -159,6 +202,8 @@
             }
 
             let items = [];
+            let totalCilindros = 0;
+
             document.querySelectorAll('.cargar-input').forEach(input => {
                 const cantidad = parseInt(input.value) || 0;
                 if (cantidad > 0) {
@@ -179,25 +224,29 @@
                     if (tipo === 'p') item.pequenos = cantidad;
                     else if (tipo === 'm') item.medianos = cantidad;
                     else if (tipo === 'g') item.grandes = cantidad;
+                    totalCilindros += cantidad;
                 }
             });
 
-            const total = items.reduce((sum, i) => sum + i.pequenos + i.medianos + i.grandes, 0);
-            const finanzas = calcularGananciaEstimada(items, plantaId);
             const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
             const resumenDiv = document.getElementById('resumenCarga');
-            
-            resumenDiv.textContent = `Total: ${total} cilindros | Ingreso: $${finanzas.ingreso.toFixed(2)} | Costo: $${finanzas.costo.toFixed(2)} | Ganancia: $${finanzas.ganancia.toFixed(2)}`;
+            const btn = document.getElementById('btnCrearCarga');
+
+            let finanzas = { ingreso: 0, costo: 0, ganancia: 0 };
+            if (items.length > 0) {
+                finanzas = calcularGananciaEstimada(items, plantaId);
+            }
+
+            resumenDiv.textContent = `Total: ${totalCilindros} cilindros | Ingreso: $${finanzas.ingreso.toFixed(2)} | Costo: $${finanzas.costo.toFixed(2)} | Ganancia: $${finanzas.ganancia.toFixed(2)}`;
             resumenDiv.style.color = '#0d47a1';
             resumenDiv.style.background = '#e3f2fd';
 
-            const btn = document.getElementById('btnCrearCarga');
-            if (total === 0 || total > capacidad) {
+            if (totalCilindros === 0 || totalCilindros > capacidad) {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
-                if (total === 0) {
+                if (totalCilindros === 0) {
                     resumenDiv.textContent += ' ⚠️ No hay cilindros para cargar';
-                } else if (total > capacidad) {
+                } else if (totalCilindros > capacidad) {
                     resumenDiv.textContent += ` ⚠️ Excede capacidad (${capacidad})`;
                     resumenDiv.style.color = '#c62828';
                     resumenDiv.style.background = '#ffebee';
@@ -208,8 +257,12 @@
             }
         }
 
+        // ============================================================
+        // 5. CREAR CARGA
+        // ============================================================
         document.getElementById('formCarga').addEventListener('submit', function(e) {
             e.preventDefault();
+            
             const planta = document.getElementById('plantaCarga').value;
             const fecha = document.getElementById('fechaCarga').value;
 
@@ -268,6 +321,9 @@
             }
         });
 
+        // ============================================================
+        // 6. UTILIDADES E INICIO
+        // ============================================================
         function mostrarMensaje(texto, tipo) {
             const msg = document.getElementById('mensaje');
             msg.textContent = texto;
@@ -278,7 +334,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            cargarPlantasCarga();
+            cargarPlantas();
             if (!document.getElementById('fechaCarga').value) {
                 document.getElementById('fechaCarga').value = new Date().toISOString().slice(0,10);
             }
@@ -287,7 +343,6 @@
             document.getElementById('capacidadCamion').textContent = cap;
             cargarCargasActivas();
             cargarDisponibles();
-
             document.getElementById('plantaCarga').addEventListener('change', actualizarResumenCarga);
         });
     </script>
