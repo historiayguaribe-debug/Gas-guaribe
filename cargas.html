@@ -14,7 +14,6 @@
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <!-- Cargas activas -->
         <div id="cargasActivas" style="margin-bottom:16px;">
             <h3>Cargas activas</h3>
             <div id="listaCargas"></div>
@@ -22,7 +21,6 @@
 
         <hr>
 
-        <!-- Nueva carga -->
         <h3>Nueva carga</h3>
         <form id="formCarga">
             <div class="form-group">
@@ -43,7 +41,7 @@
             </div>
 
             <div id="resumenCarga" class="subtotal-box" style="margin:12px 0;">
-                Total: 0 cilindros | Ingreso: $0.00 | Costo: $0.00 | Exonerados: 0 ($0.00) | Ganancia: $0.00
+                Total: 0 cilindros | Ingreso: $0.00 | Costo: $0.00 | 🎓 Exonerados: 0 ($0.00) | Ganancia: $0.00
             </div>
 
             <button type="submit" class="btn-primary" id="btnCrearCarga">Crear carga</button>
@@ -53,9 +51,6 @@
     </div>
 
     <script>
-        // ============================================================
-        // 1. CARGAR PLANTAS
-        // ============================================================
         function cargarPlantas() {
             const plantas = obtenerPlantas();
             const select = document.getElementById('plantaCarga');
@@ -68,9 +63,6 @@
             });
         }
 
-        // ============================================================
-        // 2. CARGAS ACTIVAS
-        // ============================================================
         function cargarCargasActivas() {
             cargarDatos();
             const cargas = datos.cargas.filter(c => c.estado === 'activa');
@@ -123,9 +115,6 @@
             }
         }
 
-        // ============================================================
-        // 3. RECOGIDAS DISPONIBLES CON EXONERACIONES
-        // ============================================================
         function cargarDisponibles() {
             cargarDatos();
             
@@ -184,7 +173,6 @@
                         <div style="font-size:11px; color:#999; margin-top:4px;">
                             Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes} | Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0} | Saldo: ${saldo.total}
                         </div>
-                        <!-- Checkbox para incluir exoneraciones planificadas en la carga -->
                         <div style="margin-top:6px;">
                             <label style="font-size:12px; display:flex; align-items:center; gap:6px;">
                                 <input type="checkbox" id="incluir_exo_${r.id}" class="incluir-exo" data-recogida="${r.id}" checked>
@@ -197,7 +185,6 @@
 
             container.innerHTML = html;
 
-            // Eventos
             document.querySelectorAll('.cargar-input').forEach(input => {
                 input.addEventListener('input', actualizarResumenCarga);
             });
@@ -207,9 +194,6 @@
             actualizarResumenCarga();
         }
 
-        // ============================================================
-        // 4. ACTUALIZAR RESUMEN DE CARGA (CON EXONERACIONES)
-        // ============================================================
         function actualizarResumenCarga() {
             const plantaId = document.getElementById('plantaCarga').value;
             if (!plantaId) {
@@ -255,7 +239,6 @@
                 }
             });
 
-            // Calcular exonerados totales (de todos los items)
             items.forEach(item => {
                 (item.exonerados || []).forEach(ex => {
                     totalExonerados += ex.pequenos + ex.medianos + ex.grandes;
@@ -292,9 +275,6 @@
             }
         }
 
-        // ============================================================
-        // 5. CREAR CARGA
-        // ============================================================
         document.getElementById('formCarga').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -365,9 +345,6 @@
             }
         });
 
-        // ============================================================
-        // 6. UTILIDADES E INICIO
-        // ============================================================
         function mostrarMensaje(texto, tipo) {
             const msg = document.getElementById('mensaje');
             msg.textContent = texto;
