@@ -44,7 +44,7 @@
                 Total a cargar: 0 cilindros (Capacidad: <span id="capacidadCamion">50</span>)
             </div>
 
-            <button type="submit" class="btn-primary">Crear carga</button>
+            <button type="submit" class="btn-primary" id="btnCrearCarga">Crear carga</button>
         </form>
 
         <div id="mensaje" style="margin-top:16px; padding:12px; border-radius:8px; display:none;"></div>
@@ -129,14 +129,14 @@
                     <div style="background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:6px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span><strong>${r.comunidad}</strong> (${plantaNombre})</span>
-                            <span style="font-size:13px;">Saldo: P:${saldo.p} M:${saldo.m} G:${saldo.g}</span>
+                            <span style="font-size:13px;">Disponible: P:${saldo.p} M:${saldo.m} G:${saldo.g}</span>
                         </div>
                         <div style="display:flex; gap:8px; margin-top:4px; align-items:center;">
                             <label style="font-size:12px;">A cargar:</label>
-                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="0" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="p">
-                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="0" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="m">
-                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="0" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="g">
-                            <span style="font-size:12px; color:#666;">(máx P:${saldo.p} M:${saldo.m} G:${saldo.g})</span>
+                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="${saldo.p}" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="p">
+                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="${saldo.m}" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="m">
+                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="${saldo.g}" style="width:50px; padding:4px;" data-recogida="${r.id}" data-tipo="g">
+                            <span style="font-size:12px; color:#666;">(máx ${saldo.p}/${saldo.m}/${saldo.g})</span>
                         </div>
                     </div>
                 `;
@@ -156,13 +156,18 @@
                 total += parseInt(input.value) || 0;
             });
             const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
-            document.getElementById('resumenCarga').textContent = `Total a cargar: ${total} cilindros (Capacidad: ${capacidad})`;
+            const resumenDiv = document.getElementById('resumenCarga');
+            resumenDiv.textContent = `Total a cargar: ${total} cilindros (Capacidad: ${capacidad})`;
             if (total > capacidad) {
-                document.getElementById('resumenCarga').style.color = '#c62828';
-                document.getElementById('resumenCarga').style.background = '#ffebee';
+                resumenDiv.style.color = '#c62828';
+                resumenDiv.style.background = '#ffebee';
+                document.getElementById('btnCrearCarga').disabled = true;
+                document.getElementById('btnCrearCarga').style.opacity = '0.5';
             } else {
-                document.getElementById('resumenCarga').style.color = '#0d47a1';
-                document.getElementById('resumenCarga').style.background = '#e3f2fd';
+                resumenDiv.style.color = '#0d47a1';
+                resumenDiv.style.background = '#e3f2fd';
+                document.getElementById('btnCrearCarga').disabled = false;
+                document.getElementById('btnCrearCarga').style.opacity = '1';
             }
         }
 
@@ -234,7 +239,6 @@
             if (!document.getElementById('fechaCarga').value) {
                 document.getElementById('fechaCarga').value = new Date().toISOString().slice(0,10);
             }
-            // Cargar capacidad del camión desde configuración
             cargarDatos();
             const cap = datos.config.capacidad_camion || 50;
             document.getElementById('capacidadCamion').textContent = cap;
