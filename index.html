@@ -15,13 +15,11 @@
         </header>
 
         <div class="dashboard">
-            <!-- Indicador principal -->
             <div class="stat-principal">
                 <span class="stat-number-big" id="totalPendientes">0</span>
                 <span class="stat-label-big">📦 Cilindros en almacén</span>
             </div>
 
-            <!-- Indicadores secundarios -->
             <div class="stats">
                 <div class="stat-card clickable" onclick="window.location.href='recogida.html'">
                     <span class="stat-number" id="recogidasHoy">0</span>
@@ -41,7 +39,6 @@
                 </div>
             </div>
 
-            <!-- Botones principales -->
             <div class="menu-grid">
                 <a href="recogida.html" class="menu-btn primary">📋 Nueva recogida</a>
                 <a href="carga.html" class="menu-btn primary">🚛 Armar carga</a>
@@ -57,7 +54,6 @@
 
     <script src="app.js"></script>
     <script>
-        // Mostrar fecha actual
         document.getElementById('fechaActual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
         function actualizarDashboard() {
@@ -66,7 +62,6 @@
             const cargas = datos.cargas || [];
             const entregas = datos.entregas || [];
 
-            // Total pendientes (cilindros en almacén)
             let totalPendiente = 0;
             recogidas.forEach(r => {
                 const saldo = obtenerSaldoRecogida(r);
@@ -74,21 +69,17 @@
             });
             document.getElementById('totalPendientes').textContent = totalPendiente;
 
-            // Recogidas hoy
             const hoy = new Date().toDateString();
             const recogidasHoy = recogidas.filter(r => new Date(r.fecha).toDateString() === hoy);
             document.getElementById('recogidasHoy').textContent = recogidasHoy.length;
 
-            // Cargas activas
             const activas = cargas.filter(c => c.estado === 'activa');
             document.getElementById('cargasActivas').textContent = activas.length;
 
-            // Entregas hoy
             const entregasHoy = entregas.filter(e => new Date(e.fecha).toDateString() === hoy);
             const totalEntregadosHoy = entregasHoy.reduce((sum, e) => sum + e.pequenos + e.medianos + e.grandes, 0);
             document.getElementById('entregasHoy').textContent = totalEntregadosHoy;
 
-            // Exonerados hoy
             let exoneradosHoy = 0;
             entregasHoy.forEach(e => {
                 if (e.exonerados) {
