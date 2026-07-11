@@ -14,7 +14,6 @@
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <!-- Cargas activas -->
         <div id="cargasActivas" style="margin-bottom:16px;">
             <h3>Cargas activas</h3>
             <div id="listaCargas"></div>
@@ -22,7 +21,6 @@
 
         <hr>
 
-        <!-- Nueva carga -->
         <h3>Nueva carga</h3>
         <form id="formCarga">
             <div class="form-group">
@@ -37,9 +35,12 @@
                 <input type="date" id="fechaCarga">
             </div>
 
+            <!-- AQUÍ DEBEN APARECER LAS RECOGIDAS -->
             <div class="form-group">
                 <label>Recogidas disponibles para cargar</label>
-                <div id="listaDisponibles"></div>
+                <div id="listaDisponibles" style="background:#fff8e1; padding:8px; border-radius:8px;">
+                    <p style="color:#e65100;">🔍 Cargando recogidas disponibles...</p>
+                </div>
             </div>
 
             <div id="resumenCarga" class="subtotal-box" style="margin:12px 0;">
@@ -124,24 +125,34 @@
         }
 
         // ============================================================
-        // 3. RECOGIDAS DISPONIBLES
+        // 3. RECOGIDAS DISPONIBLES (CON DEPURACIÓN)
         // ============================================================
         function cargarDisponibles() {
             cargarDatos();
             
+            // Mostrar mensaje de depuración
+            const container = document.getElementById('listaDisponibles');
+            container.innerHTML = '<p style="color:#e65100;">🔍 Buscando recogidas con saldo disponible...</p>';
+
             // Filtrar recogidas con saldo > 0
             const recogidasConSaldo = datos.recogidas.filter(r => {
                 const saldo = obtenerSaldoRecogida(r);
                 return saldo.total > 0;
             });
 
-            const container = document.getElementById('listaDisponibles');
-            
+            // Si no hay recogidas, mostrar mensaje claro
             if (recogidasConSaldo.length === 0) {
-                container.innerHTML = '<p style="color:#999;">No hay recogidas con saldo disponible. Registra una recogida primero.</p>';
+                container.innerHTML = `
+                    <div style="background:#ffebee; padding:12px; border-radius:8px; color:#c62828;">
+                        <strong>⚠️ No hay recogidas disponibles para cargar.</strong>
+                        <br>Debes registrar una recogida primero en "Nueva recogida".
+                        <br><br>📌 <em>Total de recogidas registradas: ${datos.recogidas.length}</em>
+                    </div>
+                `;
                 return;
             }
 
+            // Mostrar las recogidas
             let html = '';
             recogidasConSaldo.forEach(r => {
                 const saldo = obtenerSaldoRecogida(r);
