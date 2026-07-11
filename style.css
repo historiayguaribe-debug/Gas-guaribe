@@ -31,21 +31,35 @@ h1 {
     font-weight: 700;
 }
 
-h3 {
-    color: #0d47a1;
-    margin: 16px 0 8px;
-}
-
 .subtitle {
     color: #666;
     font-size: 14px;
+}
+
+/* Dashboard */
+.stat-principal {
+    background: #0d47a1;
+    color: white;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+.stat-number-big {
+    display: block;
+    font-size: 48px;
+    font-weight: 700;
+}
+.stat-label-big {
+    font-size: 16px;
+    opacity: 0.9;
 }
 
 .stats {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .stat-card {
@@ -53,23 +67,18 @@ h3 {
     border-radius: 12px;
     padding: 12px;
     text-align: center;
+    cursor: pointer;
     transition: transform 0.1s;
 }
-
-.clickable {
-    cursor: pointer;
-}
-.clickable:active {
+.stat-card:active {
     transform: scale(0.96);
 }
-
 .stat-number {
     display: block;
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
     color: #0d47a1;
 }
-
 .stat-label {
     font-size: 12px;
     color: #555;
@@ -94,17 +103,17 @@ h3 {
     border: none;
     cursor: pointer;
 }
-
 .menu-btn:hover {
     background: #1565c0;
 }
-
+.menu-btn.primary {
+    background: #1565c0;
+    font-size: 16px;
+    font-weight: 600;
+}
 .menu-btn.secondary {
     background: #e0e0e0;
     color: #333;
-}
-.menu-btn.secondary:hover {
-    background: #ccc;
 }
 
 footer {
@@ -118,14 +127,12 @@ footer {
 .form-group {
     margin-bottom: 16px;
 }
-
 label {
     display: block;
     font-weight: 500;
     margin-bottom: 4px;
     color: #333;
 }
-
 input, select, textarea {
     width: 100%;
     padding: 12px;
@@ -134,7 +141,6 @@ input, select, textarea {
     font-size: 16px;
     background: white;
 }
-
 input:focus, select:focus {
     outline: none;
     border-color: #0d47a1;
@@ -152,9 +158,12 @@ input:focus, select:focus {
     cursor: pointer;
     transition: background 0.2s;
 }
-
 .btn-primary:hover {
     background: #1565c0;
+}
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn-secondary {
@@ -167,30 +176,10 @@ input:focus, select:focus {
     font-weight: 500;
     width: 100%;
     cursor: pointer;
-    margin-top: 8px;
     transition: background 0.2s;
 }
-
 .btn-secondary:hover {
     background: #ccc;
-}
-
-.btn-danger {
-    background: #d32f2f;
-    color: white;
-    padding: 12px;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 500;
-    width: 100%;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: background 0.2s;
-}
-
-.btn-danger:hover {
-    background: #b71c1c;
 }
 
 .subtotal-box {
@@ -203,45 +192,19 @@ input:focus, select:focus {
     color: #0d47a1;
 }
 
-/* Recogidas y cargas */
-.recogida-item, .carga-item {
-    transition: background 0.2s;
-}
-.recogida-item:hover, .carga-item:hover {
-    background: #f0f4ff !important;
-}
-
-/* Tablas responsivas */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-th, td {
-    padding: 6px 8px;
-    border: 1px solid #ddd;
-    text-align: center;
-}
-th {
-    background: #0d47a1;
-    color: white;
-}
-
-/* Responsive */
 @media (max-width: 480px) {
     .menu-grid {
         grid-template-columns: 1fr 1fr;
         gap: 8px;
+    }
+    .stat-number-big {
+        font-size: 36px;
     }
     .stats {
         grid-template-columns: 1fr 1fr;
         gap: 8px;
     }
     .stat-number {
-        font-size: 22px;
-    }
-    .menu-btn {
-        font-size: 13px;
-        padding: 12px 6px;
+        font-size: 20px;
     }
 }
