@@ -3,95 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Recogidas - GAS GUARIBE</title>
+    <title>Nueva recogida - GAS GUARIBE</title>
     <link rel="stylesheet" href="style.css">
     <script src="app.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📋 Recogidas</h1>
+            <h1>📋 Nueva recogida</h1>
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
-        <div class="form-group">
-            <label for="filtroEstado">Filtrar por estado</label>
-            <select id="filtroEstado" onchange="cargarListaRecogidas()">
-                <option value="todas">Todas</option>
-                <option value="pendiente">Pendientes</option>
-                <option value="parcial">Parciales</option>
-                <option value="completa">Completas</option>
-            </select>
-        </div>
+        <form id="formRecogida">
+            <!-- Comunidad -->
+            <div class="form-group">
+                <label for="comunidad">Comunidad o cliente</label>
+                <input type="text" id="comunidad" list="listaComunidades" placeholder="Escribe o selecciona" required>
+                <datalist id="listaComunidades"></datalist>
+            </div>
 
-        <div id="listaRecogidas" style="margin-top:12px;"></div>
+            <!-- Cilindros recogidos -->
+            <div class="form-group">
+                <label>Cilindros recogidos</label>
+                <div style="display:flex; gap:8px;">
+                    <div style="flex:1;">
+                        <label style="font-size:12px;">Pequeños</label>
+                        <input type="number" id="pequenos" min="0" value="0">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:12px;">Medianos</label>
+                        <input type="number" id="medianos" min="0" value="0">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:12px;">Grandes</label>
+                        <input type="number" id="grandes" min="0" value="0">
+                    </div>
+                </div>
+            </div>
 
-        <button class="btn-primary" onclick="window.location.href='recogida_nueva.html'" style="margin-top:12px;">➕ Nueva recogida</button>
+            <!-- Exoneraciones planificadas -->
+            <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
+                <label style="font-weight:700;">🎓 Exoneraciones planificadas</label>
+                <div id="listaExoneradosPlanificados" style="margin-bottom:8px;"></div>
+                
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                    <div style="flex:1; min-width:100px;">
+                        <label style="font-size:12px;">Destino</label>
+                        <select id="exo_destino" style="padding:8px; width:100%;">
+                            <option value="comunidad">Comunidad</option>
+                            <option value="galpon">Galpón</option>
+                        </select>
+                    </div>
+                    <div style="flex:2; min-width:120px;">
+                        <label style="font-size:12px;">Institución</label>
+                        <select id="exo_institucion" style="padding:8px; width:100%;">
+                            <option value="Escuela">Escuela</option>
+                            <option value="Alcaldía">Alcaldía</option>
+                            <option value="CDA">CDA</option>
+                            <option value="Policía">Policía</option>
+                            <option value="Bomberos">Bomberos</option>
+                            <option value="Guardia Nacional">Guardia Nacional</option>
+                            <option value="Protección Civil">Protección Civil</option>
+                            <option value="Galpón">Galpón (uso interno)</option>
+                            <option value="Iglesia">Iglesia</option>
+                            <option value="Comedor Popular">Comedor Popular</option>
+                            <option value="Hospital">Hospital</option>
+                            <option value="Otro">Otro...</option>
+                        </select>
+                        <input type="text" id="exo_otro" placeholder="Escribe otra institución" style="margin-top:4px; padding:6px; width:100%;">
+                    </div>
+                    <div style="flex:1; min-width:50px;">
+                        <label style="font-size:12px;">P</label>
+                        <input type="number" id="exo_pequenos" min="0" value="0" style="padding:6px; width:100%;">
+                    </div>
+                    <div style="flex:1; min-width:50px;">
+                        <label style="font-size:12px;">M</label>
+                        <input type="number" id="exo_medianos" min="0" value="0" style="padding:6px; width:100%;">
+                    </div>
+                    <div style="flex:1; min-width:50px;">
+                        <label style="font-size:12px;">G</label>
+                        <input type="number" id="exo_grandes" min="0" value="0" style="padding:6px; width:100%;">
+                    </div>
+                    <div style="flex:0 0 auto;">
+                        <button type="button" class="btn-secondary" style="padding:6px 12px; margin-top:18px;" onclick="agregarExonerado()">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fecha -->
+            <div class="form-group">
+                <label for="fecha">Fecha</label>
+                <input type="date" id="fecha">
+            </div>
+
+            <input type="hidden" id="exoneradosData" value="[]">
+            <button type="submit" class="btn-primary">Guardar recogida</button>
+        </form>
+
+        <div id="mensaje" style="margin-top:16px; padding:12px; border-radius:8px; display:none;"></div>
     </div>
 
     <script>
-        function cargarListaRecogidas() {
-            cargarDatos();
-            const filtro = document.getElementById('filtroEstado').value;
-            let recogidas = datos.recogidas || [];
-            if (filtro !== 'todas') {
-                recogidas = recogidas.filter(r => r.estado === filtro);
-            }
-            recogidas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        let exonerados = [];
 
-            const container = document.getElementById('listaRecogidas');
-            if (recogidas.length === 0) {
-                container.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">No hay recogidas</p>';
+        // Cargar comunidades
+        function cargarComunidades() {
+            const comunidades = obtenerComunidades();
+            const datalist = document.getElementById('listaComunidades');
+            datalist.innerHTML = '';
+            comunidades.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c;
+                datalist.appendChild(option);
+            });
+        }
+
+        // Renderizar exonerados
+        function renderExonerados() {
+            const container = document.getElementById('listaExoneradosPlanificados');
+            if (exonerados.length === 0) {
+                container.innerHTML = '<p style="color:#999; font-size:13px;">No hay exoneraciones planificadas</p>';
                 return;
             }
-
             let html = '';
-            recogidas.forEach(r => {
-                const fecha = new Date(r.fecha).toLocaleDateString();
-                const saldo = obtenerSaldoRecogida(r);
-                const plantaNombre = obtenerNombrePlanta(r.planta);
-                const estadoLabel = r.estado === 'completa' ? '✅ Completa' : (r.estado === 'parcial' ? '⚠️ Parcial' : '⏳ Pendiente');
-                const exoPlan = r.exonerados_planificados || [];
-                const totalExo = exoPlan.reduce((sum, ex) => sum + ex.pequenos + ex.medianos + ex.grandes, 0);
-                html += `
-                    <div class="recogida-item" style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid ${r.estado === 'completa' ? '#4caf50' : (r.estado === 'parcial' ? '#ff9800' : '#2196f3')};">
-                        <div style="display:flex; justify-content:space-between;">
-                            <strong>${r.comunidad}</strong>
-                            <span>${estadoLabel}</span>
-                        </div>
-                        <div style="font-size:13px; color:#555;">
-                            ${fecha} - Planta: ${plantaNombre}
-                            <br>Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes}
-                            <br>Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0}
-                            <br><strong>Saldo pendiente:</strong> P:${saldo.p} M:${saldo.m} G:${saldo.g}
-                            ${totalExo > 0 ? `<br>🎓 Exoneraciones planificadas: ${totalExo} cilindros` : ''}
-                            ${r.observaciones ? `<br><em>${r.observaciones}</em>` : ''}
-                        </div>
-                        <div style="display:flex; gap:8px; margin-top:8px;">
-                            <button class="btn-secondary" style="padding:6px 12px; font-size:12px; flex:1;" onclick="editarRecogida(${r.id})">✏️ Editar</button>
-                            <button class="btn-danger" style="padding:6px 12px; font-size:12px; flex:1;" onclick="eliminarRecogida(${r.id})">🗑️</button>
-                        </div>
-                    </div>
-                `;
+            exonerados.forEach((ex, idx) => {
+                const destinoLabel = ex.destino === 'comunidad' ? '🏘️' : '🏭';
+                html += `<div style="background:#fff3e0; padding:8px; border-radius:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #ff9800;">
+                    <span><strong>${destinoLabel} ${ex.institucion}</strong> - P:${ex.pequenos} M:${ex.medianos} G:${ex.grandes}</span>
+                    <button type="button" onclick="eliminarExonerado(${idx})" style="background:#d32f2f; color:white; border:none; border-radius:4px; padding:4px 8px;">✕</button>
+                </div>`;
             });
             container.innerHTML = html;
         }
 
-        function editarRecogida(id) {
-            window.location.href = `recogida_nueva.html?edit=${id}`;
-        }
+        // Agregar exonerado
+        function agregarExonerado() {
+            const destino = document.getElementById('exo_destino').value;
+            const institucionSelect = document.getElementById('exo_institucion').value;
+            const otro = document.getElementById('exo_otro').value.trim();
+            const institucion = otro || institucionSelect;
+            const pequenos = parseInt(document.getElementById('exo_pequenos').value) || 0;
+            const medianos = parseInt(document.getElementById('exo_medianos').value) || 0;
+            const grandes = parseInt(document.getElementById('exo_grandes').value) || 0;
 
-        function eliminarRecogida(id) {
-            if (confirm('¿Eliminar esta recogida?')) {
-                eliminarRecogida(id);
-                cargarListaRecogidas();
-                actualizarDashboard();
+            if (pequenos === 0 && medianos === 0 && grandes === 0) {
+                mostrarMensaje('Indica al menos un cilindro exonerado', 'error');
+                return;
             }
+            if (!institucion) {
+                mostrarMensaje('Selecciona o escribe la institución', 'error');
+                return;
+            }
+
+            exonerados.push({ destino, institucion, pequenos, medianos, grandes });
+            document.getElementById('exoneradosData').value = JSON.stringify(exonerados);
+            renderExonerados();
+            
+            // Limpiar campos
+            document.getElementById('exo_otro').value = '';
+            document.getElementById('exo_pequenos').value = 0;
+            document.getElementById('exo_medianos').value = 0;
+            document.getElementById('exo_grandes').value = 0;
+            mostrarMensaje('✅ Exoneración agregada', 'exito');
         }
 
+        function eliminarExonerado(idx) {
+            exonerados.splice(idx, 1);
+            document.getElementById('exoneradosData').value = JSON.stringify(exonerados);
+            renderExonerados();
+        }
+
+        // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
-            cargarListaRecogidas();
+            cargarComunidades();
+            if (!document.getElementById('fecha').value) {
+                document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+            }
         });
+
+        // Guardar recogida
+        document.getElementById('formRecogida').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const comunidad = document.getElementById('comunidad').value.trim();
+            const pequenos = parseInt(document.getElementById('pequenos').value) || 0;
+            const medianos = parseInt(document.getElementById('medianos').value) || 0;
+            const grandes = parseInt(document.getElementById('grandes').value) || 0;
+            const fecha = document.getElementById('fecha').value;
+            const exoneradosPlan = JSON.parse(document.getElementById('exoneradosData').value || '[]');
+
+            if (!comunidad) {
+                mostrarMensaje('Indica la comunidad o cliente', 'error');
+                return;
+            }
+            if (pequenos === 0 && medianos === 0 && grandes === 0) {
+                mostrarMensaje('Debes registrar al menos un cilindro', 'error');
+                return;
+            }
+
+            agregarComunidad(comunidad);
+            const recogida = registrarRecogida(comunidad, '', pequenos, medianos, grandes, fecha || new Date().toISOString(), '', exoneradosPlan);
+            
+            if (recogida) {
+                mostrarMensaje(`✅ Recogida guardada: ${comunidad} (${pequenos+medianos+grandes} cilindros)`, 'exito');
+                document.getElementById('formRecogida').reset();
+                exonerados = [];
+                document.getElementById('exoneradosData').value = '[]';
+                renderExonerados();
+                cargarComunidades();
+                document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+            }
+        });
+
+        function mostrarMensaje(texto, tipo) {
+            const msg = document.getElementById('mensaje');
+            msg.textContent = texto;
+            msg.style.display = 'block';
+            msg.style.backgroundColor = tipo === 'exito' ? '#d4edda' : '#f8d7da';
+            msg.style.color = tipo === 'exito' ? '#155724' : '#721c24';
+            setTimeout(() => { msg.style.display = 'none'; }, 4000);
+        }
     </script>
 </body>
 </html>
