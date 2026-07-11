@@ -1,5 +1,6 @@
 // ============================================================
-// GAS GUARIBE v2.1 - app.js (Limpio y completo)
+// GAS GUARIBE v2.1 - app.js
+// Lógica completa con exoneraciones y cargas como centro
 // ============================================================
 
 // ------------------------------------------------------------
@@ -30,7 +31,8 @@ const CONFIG_DEFAULT = {
         comercio: { pequeno: 3.00, mediano: 4.50, grande: 6.50 },
         galpon: { pequeno: 2.50, mediano: 3.80, grande: 5.20 }
     },
-    capacidad_camion: 50
+    capacidad_camion: 50,
+    gastos_generales: { nomina: 0, alquiler: 0, mantenimiento: 0, repuestos: 0, varios: 0 }
 };
 
 let datos = {
@@ -197,7 +199,7 @@ function actualizarEstadoRecogida(recogida) {
 }
 
 // ------------------------------------------------------------
-// 5. CARGAS
+// 5. CARGAS (CENTRO DE OPERACIONES)
 // ------------------------------------------------------------
 
 function crearCarga(planta, fecha, items) {
@@ -379,7 +381,7 @@ function eliminarGasto(id) {
 }
 
 // ------------------------------------------------------------
-// 8. DESHACER ÚLTIMA ACCIÓN
+// 8. DESHACER
 // ------------------------------------------------------------
 
 let ultimoId = null;
@@ -480,9 +482,9 @@ function calcularGananciaEstimada(items, plantaId) {
         totalIngreso += (item.pequenos * precios.pequeno) + (item.medianos * precios.mediano) + (item.grandes * precios.grande);
         totalCosto += (item.pequenos * costos.pequeno) + (item.medianos * costos.mediano) + (item.grandes * costos.grande);
     });
-    return { 
-        ingreso: totalIngreso, 
-        costo: totalCosto, 
+    return {
+        ingreso: totalIngreso,
+        costo: totalCosto,
         ganancia: totalIngreso - totalCosto - totalExoneradosCosto,
         exoneradosCosto: totalExoneradosCosto
     };
@@ -501,7 +503,7 @@ function obtenerNombrePlanta(plantaId) {
 cargarDatos();
 
 // ------------------------------------------------------------
-// 11. EXPORTAR FUNCIONES (para usar en HTML)
+// 11. EXPORTAR FUNCIONES (global)
 // ------------------------------------------------------------
 
 window.obtenerComunidades = obtenerComunidades;
