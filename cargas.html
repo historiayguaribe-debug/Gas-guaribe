@@ -10,7 +10,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🛻 Armar carga a planta</h1>
+            <h1>🚛 Armar carga a planta</h1>
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
 
@@ -35,16 +35,13 @@
                 <input type="date" id="fechaCarga">
             </div>
 
-            <!-- AQUÍ DEBEN APARECER LAS RECOGIDAS -->
             <div class="form-group">
                 <label>Recogidas disponibles para cargar</label>
-                <div id="listaDisponibles" style="background:#fff8e1; padding:8px; border-radius:8px;">
-                    <p style="color:#e65100;">🔍 Cargando recogidas disponibles...</p>
-                </div>
+                <div id="listaDisponibles"></div>
             </div>
 
-            <div id="resumenCarga" class="subtotal-box" style="margin:12px 0;">
-                Total: 0 cilindros | Ingreso: $0.00 | Costo: $0.00 | 🎓 Exonerados: 0 ($0.00) | Ganancia: $0.00
+            <div id="resumenCarga" class="subtotal-box">
+                Total: 0 cilindros | Exonerados: 0 | Ganancia estimada: $0.00
             </div>
 
             <button type="submit" class="btn-primary" id="btnCrearCarga">Crear carga</button>
@@ -54,9 +51,6 @@
     </div>
 
     <script>
-        // ============================================================
-        // 1. CARGAR PLANTAS
-        // ============================================================
         function cargarPlantas() {
             const plantas = obtenerPlantas();
             const select = document.getElementById('plantaCarga');
@@ -69,9 +63,6 @@
             });
         }
 
-        // ============================================================
-        // 2. CARGAS ACTIVAS
-        // ============================================================
         function cargarCargasActivas() {
             cargarDatos();
             const cargas = datos.cargas.filter(c => c.estado === 'activa');
@@ -84,9 +75,7 @@
             cargas.forEach(c => {
                 const fecha = new Date(c.fecha).toLocaleDateString();
                 const plantaNombre = obtenerNombrePlanta(c.planta);
-                const resumen = obtenerResumenCarga(c.id);
-                const total = resumen ? resumen.totalP + resumen.totalM + resumen.totalG : 0;
-                const exoTotal = resumen ? resumen.totalExonerados : 0;
+                const total = c.items.reduce((sum, i) => sum + i.pequenos + i.medianos + i.grandes, 0);
                 html += `
                     <div style="background:#e3f2fd; padding:12px; border-radius:8px; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between;">
@@ -94,16 +83,9 @@
                             <span>${fecha}</span>
                         </div>
                         <div>Planta: ${plantaNombre}</div>
-                        <div>Cilindros: ${total} | 🎓 Exonerados: ${exoTotal}</div>
-                        <div style="font-size:12px; color:#555;">
-                            ${c.items.map(item => {
-                                const rec = datos.recogidas.find(r => r.id === item.recogidaId);
-                                return rec ? `${rec.comunidad}: P:${item.pequenos} M:${item.medianos} G:${item.grandes}` : '';
-                            }).join(' | ')}
-                        </div>
+                        <div>Cilindros: ${total}</div>
                         <div style="margin-top:6px;">
-                            <button class="btn-secondary" style="padding:6px 12px; font-size:12px; display:inline-block; width:auto;" onclick="verDetalleCarga(${c.id})">📋 Ver detalle</button>
-                            <button class="btn-danger" style="padding:6px 12px; font-size:12px; display:inline-block; width:auto;" onclick="eliminarCarga(${c.id})">🗑️</button>
+                            <button class="btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="eliminarCarga(${c.id})">🗑️ Eliminar</button>
                         </div>
                     </div>
                 `;
@@ -111,12 +93,8 @@
             container.innerHTML = html;
         }
 
-        function verDetalleCarga(id) {
-            window.location.href = `detalle_carga.html?id=${id}`;
-        }
-
         function eliminarCarga(id) {
-            if (confirm('¿Eliminar esta carga? Se revertirán los envíos.')) {
+            if (confirm('¿Eliminar esta carga?')) {
                 eliminarCarga(id);
                 cargarCargasActivas();
                 cargarDisponibles();
@@ -124,82 +102,54 @@
             }
         }
 
-        // ============================================================
-        // 3. RECOGIDAS DISPONIBLES (CON DEPURACIÓN)
-        // ============================================================
         function cargarDisponibles() {
             cargarDatos();
-            
-            // Mostrar mensaje de depuración
-            const container = document.getElementById('listaDisponibles');
-            container.innerHTML = '<p style="color:#e65100;">🔍 Buscando recogidas con saldo disponible...</p>';
-
-            // Filtrar recogidas con saldo > 0
             const recogidasConSaldo = datos.recogidas.filter(r => {
                 const saldo = obtenerSaldoRecogida(r);
                 return saldo.total > 0;
             });
 
-            // Si no hay recogidas, mostrar mensaje claro
+            const container = document.getElementById('listaDisponibles');
+            
             if (recogidasConSaldo.length === 0) {
-                container.innerHTML = `
-                    <div style="background:#ffebee; padding:12px; border-radius:8px; color:#c62828;">
-                        <strong>⚠️ No hay recogidas disponibles para cargar.</strong>
-                        <br>Debes registrar una recogida primero en "Nueva recogida".
-                        <br><br>📌 <em>Total de recogidas registradas: ${datos.recogidas.length}</em>
-                    </div>
-                `;
+                container.innerHTML = '<p style="color:#999;">No hay recogidas disponibles. Registra una recogida primero.</p>';
                 return;
             }
 
-            // Mostrar las recogidas
             let html = '';
             recogidasConSaldo.forEach(r => {
                 const saldo = obtenerSaldoRecogida(r);
-                const plantaNombre = obtenerNombrePlanta(r.planta);
-                const tipoCliente = obtenerTipoClienteRecogida(r);
                 const exoneradosPlan = r.exonerados_planificados || [];
                 const totalExoPlan = exoneradosPlan.reduce((sum, ex) => sum + ex.pequenos + ex.medianos + ex.grandes, 0);
                 
-                let icono = '🏘️';
-                let etiqueta = 'Comunidad';
-                if (tipoCliente === 'comercio') { icono = '🏪'; etiqueta = 'Comercio'; }
-                else if (tipoCliente === 'galpon') { icono = '🏭'; etiqueta = 'Galpón'; }
-
                 html += `
-                    <div style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid ${tipoCliente === 'comunidad' ? '#2196f3' : (tipoCliente === 'comercio' ? '#ff9800' : '#4caf50')};">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-                            <span><strong>${icono} ${r.comunidad}</strong> <span style="font-size:12px; color:#666;">(${etiqueta})</span></span>
-                            <span style="font-size:13px; background:#e3f2fd; padding:2px 8px; border-radius:12px;">
-                                Disponible: <strong>${saldo.total}</strong> cilindros
-                            </span>
+                    <div style="background:#f8f9fa; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid #2196f3;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span><strong>${r.comunidad}</strong></span>
+                            <span>Disponible: <strong>${saldo.total}</strong> cilindros</span>
                         </div>
                         ${totalExoPlan > 0 ? `
-                        <div style="background:#fff3e0; padding:6px 10px; border-radius:6px; margin:6px 0; font-size:13px;">
-                            <strong>🎓 Exoneraciones planificadas:</strong>
+                        <div style="background:#fff3e0; padding:6px; border-radius:6px; margin:6px 0; font-size:13px;">
+                            <strong>🎓 Exoneraciones:</strong>
                             ${exoneradosPlan.map(ex => 
                                 `${ex.institucion} (P:${ex.pequenos} M:${ex.medianos} G:${ex.grandes})`
                             ).join(' | ')}
-                            <span style="color:#e65100; font-weight:500;">(costo estimado: $${exoneradosPlan.reduce((s, ex) => s + ex.costo, 0).toFixed(2)})</span>
                         </div>
                         ` : ''}
                         <div style="display:flex; gap:8px; margin-top:6px; align-items:center; flex-wrap:wrap;">
-                            <label style="font-size:12px;">A cargar:</label>
-                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="${saldo.p}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="p">
-                            <span style="font-size:12px;">P</span>
-                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="${saldo.m}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="m">
-                            <span style="font-size:12px;">M</span>
-                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="${saldo.g}" style="width:50px; padding:4px; border:1px solid #ccc; border-radius:4px;" data-recogida="${r.id}" data-tipo="g">
-                            <span style="font-size:12px;">G</span>
+                            <label>A cargar:</label>
+                            <input type="number" id="cargar_p_${r.id}" class="cargar-input" min="0" max="${saldo.p}" value="${saldo.p}" style="width:50px;" data-recogida="${r.id}" data-tipo="p">
+                            <span>P</span>
+                            <input type="number" id="cargar_m_${r.id}" class="cargar-input" min="0" max="${saldo.m}" value="${saldo.m}" style="width:50px;" data-recogida="${r.id}" data-tipo="m">
+                            <span>M</span>
+                            <input type="number" id="cargar_g_${r.id}" class="cargar-input" min="0" max="${saldo.g}" value="${saldo.g}" style="width:50px;" data-recogida="${r.id}" data-tipo="g">
+                            <span>G</span>
                             <span style="font-size:11px; color:#888;">(máx ${saldo.p}/${saldo.m}/${saldo.g})</span>
                         </div>
-                        <div style="font-size:11px; color:#999; margin-top:4px;">
-                            Recogido: P:${r.pequenos} M:${r.medianos} G:${r.grandes} | Enviado: P:${r.enviado?.p || 0} M:${r.enviado?.m || 0} G:${r.enviado?.g || 0} | Saldo: ${saldo.total}
-                        </div>
                         <div style="margin-top:6px;">
-                            <label style="font-size:12px; display:flex; align-items:center; gap:6px;">
+                            <label style="font-size:12px;">
                                 <input type="checkbox" id="incluir_exo_${r.id}" class="incluir-exo" data-recogida="${r.id}" checked>
-                                Incluir exoneraciones planificadas en esta carga
+                                Incluir exoneraciones en esta carga
                             </label>
                         </div>
                     </div>
@@ -208,7 +158,6 @@
 
             container.innerHTML = html;
 
-            // Eventos para actualizar resumen
             document.querySelectorAll('.cargar-input').forEach(input => {
                 input.addEventListener('input', actualizarResumenCarga);
             });
@@ -218,9 +167,6 @@
             actualizarResumenCarga();
         }
 
-        // ============================================================
-        // 4. ACTUALIZAR RESUMEN DE CARGA
-        // ============================================================
         function actualizarResumenCarga() {
             const plantaId = document.getElementById('plantaCarga').value;
             if (!plantaId) {
@@ -228,71 +174,38 @@
                 return;
             }
 
-            let items = [];
-            let totalCilindros = 0;
-            let totalExonerados = 0;
-            let costoExonerados = 0;
-
+            let total = 0;
+            let exoneradosTotal = 0;
             document.querySelectorAll('.cargar-input').forEach(input => {
                 const cantidad = parseInt(input.value) || 0;
-                if (cantidad > 0) {
-                    const recogidaId = parseInt(input.dataset.recogida);
-                    const tipo = input.dataset.tipo;
-                    let item = items.find(i => i.recogidaId === recogidaId);
-                    if (!item) {
-                        const recogida = datos.recogidas.find(r => r.id === recogidaId);
-                        const incluirExo = document.getElementById(`incluir_exo_${recogidaId}`).checked;
-                        let exonerados = [];
-                        if (incluirExo && recogida && recogida.exonerados_planificados) {
-                            exonerados = recogida.exonerados_planificados.map(ex => ({
-                                ...ex,
-                                costo: ex.costo || 0
-                            }));
-                        }
-                        item = {
-                            recogidaId,
-                            pequenos: 0,
-                            medianos: 0,
-                            grandes: 0,
-                            tipoCliente: recogida ? obtenerTipoClienteRecogida(recogida) : 'comunidad',
-                            exonerados: exonerados
-                        };
-                        items.push(item);
+                total += cantidad;
+                // Contar exonerados que se van a incluir
+                const recogidaId = parseInt(input.dataset.recogida);
+                const incluirExo = document.getElementById(`incluir_exo_${recogidaId}`).checked;
+                if (incluirExo) {
+                    const recogida = datos.recogidas.find(r => r.id === recogidaId);
+                    if (recogida && recogida.exonerados_planificados) {
+                        recogida.exonerados_planificados.forEach(ex => {
+                            exoneradosTotal += ex.pequenos + ex.medianos + ex.grandes;
+                        });
                     }
-                    if (tipo === 'p') item.pequenos = cantidad;
-                    else if (tipo === 'm') item.medianos = cantidad;
-                    else if (tipo === 'g') item.grandes = cantidad;
-                    totalCilindros += cantidad;
                 }
-            });
-
-            // Calcular exonerados totales
-            items.forEach(item => {
-                (item.exonerados || []).forEach(ex => {
-                    totalExonerados += ex.pequenos + ex.medianos + ex.grandes;
-                    costoExonerados += ex.costo || 0;
-                });
             });
 
             const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
             const resumenDiv = document.getElementById('resumenCarga');
             const btn = document.getElementById('btnCrearCarga');
 
-            let finanzas = { ingreso: 0, costo: 0, ganancia: 0, exoneradosCosto: 0 };
-            if (items.length > 0) {
-                finanzas = calcularGananciaEstimada(items, plantaId);
-            }
-
-            resumenDiv.textContent = `Total: ${totalCilindros} cilindros | Ingreso: $${finanzas.ingreso.toFixed(2)} | Costo: $${finanzas.costo.toFixed(2)} | 🎓 Exonerados: ${totalExonerados} ($${costoExonerados.toFixed(2)}) | Ganancia: $${finanzas.ganancia.toFixed(2)}`;
+            resumenDiv.textContent = `Total: ${total} cilindros | 🎓 Exonerados: ${exoneradosTotal} | Ganancia estimada: $${(total * 1.5).toFixed(2)}`; // Simulación de ganancia
             resumenDiv.style.color = '#0d47a1';
             resumenDiv.style.background = '#e3f2fd';
 
-            if (totalCilindros === 0 || totalCilindros > capacidad) {
+            if (total === 0 || total > capacidad) {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
-                if (totalCilindros === 0) {
+                if (total === 0) {
                     resumenDiv.textContent += ' ⚠️ No hay cilindros para cargar';
-                } else if (totalCilindros > capacidad) {
+                } else if (total > capacidad) {
                     resumenDiv.textContent += ` ⚠️ Excede capacidad (${capacidad})`;
                     resumenDiv.style.color = '#c62828';
                     resumenDiv.style.background = '#ffebee';
@@ -303,12 +216,8 @@
             }
         }
 
-        // ============================================================
-        // 5. CREAR CARGA
-        // ============================================================
         document.getElementById('formCarga').addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const planta = document.getElementById('plantaCarga').value;
             const fecha = document.getElementById('fechaCarga').value;
 
@@ -329,19 +238,9 @@
                         const incluirExo = document.getElementById(`incluir_exo_${recogidaId}`).checked;
                         let exonerados = [];
                         if (incluirExo && recogida && recogida.exonerados_planificados) {
-                            exonerados = recogida.exonerados_planificados.map(ex => ({
-                                ...ex,
-                                costo: ex.costo || 0
-                            }));
+                            exonerados = recogida.exonerados_planificados;
                         }
-                        item = {
-                            recogidaId,
-                            pequenos: 0,
-                            medianos: 0,
-                            grandes: 0,
-                            tipoCliente: recogida ? obtenerTipoClienteRecogida(recogida) : 'comunidad',
-                            exonerados: exonerados
-                        };
+                        item = { recogidaId, pequenos: 0, medianos: 0, grandes: 0, exonerados };
                         items.push(item);
                     }
                     if (tipo === 'p') item.pequenos = cantidad;
@@ -355,37 +254,31 @@
                 return;
             }
 
-            const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
             const total = items.reduce((sum, i) => sum + i.pequenos + i.medianos + i.grandes, 0);
+            const capacidad = parseInt(document.getElementById('capacidadCamion').textContent) || 50;
             if (total > capacidad) {
-                mostrarMensaje(`⚠️ Excedes la capacidad del camión (${capacidad} cilindros)`, 'error');
+                mostrarMensaje(`⚠️ Excedes la capacidad del camión (${capacidad})`, 'error');
                 return;
             }
 
-            const carga = crearCarga(planta, fecha ? new Date(fecha).toISOString() : new Date().toISOString(), items);
+            const carga = crearCarga(planta, fecha || new Date().toISOString(), items);
             if (carga) {
-                setUltimo('carga', carga.id);
                 mostrarMensaje(`✅ Carga #${carga.id} creada con ${total} cilindros`, 'exito');
                 document.getElementById('formCarga').reset();
                 document.getElementById('fechaCarga').value = new Date().toISOString().slice(0,10);
                 cargarCargasActivas();
                 cargarDisponibles();
                 actualizarDashboard();
-            } else {
-                mostrarMensaje('❌ Error al crear la carga', 'error');
             }
         });
 
-        // ============================================================
-        // 6. UTILIDADES E INICIO
-        // ============================================================
         function mostrarMensaje(texto, tipo) {
             const msg = document.getElementById('mensaje');
             msg.textContent = texto;
             msg.style.display = 'block';
             msg.style.backgroundColor = tipo === 'exito' ? '#d4edda' : '#f8d7da';
             msg.style.color = tipo === 'exito' ? '#155724' : '#721c24';
-            setTimeout(() => { msg.style.display = 'none'; }, 5000);
+            setTimeout(() => { msg.style.display = 'none'; }, 4000);
         }
 
         document.addEventListener('DOMContentLoaded', function() {
