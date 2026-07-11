@@ -15,48 +15,49 @@
         </header>
 
         <div class="dashboard">
+            <!-- Indicador principal -->
+            <div class="stat-principal">
+                <span class="stat-number-big" id="totalPendientes">0</span>
+                <span class="stat-label-big">📦 Cilindros en almacén</span>
+            </div>
+
+            <!-- Indicadores secundarios -->
             <div class="stats">
-                <div class="stat-card clickable" onclick="verDetalle('pendientes')">
-                    <span class="stat-number" id="recogidasPendientes">0</span>
-                    <span class="stat-label">📋 Recogidas pendientes</span>
+                <div class="stat-card clickable" onclick="window.location.href='recogida.html'">
+                    <span class="stat-number" id="recogidasHoy">0</span>
+                    <span class="stat-label">📋 Recogidas hoy</span>
                 </div>
-                <div class="stat-card clickable" onclick="verDetalle('parciales')">
-                    <span class="stat-number" id="recogidasParciales">0</span>
-                    <span class="stat-label">📋 Recogidas parciales</span>
-                </div>
-                <div class="stat-card clickable" onclick="verDetalle('cargas')">
+                <div class="stat-card clickable" onclick="window.location.href='carga.html'">
                     <span class="stat-number" id="cargasActivas">0</span>
                     <span class="stat-label">🛻 Cargas activas</span>
                 </div>
-                <div class="stat-card clickable" onclick="verDetalle('entregas')">
+                <div class="stat-card clickable" onclick="window.location.href='entrega.html'">
                     <span class="stat-number" id="entregasHoy">0</span>
-                    <span class="stat-label">✅ Entregas hoy</span>
+                    <span class="stat-label">💰 Entregas hoy</span>
+                </div>
+                <div class="stat-card clickable" onclick="window.location.href='reportes.html'">
+                    <span class="stat-number" id="exoneradosHoy">0</span>
+                    <span class="stat-label">🎓 Exonerados hoy</span>
                 </div>
             </div>
 
-            <div id="resumenPendientes" style="margin:12px 0; padding:12px; background:#fff3e0; border-radius:8px; font-size:14px; color:#e65100;">
-                <strong>📦 Pendientes de enviar a planta:</strong> <span id="totalPendientes">0</span> cilindros
-            </div>
-
+            <!-- Botones principales -->
             <div class="menu-grid">
-                <a href="recogida_nueva.html" class="menu-btn">📋 Nueva recogida</a>
-                <a href="cargas.html" class="menu-btn">🛻 Armar carga</a>
-                <a href="entregas.html" class="menu-btn">💰 Registrar entrega</a>
-                <a href="inventario.html" class="menu-btn">📦 Ver inventario</a>
-                <a href="ventas.html" class="menu-btn">🏪 Ventas almacén</a>
-                <a href="gastos.html" class="menu-btn">💸 Gastos</a>
+                <a href="recogida.html" class="menu-btn primary">📋 Nueva recogida</a>
+                <a href="carga.html" class="menu-btn primary">🚛 Armar carga</a>
+                <a href="entrega.html" class="menu-btn">💰 Registrar entrega</a>
                 <a href="reportes.html" class="menu-btn">📊 Reportes</a>
-                <a href="configuracion.html" class="menu-btn">⚙️ Configurar</a>
             </div>
         </div>
 
         <footer>
-            <p>GAS GUARIBE v2.1</p>
+            <p>GAS GUARIBE v3.0</p>
         </footer>
     </div>
 
     <script src="app.js"></script>
     <script>
+        // Mostrar fecha actual
         document.getElementById('fechaActual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
         function actualizarDashboard() {
@@ -65,31 +66,38 @@
             const cargas = datos.cargas || [];
             const entregas = datos.entregas || [];
 
-            document.getElementById('recogidasPendientes').textContent = recogidas.filter(r => r.estado === 'pendiente').length;
-            document.getElementById('recogidasParciales').textContent = recogidas.filter(r => r.estado === 'parcial').length;
-            document.getElementById('cargasActivas').textContent = cargas.filter(c => c.estado === 'activa').length;
+            // Total pendientes (cilindros en almacén)
+            let totalPendiente = 0;
+            recogidas.forEach(r => {
+                const saldo = obtenerSaldoRecogida(r);
+                totalPendiente += saldo.total;
+            });
+            document.getElementById('totalPendientes').textContent = totalPendiente;
 
+            // Recogidas hoy
             const hoy = new Date().toDateString();
+            const recogidasHoy = recogidas.filter(r => new Date(r.fecha).toDateString() === hoy);
+            document.getElementById('recogidasHoy').textContent = recogidasHoy.length;
+
+            // Cargas activas
+            const activas = cargas.filter(c => c.estado === 'activa');
+            document.getElementById('cargasActivas').textContent = activas.length;
+
+            // Entregas hoy
             const entregasHoy = entregas.filter(e => new Date(e.fecha).toDateString() === hoy);
             const totalEntregadosHoy = entregasHoy.reduce((sum, e) => sum + e.pequenos + e.medianos + e.grandes, 0);
             document.getElementById('entregasHoy').textContent = totalEntregadosHoy;
 
-            let totalPendiente = 0;
-            recogidas.forEach(r => {
-                if (r.estado !== 'completa') {
-                    const saldo = obtenerSaldoRecogida(r);
-                    totalPendiente += saldo.total;
+            // Exonerados hoy
+            let exoneradosHoy = 0;
+            entregasHoy.forEach(e => {
+                if (e.exonerados) {
+                    e.exonerados.forEach(ex => {
+                        exoneradosHoy += ex.pequenos + ex.medianos + ex.grandes;
+                    });
                 }
             });
-            document.getElementById('totalPendientes').textContent = totalPendiente;
-        }
-
-        function verDetalle(tipo) {
-            if (tipo === 'cargas') {
-                window.location.href = 'cargas.html';
-            } else {
-                window.location.href = `recogidas.html?filtro=${tipo}`;
-            }
+            document.getElementById('exoneradosHoy').textContent = exoneradosHoy;
         }
 
         document.addEventListener('DOMContentLoaded', function() {
