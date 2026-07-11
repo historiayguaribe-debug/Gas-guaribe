@@ -179,7 +179,6 @@
             document.querySelectorAll('.cargar-input').forEach(input => {
                 const cantidad = parseInt(input.value) || 0;
                 total += cantidad;
-                // Contar exonerados que se van a incluir
                 const recogidaId = parseInt(input.dataset.recogida);
                 const incluirExo = document.getElementById(`incluir_exo_${recogidaId}`).checked;
                 if (incluirExo) {
@@ -196,7 +195,7 @@
             const resumenDiv = document.getElementById('resumenCarga');
             const btn = document.getElementById('btnCrearCarga');
 
-            resumenDiv.textContent = `Total: ${total} cilindros | 🎓 Exonerados: ${exoneradosTotal} | Ganancia estimada: $${(total * 1.5).toFixed(2)}`; // Simulación de ganancia
+            resumenDiv.textContent = `Total: ${total} cilindros | 🎓 Exonerados: ${exoneradosTotal} | Ganancia estimada: $${(total * 1.5).toFixed(2)}`;
             resumenDiv.style.color = '#0d47a1';
             resumenDiv.style.background = '#e3f2fd';
 
