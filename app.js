@@ -1,12 +1,3 @@
-// ============================================================
-// GAS GUARIBE v2.1 - app.js
-// Lógica completa con exoneraciones y cargas como centro
-// ============================================================
-
-// ------------------------------------------------------------
-// 1. CONFIGURACIÓN INICIAL
-// ------------------------------------------------------------
-
 const COMUNIDADES_PREDEFINIDAS = [
     "El Bachiller", "La Mirandera", "Guaribito", "Los Samanes",
     "Santa Rosa", "Santa Rosa de Lima", "Las Delicias", "Delicias Norte",
@@ -31,8 +22,7 @@ const CONFIG_DEFAULT = {
         comercio: { pequeno: 3.00, mediano: 4.50, grande: 6.50 },
         galpon: { pequeno: 2.50, mediano: 3.80, grande: 5.20 }
     },
-    capacidad_camion: 50,
-    gastos_generales: { nomina: 0, alquiler: 0, mantenimiento: 0, repuestos: 0, varios: 0 }
+    capacidad_camion: 50
 };
 
 let datos = {
@@ -44,10 +34,6 @@ let datos = {
     ventas: [],
     gastos: []
 };
-
-// ------------------------------------------------------------
-// 2. PERSISTENCIA
-// ------------------------------------------------------------
 
 function guardarDatos() {
     localStorage.setItem('gasguaribe_datos_v2', JSON.stringify(datos));
@@ -102,14 +88,7 @@ function resetearDatos() {
     guardarDatos();
 }
 
-// ------------------------------------------------------------
-// 3. COMUNIDADES Y PLANTAS
-// ------------------------------------------------------------
-
-function obtenerComunidades() {
-    return datos.comunidades || COMUNIDADES_PREDEFINIDAS;
-}
-
+function obtenerComunidades() { return datos.comunidades || COMUNIDADES_PREDEFINIDAS; }
 function agregarComunidad(nombre) {
     if (!nombre || nombre.trim() === '') return false;
     const limpio = nombre.trim();
@@ -120,23 +99,9 @@ function agregarComunidad(nombre) {
     }
     return false;
 }
-
-function obtenerPlantas() {
-    return datos.config.plantas || PLANTAS_PREDEFINIDAS;
-}
-
-function obtenerPlantaPorId(id) {
-    return (datos.config.plantas || []).find(p => p.id === id);
-}
-
-function guardarPlantas(plantas) {
-    datos.config.plantas = plantas;
-    guardarDatos();
-}
-
-// ------------------------------------------------------------
-// 4. RECOGIDAS
-// ------------------------------------------------------------
+function obtenerPlantas() { return datos.config.plantas || PLANTAS_PREDEFINIDAS; }
+function obtenerPlantaPorId(id) { return (datos.config.plantas || []).find(p => p.id === id); }
+function guardarPlantas(plantas) { datos.config.plantas = plantas; guardarDatos(); }
 
 function registrarRecogida(comunidad, planta, pequenos, medianos, grandes, fecha, observaciones, exonerados_planificados) {
     const recogida = {
@@ -188,19 +153,11 @@ function obtenerSaldoRecogida(recogida) {
 
 function actualizarEstadoRecogida(recogida) {
     const saldo = obtenerSaldoRecogida(recogida);
-    if (saldo.total === 0) {
-        recogida.estado = 'completa';
-    } else if (recogida.enviado.p === 0 && recogida.enviado.m === 0 && recogida.enviado.g === 0) {
-        recogida.estado = 'pendiente';
-    } else {
-        recogida.estado = 'parcial';
-    }
+    if (saldo.total === 0) recogida.estado = 'completa';
+    else if (recogida.enviado.p === 0 && recogida.enviado.m === 0 && recogida.enviado.g === 0) recogida.estado = 'pendiente';
+    else recogida.estado = 'parcial';
     return recogida;
 }
-
-// ------------------------------------------------------------
-// 5. CARGAS (CENTRO DE OPERACIONES)
-// ------------------------------------------------------------
 
 function crearCarga(planta, fecha, items) {
     const carga = {
@@ -270,11 +227,8 @@ function obtenerResumenCarga(cargaId) {
     const carga = datos.cargas.find(c => c.id === cargaId);
     if (!carga) return null;
     const resumen = {
-        totalP: 0,
-        totalM: 0,
-        totalG: 0,
-        totalExonerados: 0,
-        costoExonerados: 0,
+        totalP: 0, totalM: 0, totalG: 0,
+        totalExonerados: 0, costoExonerados: 0,
         comunidades: []
     };
     carga.items.forEach(item => {
@@ -298,10 +252,6 @@ function obtenerResumenCarga(cargaId) {
     });
     return resumen;
 }
-
-// ------------------------------------------------------------
-// 6. ENTREGAS
-// ------------------------------------------------------------
 
 function registrarEntrega(comunidad, pequenos, medianos, grandes, precios, pago_efectivo, pago_transferencia, pago_punto_venta, exonerados, planta, fecha) {
     const entrega = {
@@ -336,10 +286,6 @@ function eliminarEntrega(id) {
     datos.entregas = datos.entregas.filter(e => e.id !== id);
     guardarDatos();
 }
-
-// ------------------------------------------------------------
-// 7. VENTAS Y GASTOS
-// ------------------------------------------------------------
 
 function registrarVenta(cliente, pequenos, medianos, grandes, precio_unitario, fecha) {
     const venta = {
@@ -380,29 +326,14 @@ function eliminarGasto(id) {
     guardarDatos();
 }
 
-// ------------------------------------------------------------
-// 8. DESHACER
-// ------------------------------------------------------------
-
-let ultimoId = null;
-let ultimoTipo = null;
-
 function setUltimo(tipo, id) {
-    ultimoTipo = tipo;
-    ultimoId = id;
     sessionStorage.setItem('ultimo_tipo', tipo);
     sessionStorage.setItem('ultimo_id', id);
 }
 
-function getUltimo() {
-    return {
-        tipo: sessionStorage.getItem('ultimo_tipo'),
-        id: parseInt(sessionStorage.getItem('ultimo_id'))
-    };
-}
-
 function deshacerUltimo() {
-    const { tipo, id } = getUltimo();
+    const tipo = sessionStorage.getItem('ultimo_tipo');
+    const id = parseInt(sessionStorage.getItem('ultimo_id'));
     if (!tipo || !id) return false;
     let eliminado = false;
     switch(tipo) {
@@ -411,19 +342,13 @@ function deshacerUltimo() {
         case 'venta': eliminarVenta(id); eliminado = true; break;
         case 'gasto': eliminarGasto(id); eliminado = true; break;
         case 'carga': eliminarCarga(id); eliminado = true; break;
-        default: return false;
     }
     if (eliminado) {
         sessionStorage.removeItem('ultimo_tipo');
         sessionStorage.removeItem('ultimo_id');
-        return true;
     }
-    return false;
+    return eliminado;
 }
-
-// ------------------------------------------------------------
-// 9. CÁLCULOS Y PRECIOS
-// ------------------------------------------------------------
 
 function calcularTotalEntrega(entrega) {
     const p = entrega.precios || { pequeno: 3.50, mediano: 5.00, grande: 7.50 };
@@ -462,9 +387,7 @@ function obtenerCostoPlanta(plantaId, tamanio) {
 }
 
 function calcularGananciaEstimada(items, plantaId) {
-    let totalIngreso = 0;
-    let totalCosto = 0;
-    let totalExoneradosCosto = 0;
+    let totalIngreso = 0, totalCosto = 0, totalExoneradosCosto = 0;
     items.forEach(item => {
         const tipoCliente = item.tipoCliente || 'comunidad';
         const precios = {
@@ -496,16 +419,9 @@ function obtenerNombrePlanta(plantaId) {
     return planta ? planta.nombre : (plantaId || 'No especificada');
 }
 
-// ------------------------------------------------------------
-// 10. INICIALIZACIÓN
-// ------------------------------------------------------------
-
 cargarDatos();
 
-// ------------------------------------------------------------
-// 11. EXPORTAR FUNCIONES (global)
-// ------------------------------------------------------------
-
+// Exportar globalmente
 window.obtenerComunidades = obtenerComunidades;
 window.agregarComunidad = agregarComunidad;
 window.obtenerPlantas = obtenerPlantas;
