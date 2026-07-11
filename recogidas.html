@@ -15,14 +15,12 @@
         </header>
 
         <form id="formRecogida">
-            <!-- Comunidad -->
             <div class="form-group">
                 <label for="comunidad">Comunidad o cliente</label>
                 <input type="text" id="comunidad" list="listaComunidades" placeholder="Escribe o selecciona" required>
                 <datalist id="listaComunidades"></datalist>
             </div>
 
-            <!-- Cilindros recogidos -->
             <div class="form-group">
                 <label>Cilindros recogidos</label>
                 <div style="display:flex; gap:8px;">
@@ -41,7 +39,6 @@
                 </div>
             </div>
 
-            <!-- Exoneraciones planificadas -->
             <div class="form-group" style="border-top:2px solid #ddd; padding-top:12px;">
                 <label style="font-weight:700;">🎓 Exoneraciones planificadas</label>
                 <div id="listaExoneradosPlanificados" style="margin-bottom:8px;"></div>
@@ -90,7 +87,6 @@
                 </div>
             </div>
 
-            <!-- Fecha -->
             <div class="form-group">
                 <label for="fecha">Fecha</label>
                 <input type="date" id="fecha">
@@ -106,7 +102,6 @@
     <script>
         let exonerados = [];
 
-        // Cargar comunidades
         function cargarComunidades() {
             const comunidades = obtenerComunidades();
             const datalist = document.getElementById('listaComunidades');
@@ -118,7 +113,6 @@
             });
         }
 
-        // Renderizar exonerados
         function renderExonerados() {
             const container = document.getElementById('listaExoneradosPlanificados');
             if (exonerados.length === 0) {
@@ -136,7 +130,6 @@
             container.innerHTML = html;
         }
 
-        // Agregar exonerado
         function agregarExonerado() {
             const destino = document.getElementById('exo_destino').value;
             const institucionSelect = document.getElementById('exo_institucion').value;
@@ -159,7 +152,6 @@
             document.getElementById('exoneradosData').value = JSON.stringify(exonerados);
             renderExonerados();
             
-            // Limpiar campos
             document.getElementById('exo_otro').value = '';
             document.getElementById('exo_pequenos').value = 0;
             document.getElementById('exo_medianos').value = 0;
@@ -173,7 +165,6 @@
             renderExonerados();
         }
 
-        // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
             cargarComunidades();
             if (!document.getElementById('fecha').value) {
@@ -181,7 +172,6 @@
             }
         });
 
-        // Guardar recogida
         document.getElementById('formRecogida').addEventListener('submit', function(e) {
             e.preventDefault();
             const comunidad = document.getElementById('comunidad').value.trim();
