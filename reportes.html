@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Reportes - GAS GUARIBE</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -14,11 +12,6 @@
             <h1>📊 Reportes</h1>
             <a href="index.html" style="color:#0d47a1; text-decoration:none;">← Volver</a>
         </header>
-
-        <div style="display:flex; gap:8px; margin:16px 0;">
-            <button class="menu-btn" onclick="generarExcel()" style="background:#1e7e34;">📥 Excel</button>
-            <button class="menu-btn" onclick="generarPDF()" style="background:#c62828;">📥 PDF</button>
-        </div>
 
         <div class="form-group">
             <label for="tipoReporte">Tipo de reporte</label>
@@ -113,36 +106,6 @@
             }
 
             document.getElementById('reporteContenido').innerHTML = html;
-        }
-
-        function generarExcel() {
-            const tipo = document.getElementById('tipoReporte').value;
-            const datos = obtenerDatos();
-            let data = [];
-
-            if (tipo === 'resumen') {
-                data = [{ 'Indicador': 'Total recogido', 'Valor': datos.recogidas.reduce((s, r) => s + r.pequenos + r.medianos + r.grandes, 0) },
-                        { 'Indicador': 'Total entregado', 'Valor': datos.entregas.reduce((s, e) => s + e.pequenos + e.medianos + e.grandes, 0) }];
-            } else if (tipo === 'exonerados') {
-                datos.entregas.forEach(e => {
-                    if (e.exonerados) {
-                        e.exonerados.forEach(ex => {
-                            data.push({ 'Fecha': new Date(e.fecha).toLocaleDateString(), 'Comunidad': e.comunidad,
-                                        'Institución': ex.institucion, 'P': ex.pequenos, 'M': ex.medianos, 'G': ex.grandes });
-                        });
-                    }
-                });
-            }
-
-            if (data.length === 0) { alert('No hay datos'); return; }
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(data);
-            XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
-            XLSX.writeFile(wb, `Reporte_${tipo}_${new Date().toISOString().slice(0,10)}.xlsx`);
-        }
-
-        function generarPDF() {
-            alert('Función PDF en desarrollo');
         }
 
         document.addEventListener('DOMContentLoaded', cambiarReporte);
