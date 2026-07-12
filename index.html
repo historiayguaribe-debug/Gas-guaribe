@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>GAS GUARIBE - Gestión Municipal</title>
+  <title>Gas Guaribe – GAS | Gestión Administrativa de Suministro de Gas</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Librerías para exportar -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     /* ===== RESET Y ESTILOS GLOBALES ===== */
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,7 +17,7 @@
       background: #f0f4f8;
       color: #1e293b;
       padding: 12px;
-      max-width: 520px;
+      max-width: 580px;
       margin: 0 auto;
     }
     h1, h2, h3 { font-weight: 600; }
@@ -106,12 +110,16 @@
     .btn-secundario:active { background: #d0d7e0; }
     .btn-peligro { background: #f8d7da; color: #842029; }
     .btn-peligro:active { background: #f1c1c7; }
+    .btn-exito { background: #d4edda; color: #0f5132; }
+    .btn-exito:active { background: #c1e0c9; }
 
     .flex { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .flex-entre { justify-content: space-between; }
     .grow { flex: 1; }
     .text-center { text-align: center; }
     .text-muted { color: #6a7a8a; font-size: 0.9rem; }
+    .text-success { color: #2d6a4f; }
+    .text-danger { color: #842029; }
 
     /* ===== LISTAS ===== */
     .item-lista {
@@ -152,7 +160,6 @@
 
     .oculto { display: none; }
 
-    /* ===== MÓVIL ===== */
     @media (max-width: 420px) {
       body { padding: 8px; }
       .nav button { font-size: 0.6rem; padding: 6px 2px; }
@@ -162,6 +169,8 @@
 
     .mb-8 { margin-bottom: 8px; }
     .mt-8 { margin-top: 8px; }
+    .p-2 { padding: 6px; }
+    .border-bottom { border-bottom: 1px solid #e2e8f0; }
   </style>
 </head>
 <body>
@@ -173,12 +182,16 @@
   <button data-vista="carga">🚚 Carga</button>
   <button data-vista="entregas">📦 Entregas</button>
   <button data-vista="gastos">💰 Gastos</button>
+  <button data-vista="config">⚙️ Config</button>
   <button data-vista="reportes">📈 Reportes</button>
 </div>
 
 <!-- ========== VISTA DASHBOARD ========== -->
 <div id="dashboard" class="vista activa">
-  <h1>GAS GUARIBE</h1>
+  <h1>Gas Guaribe <span style="font-size:0.6rem; font-weight:400; color:#0b3b5c;">GAS</span></h1>
+  <p style="font-size:0.85rem; color:#1e4a6b; margin-top:-6px; margin-bottom:16px;">
+    Gestión Administrativa de Suministro de Gas
+  </p>
   <div class="card">
     <h2>Resumen</h2>
     <div class="grid-2" id="resumenStats">
@@ -239,30 +252,10 @@
   </div>
 </div>
 
-<!-- ========== VISTA CARGA (CON PLANTAS) ========== -->
+<!-- ========== VISTA CARGA (CON PLANTAS Y COSTOS POR TAMAÑO) ========== -->
 <div id="carga" class="vista">
   <h2>Armar carga a planta</h2>
-  
-  <!-- CONFIGURACIÓN DE PRECIOS POR PLANTA -->
-  <div class="card">
-    <h3>⚙️ Precios de llenado por planta</h3>
-    <p class="text-muted">Costo por cilindro en cada planta (se actualiza automáticamente).</p>
-    <div class="flex" style="margin-top:8px;">
-      <label style="flex:1; font-weight:400;">Puerto La Cruz:</label>
-      <input type="number" id="precioPLC" step="0.01" min="0" style="width:80px;">
-    </div>
-    <div class="flex">
-      <label style="flex:1; font-weight:400;">Altagracia:</label>
-      <input type="number" id="precioALT" step="0.01" min="0" style="width:80px;">
-    </div>
-    <div class="flex">
-      <label style="flex:1; font-weight:400;">Valle de la Pascua:</label>
-      <input type="number" id="precioVAL" step="0.01" min="0" style="width:80px;">
-    </div>
-    <button class="btn-secundario" id="btnGuardarPrecios" style="margin-top:8px;">Guardar precios</button>
-  </div>
 
-  <!-- ARMAR CARGA -->
   <div class="card">
     <div class="flex flex-entre mb-8">
       <span><strong>Capacidad del camión:</strong></span>
@@ -277,18 +270,29 @@
       <option value="valle_pascua">Valle de la Pascua</option>
     </select>
 
-    <div class="flex flex-entre">
-      <span><strong>Costo unitario (Bs/cil):</strong></span>
-      <span id="mostrarPrecioUnitario">0.00</span>
+    <div id="costosPlantaInfo" class="text-muted" style="margin:8px 0; font-size:0.9rem;">
+      Costos llenado: P: <span id="costoP">0.00</span> | M: <span id="costoM">0.00</span> | G: <span id="costoG">0.00</span>
+      <br>Gasto logístico: <span id="gastoLogistico">0.00</span>
     </div>
 
-    <p class="text-muted" style="margin-top:8px;">Asigna cantidades a enviar de cada recogida con saldo disponible.</p>
+    <label><strong>Filtrar por comunidad</strong></label>
+    <select id="filtroComunidad">
+      <option value="">Todas las comunidades</option>
+    </select>
+
+    <p class="text-muted" style="margin-top:8px;">Selecciona cantidades a enviar de cada recogida con saldo disponible.</p>
     <div id="listaRecogidasCarga"><p class="text-muted">No hay recogidas con saldo.</p></div>
+
+    <div id="resumenCarga" style="margin-top:12px; background:#eef3f8; border-radius:10px; padding:12px;">
+      <div class="flex flex-entre"><span>Total cilindros:</span><span id="resumenTotalCil">0</span></div>
+      <div class="flex flex-entre"><span>Costo llenado:</span><span id="resumenCostoLlenado">0.00</span></div>
+      <div class="flex flex-entre"><span>Gasto logístico:</span><span id="resumenGastoLog">0.00</span></div>
+      <div class="flex flex-entre" style="font-weight:bold;"><span>Costo total estimado:</span><span id="resumenCostoTotal">0.00</span></div>
+    </div>
 
     <button class="btn-primario" id="btnArmarCarga">🚛 Armar carga</button>
   </div>
 
-  <!-- LISTA DE CARGAS CREADAS -->
   <div class="card">
     <h3>Cargas creadas</h3>
     <div id="listaCargas"><p class="text-muted">No hay cargas.</p></div>
@@ -310,7 +314,19 @@
         <input type="number" id="eGrandes" placeholder="G" min="0" value="0" class="grow">
       </div>
 
-      <label>Monto cobrado (Bs)</label>
+      <div class="flex flex-entre">
+        <span><strong>Precios unitarios (Bs):</strong></span>
+        <span>P: <input type="number" id="ePrecioP" step="0.01" min="0" style="width:70px; display:inline;"></span>
+        <span>M: <input type="number" id="ePrecioM" step="0.01" min="0" style="width:70px; display:inline;"></span>
+        <span>G: <input type="number" id="ePrecioG" step="0.01" min="0" style="width:70px; display:inline;"></span>
+      </div>
+
+      <div class="flex flex-entre" style="font-weight:bold;">
+        <span>Monto total calculado:</span>
+        <span id="montoCalculado">0.00</span>
+      </div>
+
+      <label>Monto cobrado (Bs) - puede editarse</label>
       <input type="number" id="eMonto" step="0.01" min="0" value="0">
 
       <label>Referencia a carga (opcional)</label>
@@ -341,9 +357,18 @@
       <select id="gCategoria">
         <option value="transporte">Transporte</option>
         <option value="planta">Planta (llenado)</option>
+        <option value="logistico">Logístico</option>
         <option value="mantenimiento">Mantenimiento</option>
         <option value="administrativo">Administrativo</option>
         <option value="otro">Otro</option>
+      </select>
+
+      <label>Asociar a planta (opcional)</label>
+      <select id="gPlanta">
+        <option value="">Ninguna</option>
+        <option value="puerto_la_cruz">Puerto La Cruz</option>
+        <option value="altagracia">Altagracia</option>
+        <option value="valle_pascua">Valle de la Pascua</option>
       </select>
 
       <button type="submit">Registrar gasto</button>
@@ -356,16 +381,65 @@
   </div>
 </div>
 
+<!-- ========== VISTA CONFIGURACIÓN ========== -->
+<div id="config" class="vista">
+  <h2>⚙️ Configuración</h2>
+  <div class="card">
+    <h3>Precios de llenado por planta y tamaño</h3>
+    <p class="text-muted">Costo por cilindro en cada planta según tamaño (P, M, G).</p>
+    <div style="margin-top:8px;">
+      <div><strong>Puerto La Cruz</strong></div>
+      <div class="flex">
+        <label style="flex:1; font-weight:400;">P: <input type="number" id="cfgPLC_P" step="0.01" min="0" style="width:70px;"></label>
+        <label style="flex:1; font-weight:400;">M: <input type="number" id="cfgPLC_M" step="0.01" min="0" style="width:70px;"></label>
+        <label style="flex:1; font-weight:400;">G: <input type="number" id="cfgPLC_G" step="0.01" min="0" style="width:70px;"></label>
+      </div>
+      <div><strong>Altagracia</strong></div>
+      <div class="flex">
+        <label style="flex:1; font-weight:400;">P: <input type="number" id="cfgALT_P" step="0.01" min="0" style="width:70px;"></label>
+        <label style="flex:1; font-weight:400;">M: <input type="number" id="cfgALT_M" step="0.01" min="0" style="width:70px;"></label>
+        <label style="flex:1; font-weight:400;">G: <input type="number" id="cfgALT_G" step="0.01" min="0" style="width:70px;"></label>
+      </div>
+      <div><strong>Valle de la Pascua</strong></div>
+      <div class="flex">
+        <label style="flex:1; font-weight:400;">P: <input type="number" id="cfgVAL_P" step="0.01" min="0" style="width:70px;"></label>
+        <label style="flex:1; font-weight:400;">M: <input type="number" id="cfgVAL_M" step="0.01" min="0" style="width:70px;"></label>
+        <label style="flex:1; font-weight:400;">G: <input type="number" id="cfgVAL_G" step="0.01" min="0" style="width:70px;"></label>
+      </div>
+    </div>
+
+    <h3 style="margin-top:16px;">Precios de venta por tamaño</h3>
+    <div class="flex">
+      <label style="flex:1; font-weight:400;">P: <input type="number" id="cfgVentaP" step="0.01" min="0" style="width:80px;"></label>
+      <label style="flex:1; font-weight:400;">M: <input type="number" id="cfgVentaM" step="0.01" min="0" style="width:80px;"></label>
+      <label style="flex:1; font-weight:400;">G: <input type="number" id="cfgVentaG" step="0.01" min="0" style="width:80px;"></label>
+    </div>
+
+    <h3 style="margin-top:16px;">Gastos logísticos por planta</h3>
+    <div class="flex">
+      <label style="flex:1; font-weight:400;">PLC: <input type="number" id="cfgLogPLC" step="0.01" min="0" style="width:80px;"></label>
+      <label style="flex:1; font-weight:400;">ALT: <input type="number" id="cfgLogALT" step="0.01" min="0" style="width:80px;"></label>
+      <label style="flex:1; font-weight:400;">VAL: <input type="number" id="cfgLogVAL" step="0.01" min="0" style="width:80px;"></label>
+    </div>
+
+    <button class="btn-primario" id="btnGuardarConfig" style="margin-top:20px;">💾 Guardar configuración</button>
+  </div>
+</div>
+
 <!-- ========== VISTA REPORTES ========== -->
 <div id="reportes" class="vista">
   <h2>Reportes</h2>
   <div class="card">
     <div class="flex" style="gap:8px; flex-wrap:wrap;">
       <button class="btn-secundario" id="btnReporteResumen">📊 Resumen</button>
-      <button class="btn-secundario" id="btnReporteComunidades">🏘️ Por comunidad</button>
+      <button class="btn-secundario" id="btnReporteComunidades">🏘️ Comunidades</button>
       <button class="btn-secundario" id="btnReporteExoneraciones">📋 Exonerados</button>
       <button class="btn-secundario" id="btnReporteGastos">💸 Gastos</button>
       <button class="btn-secundario" id="btnReportePlantas">🏭 Por planta</button>
+    </div>
+    <div style="margin-top:12px; gap:8px; display:flex; flex-wrap:wrap;">
+      <button class="btn-secundario" id="btnExportarExcel">📊 Exportar Excel</button>
+      <button class="btn-secundario" id="btnExportarPDF">📄 Exportar PDF</button>
     </div>
     <div id="contenidoReporte" style="margin-top:16px;">
       <p class="text-muted">Selecciona un reporte.</p>
@@ -381,17 +455,23 @@
     'use strict';
 
     // ---------- CLAVES LOCALSTORAGE ----------
-    const STORAGE_KEY = 'gas_guaribe_data_v5';
+    const STORAGE_KEY = 'gas_guaribe_data_v6';
 
     // ---------- DATOS POR DEFECTO ----------
     function getDefaultData() {
       return {
-        config: { 
+        config: {
           capacidad_camion: 60,
-          precios_plantas: {
-            puerto_la_cruz: 15.00,
-            altagracia: 18.50,
-            valle_pascua: 22.00
+          precios_llenado: {
+            puerto_la_cruz: { p: 2.00, m: 3.00, g: 4.00 },
+            altagracia: { p: 1.50, m: 2.50, g: 3.50 },
+            valle_pascua: { p: 1.00, m: 1.80, g: 2.50 }
+          },
+          precios_venta: { p: 5.00, m: 8.00, g: 12.00 },
+          gastos_logisticos: {
+            puerto_la_cruz: 20.00,
+            altagracia: 35.00,
+            valle_pascua: 50.00
           }
         },
         recogidas: [],
@@ -412,7 +492,9 @@
             if (!(key in parsed)) parsed[key] = def[key];
           }
           // Asegurar subclaves
-          if (!parsed.config.precios_plantas) parsed.config.precios_plantas = def.config.precios_plantas;
+          if (!parsed.config.precios_llenado) parsed.config.precios_llenado = def.config.precios_llenado;
+          if (!parsed.config.precios_venta) parsed.config.precios_venta = def.config.precios_venta;
+          if (!parsed.config.gastos_logisticos) parsed.config.gastos_logisticos = def.config.gastos_logisticos;
           return parsed;
         }
       } catch (e) {
@@ -451,14 +533,12 @@
     // ---------- CÁLCULO DE SALDO DE UNA RECOGIDA ----------
     function obtenerSaldo(recogida) {
       const enviado = recogida.enviado || { p: 0, m: 0, g: 0 };
-      const saldoP = (recogida.pequenos || 0) - (enviado.p || 0);
-      const saldoM = (recogida.medianos || 0) - (enviado.m || 0);
-      const saldoG = (recogida.grandes || 0) - (enviado.g || 0);
       return {
-        p: saldoP,
-        m: saldoM,
-        g: saldoG,
-        total: saldoP + saldoM + saldoG
+        p: (recogida.pequenos || 0) - (enviado.p || 0),
+        m: (recogida.medianos || 0) - (enviado.m || 0),
+        g: (recogida.grandes || 0) - (enviado.g || 0),
+        total: (recogida.pequenos || 0) + (recogida.medianos || 0) + (recogida.grandes || 0) -
+               (enviado.p || 0) - (enviado.m || 0) - (enviado.g || 0)
       };
     }
 
@@ -478,7 +558,6 @@
       document.getElementById('totalEntregas').textContent = totalEnt;
       document.getElementById('totalGastos').textContent = totalGastos.toFixed(2);
 
-      // Últimas 5 recogidas
       const ultRec = data.recogidas.slice(-5).reverse();
       const contRec = document.getElementById('ultimasRecogidas');
       if (ultRec.length === 0) {
@@ -493,7 +572,6 @@
         }).join('');
       }
 
-      // Últimas 5 entregas
       const ultEnt = data.entregas.slice(-5).reverse();
       const contEnt = document.getElementById('ultimasEntregas');
       if (ultEnt.length === 0) {
@@ -516,7 +594,9 @@
         cont.innerHTML = '<p class="text-muted">No hay recogidas.</p>';
         return;
       }
-      cont.innerHTML = data.recogidas.map(r => {
+      // Ordenar por fecha descendente (más reciente primero)
+      const sorted = [...data.recogidas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(r => {
         const saldo = obtenerSaldo(r);
         const exos = r.exonerados ? r.exonerados.map(e => `${e.nombre}(${e.cantidad})`).join(', ') : 'Ninguno';
         return `<div class="item-lista" data-id="${r.id}">
@@ -539,7 +619,11 @@
     }
 
     window.editarRecogida = function(id) {
-      alert('Función de edición: puedes eliminar y volver a crear.');
+      const data = loadData();
+      const r = data.recogidas.find(r => r.id === id);
+      if (!r) return;
+      // Cargar datos en el formulario (aún no implementado, podríamos hacer un modal)
+      alert('Función de edición: puedes eliminar y volver a crear. Datos: ' + JSON.stringify(r));
     };
     window.eliminarRecogida = function(id) {
       if (!confirm('¿Eliminar esta recogida?')) return;
@@ -551,30 +635,69 @@
 
     // ---------- VISTA CARGA: PRECIOS Y LISTA DE RECOGIDAS DISPONIBLES ----------
     function cargarPreciosUI(data) {
-      const p = data.config.precios_plantas;
-      document.getElementById('precioPLC').value = p.puerto_la_cruz || 0;
-      document.getElementById('precioALT').value = p.altagracia || 0;
-      document.getElementById('precioVAL').value = p.valle_pascua || 0;
-      actualizarPrecioUnitario();
+      const cfg = data.config;
+      document.getElementById('cfgPLC_P').value = cfg.precios_llenado.puerto_la_cruz.p || 0;
+      document.getElementById('cfgPLC_M').value = cfg.precios_llenado.puerto_la_cruz.m || 0;
+      document.getElementById('cfgPLC_G').value = cfg.precios_llenado.puerto_la_cruz.g || 0;
+      document.getElementById('cfgALT_P').value = cfg.precios_llenado.altagracia.p || 0;
+      document.getElementById('cfgALT_M').value = cfg.precios_llenado.altagracia.m || 0;
+      document.getElementById('cfgALT_G').value = cfg.precios_llenado.altagracia.g || 0;
+      document.getElementById('cfgVAL_P').value = cfg.precios_llenado.valle_pascua.p || 0;
+      document.getElementById('cfgVAL_M').value = cfg.precios_llenado.valle_pascua.m || 0;
+      document.getElementById('cfgVAL_G').value = cfg.precios_llenado.valle_pascua.g || 0;
+
+      document.getElementById('cfgVentaP').value = cfg.precios_venta.p || 0;
+      document.getElementById('cfgVentaM').value = cfg.precios_venta.m || 0;
+      document.getElementById('cfgVentaG').value = cfg.precios_venta.g || 0;
+
+      document.getElementById('cfgLogPLC').value = cfg.gastos_logisticos.puerto_la_cruz || 0;
+      document.getElementById('cfgLogALT').value = cfg.gastos_logisticos.altagracia || 0;
+      document.getElementById('cfgLogVAL').value = cfg.gastos_logisticos.valle_pascua || 0;
     }
 
-    function actualizarPrecioUnitario() {
-      const select = document.getElementById('selectPlanta');
-      const precioMap = {
-        'puerto_la_cruz': parseFloat(document.getElementById('precioPLC').value) || 0,
-        'altagracia': parseFloat(document.getElementById('precioALT').value) || 0,
-        'valle_pascua': parseFloat(document.getElementById('precioVAL').value) || 0
-      };
-      const planta = select.value;
-      document.getElementById('mostrarPrecioUnitario').textContent = precioMap[planta].toFixed(2);
+    function actualizarCostosPlanta() {
+      const data = loadData();
+      const planta = document.getElementById('selectPlanta').value;
+      const precios = data.config.precios_llenado[planta] || { p:0, m:0, g:0 };
+      document.getElementById('costoP').textContent = precios.p.toFixed(2);
+      document.getElementById('costoM').textContent = precios.m.toFixed(2);
+      document.getElementById('costoG').textContent = precios.g.toFixed(2);
+      const log = data.config.gastos_logisticos[planta] || 0;
+      document.getElementById('gastoLogistico').textContent = log.toFixed(2);
+      // Actualizar resumen de carga
+      calcularResumenCarga();
+    }
+
+    function actualizarFiltroComunidad(data) {
+      const select = document.getElementById('filtroComunidad');
+      const comunidades = new Set();
+      data.recogidas.forEach(r => {
+        if (obtenerSaldo(r).total > 0) comunidades.add(r.comunidad);
+      });
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">Todas las comunidades</option>';
+      comunidades.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        select.appendChild(opt);
+      });
+      select.value = currentVal;
+      renderListaCarga(data);
     }
 
     function renderListaCarga(data) {
       const cont = document.getElementById('listaRecogidasCarga');
-      const disponibles = data.recogidas.filter(r => obtenerSaldo(r).total > 0);
+      const filtro = document.getElementById('filtroComunidad').value;
+      let disponibles = data.recogidas.filter(r => obtenerSaldo(r).total > 0);
+      if (filtro) {
+        disponibles = disponibles.filter(r => r.comunidad === filtro);
+      }
+      // Ordenar por fecha descendente
+      disponibles.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
 
       if (disponibles.length === 0) {
-        cont.innerHTML = '<p class="text-muted">No hay recogidas con saldo disponible.</p>';
+        cont.innerHTML = '<p class="text-muted">No hay recogidas con saldo disponible para esta comunidad.</p>';
         return;
       }
 
@@ -603,6 +726,39 @@
         </div>`;
       });
       cont.innerHTML = html;
+
+      // Agregar eventos para recalcular resumen
+      document.querySelectorAll('.cantidad-carga').forEach(inp => {
+        inp.addEventListener('input', calcularResumenCarga);
+      });
+      calcularResumenCarga();
+    }
+
+    function calcularResumenCarga() {
+      const data = loadData();
+      const planta = document.getElementById('selectPlanta').value;
+      const precios = data.config.precios_llenado[planta] || { p:0, m:0, g:0 };
+      const gastoLog = data.config.gastos_logisticos[planta] || 0;
+
+      let totalP = 0, totalM = 0, totalG = 0;
+      document.querySelectorAll('.cantidad-carga').forEach(inp => {
+        const val = parseInt(inp.value) || 0;
+        const tipo = inp.dataset.tipo;
+        if (tipo === 'p') totalP += val;
+        else if (tipo === 'm') totalM += val;
+        else if (tipo === 'g') totalG += val;
+      });
+      const totalCil = totalP + totalM + totalG;
+      const costoP = totalP * precios.p;
+      const costoM = totalM * precios.m;
+      const costoG = totalG * precios.g;
+      const costoLlenado = costoP + costoM + costoG;
+      const costoTotal = costoLlenado + gastoLog;
+
+      document.getElementById('resumenTotalCil').textContent = totalCil;
+      document.getElementById('resumenCostoLlenado').textContent = costoLlenado.toFixed(2);
+      document.getElementById('resumenGastoLog').textContent = gastoLog.toFixed(2);
+      document.getElementById('resumenCostoTotal').textContent = costoTotal.toFixed(2);
     }
 
     // ---------- VISTA CARGA: LISTA DE CARGAS CREADAS ----------
@@ -612,7 +768,8 @@
         cont.innerHTML = '<p class="text-muted">No hay cargas creadas.</p>';
         return;
       }
-      cont.innerHTML = data.cargas.map(c => {
+      const sorted = [...data.cargas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(c => {
         const estado = c.estado || 'armada';
         let badgeClass = '';
         let estadoTexto = estado.toUpperCase();
@@ -621,6 +778,7 @@
         else { badgeClass = 'badge-info'; estadoTexto = 'ARMADA'; }
 
         const plantaNom = nombrePlanta(c.plantaDestino) || 'Sin planta';
+        const costos = c.costos || { llenado: { total: 0 }, logistico: 0, total: 0 };
         return `<div class="item-lista">
           <div class="flex flex-entre">
             <span><strong>Carga #${c.id}</strong> (${c.total_cilindros} cil.)</span>
@@ -628,8 +786,7 @@
           </div>
           <div class="text-muted" style="font-size:0.85rem;">
             Fecha: ${formatearFecha(c.fecha)}<br>
-            Planta: <strong>${plantaNom}</strong> | Costo llenado: Bs ${(c.costoLlenadoTotal || 0).toFixed(2)} (${(c.costoLlenadoUnitario || 0).toFixed(2)} Bs/cil)<br>
-            Origen: ${c.origen.map(o => `ID ${o.recogidaId} (P${o.p} M${o.m} G${o.g})`).join('; ')}
+            Planta: <strong>${plantaNom}</strong> | Costo llenado: Bs ${(costos.llenado.total || 0).toFixed(2)} | Logístico: Bs ${(costos.logistico || 0).toFixed(2)} | Total: Bs ${(costos.total || 0).toFixed(2)}
           </div>
           <div class="flex" style="margin-top:4px;">
             ${estado === 'armada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="enviarCarga(${c.id})">📤 Enviar a planta</button>` : ''}
@@ -640,28 +797,40 @@
       }).join('');
     }
 
-    // Funciones globales para cargas (con integración a gastos)
     window.enviarCarga = function(id) {
       const data = loadData();
       const carga = data.cargas.find(c => c.id === id);
       if (!carga) return;
       
-      // Registrar el gasto de llenado automáticamente
-      if (carga.costoLlenadoTotal && carga.costoLlenadoTotal > 0) {
+      // Registrar gasto de llenado automáticamente
+      if (carga.costos && carga.costos.llenado.total > 0) {
         data.gastos.push({
           id: generarId(),
           concepto: `Llenado planta ${nombrePlanta(carga.plantaDestino)} (Carga #${carga.id})`,
-          monto: carga.costoLlenadoTotal,
+          monto: carga.costos.llenado.total,
           categoria: 'planta',
           fecha: new Date().toISOString(),
-          cargaId: carga.id
+          cargaId: carga.id,
+          planta: carga.plantaDestino
+        });
+      }
+      // Registrar gasto logístico si existe
+      if (carga.costos && carga.costos.logistico > 0) {
+        data.gastos.push({
+          id: generarId(),
+          concepto: `Gasto logístico ${nombrePlanta(carga.plantaDestino)} (Carga #${carga.id})`,
+          monto: carga.costos.logistico,
+          categoria: 'logistico',
+          fecha: new Date().toISOString(),
+          cargaId: carga.id,
+          planta: carga.plantaDestino
         });
       }
 
       carga.estado = 'enviada';
       saveData(data);
       actualizarApp();
-      alert(`✅ Carga enviada a ${nombrePlanta(carga.plantaDestino)}. Gasto de llenado registrado automáticamente.`);
+      alert(`✅ Carga enviada a ${nombrePlanta(carga.plantaDestino)}. Gastos registrados automáticamente.`);
     };
 
     window.regresarCarga = function(id) {
@@ -682,14 +851,42 @@
       actualizarApp();
     };
 
-    // ---------- VISTA ENTREGAS: LISTA ----------
+    // ---------- VISTA ENTREGAS: FORMULARIO Y LISTA ----------
+    function setupEntregaCalculo() {
+      const inputs = ['ePequenos', 'eMedianos', 'eGrandes', 'ePrecioP', 'ePrecioM', 'ePrecioG'];
+      inputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', calcularMontoEntrega);
+      });
+    }
+
+    function calcularMontoEntrega() {
+      const p = parseInt(document.getElementById('ePequenos').value) || 0;
+      const m = parseInt(document.getElementById('eMedianos').value) || 0;
+      const g = parseInt(document.getElementById('eGrandes').value) || 0;
+      const precioP = parseFloat(document.getElementById('ePrecioP').value) || 0;
+      const precioM = parseFloat(document.getElementById('ePrecioM').value) || 0;
+      const precioG = parseFloat(document.getElementById('ePrecioG').value) || 0;
+      const total = p*precioP + m*precioM + g*precioG;
+      document.getElementById('montoCalculado').textContent = total.toFixed(2);
+      document.getElementById('eMonto').value = total.toFixed(2);
+    }
+
+    function cargarPreciosVentaEnEntrega(data) {
+      const precios = data.config.precios_venta || { p:0, m:0, g:0 };
+      document.getElementById('ePrecioP').value = precios.p;
+      document.getElementById('ePrecioM').value = precios.m;
+      document.getElementById('ePrecioG').value = precios.g;
+      calcularMontoEntrega();
+    }
+
     function renderListaEntregas(data) {
       const cont = document.getElementById('listaEntregas');
       if (data.entregas.length === 0) {
         cont.innerHTML = '<p class="text-muted">No hay entregas.</p>';
         return;
       }
-      cont.innerHTML = data.entregas.map(e => {
+      const sorted = [...data.entregas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(e => {
         const total = (e.pequenos||0)+(e.medianos||0)+(e.grandes||0);
         return `<div class="item-lista">
           <div class="flex flex-entre">
@@ -717,10 +914,12 @@
         cont.innerHTML = '<p class="text-muted">No hay gastos.</p>';
         return;
       }
-      cont.innerHTML = data.gastos.map(g => {
+      const sorted = [...data.gastos].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(g => {
+        const planta = g.planta ? nombrePlanta(g.planta) : '';
         return `<div class="item-lista">
           <div class="flex flex-entre">
-            <span><strong>${g.concepto}</strong> (${g.categoria})</span>
+            <span><strong>${g.concepto}</strong> (${g.categoria}) ${planta ? ' - '+planta : ''}</span>
             <span class="badge">Bs ${(g.monto||0).toFixed(2)}</span>
           </div>
           <div class="text-muted" style="font-size:0.85rem;">${formatearFecha(g.fecha)}</div>
@@ -832,28 +1031,238 @@
       return html;
     }
 
-    // NUEVO REPORTE POR PLANTA
     function renderReportePlantas(data) {
       const mapa = {};
       data.cargas.forEach(c => {
         const planta = c.plantaDestino || 'sin_definir';
-        if (!mapa[planta]) mapa[planta] = { cilindros: 0, costo: 0, cargas: 0 };
+        if (!mapa[planta]) mapa[planta] = { cilindros: 0, costo_llenado: 0, costo_logistico: 0, cargas: 0 };
+        const costos = c.costos || { llenado: { total: 0 }, logistico: 0 };
         mapa[planta].cilindros += (c.total_cilindros || 0);
-        mapa[planta].costo += (c.costoLlenadoTotal || 0);
+        mapa[planta].costo_llenado += (costos.llenado.total || 0);
+        mapa[planta].costo_logistico += (costos.logistico || 0);
         mapa[planta].cargas += 1;
+      });
+      // Agregar gastos logísticos generales asociados a planta
+      data.gastos.forEach(g => {
+        if (g.planta && g.categoria === 'logistico') {
+          if (!mapa[g.planta]) mapa[g.planta] = { cilindros: 0, costo_llenado: 0, costo_logistico: 0, cargas: 0 };
+          mapa[g.planta].costo_logistico += (g.monto || 0);
+        }
       });
 
       const claves = Object.keys(mapa);
-      if (claves.length === 0) return '<p class="text-muted">No hay cargas registradas en plantas.</p>';
+      if (claves.length === 0) return '<p class="text-muted">No hay datos de plantas.</p>';
       let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-        <tr><th>Planta</th><th>Cargas</th><th>Cilindros</th><th>Costo total (Bs)</th></tr>`;
+        <tr><th>Planta</th><th>Cargas</th><th>Cilindros</th><th>Costo llenado</th><th>Costo logístico</th><th>Total</th></tr>`;
       claves.forEach(key => {
         const d = mapa[key];
-        const nom = nombrePlanta(key);
-        html += `<tr><td><strong>${nom}</strong></td><td>${d.cargas}</td><td>${d.cilindros}</td><td>${d.costo.toFixed(2)}</td></tr>`;
+        const total = d.costo_llenado + d.costo_logistico;
+        html += `<tr><td><strong>${nombrePlanta(key)}</strong></td><td>${d.cargas}</td><td>${d.cilindros}</td><td>${d.costo_llenado.toFixed(2)}</td><td>${d.costo_logistico.toFixed(2)}</td><td>${total.toFixed(2)}</td></tr>`;
       });
       html += '</table>';
       return html;
+    }
+
+    // ---------- EXPORTAR EXCEL Y PDF ----------
+    function exportarExcel(data) {
+      const wb = XLSX.utils.book_new();
+
+      const resumen = [
+        ['Gas Guaribe – GAS', 'Gestión Administrativa de Suministro de Gas'],
+        [''],
+        ['Métrica', 'Valor'],
+        ['Total Recogidas', data.recogidas.length],
+        ['Total Cilindros', data.recogidas.reduce((acc, r) => acc + (r.pequenos||0)+(r.medianos||0)+(r.grandes||0), 0)],
+        ['Total Cargas', data.cargas.length],
+        ['Total Entregas', data.entregas.length],
+        ['Total Gastos', data.gastos.reduce((acc, g) => acc + (g.monto||0), 0)],
+        ['Total Ventas', data.entregas.reduce((acc, e) => acc + (e.monto_cobrado||0), 0)]
+      ];
+      const ws1 = XLSX.utils.aoa_to_sheet(resumen);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
+
+      if (data.recogidas.length) {
+        const recRows = [['ID', 'Comunidad', 'P', 'M', 'G', 'Total', 'Cobro (Bs)', 'Fecha', 'Exonerados']];
+        data.recogidas.forEach(r => {
+          const exos = (r.exonerados || []).map(e => `${e.nombre}(${e.cantidad})`).join(', ');
+          recRows.push([r.id, r.comunidad, r.pequenos||0, r.medianos||0, r.grandes||0, 
+            (r.pequenos||0)+(r.medianos||0)+(r.grandes||0), r.cobro||0, r.fecha, exos]);
+        });
+        const ws2 = XLSX.utils.aoa_to_sheet(recRows);
+        XLSX.utils.book_append_sheet(wb, ws2, 'Recogidas');
+      }
+
+      if (data.cargas.length) {
+        const carRows = [['ID', 'Fecha', 'Planta', 'Total Cil.', 'Costo Llenado', 'Costo Logístico', 'Costo Total', 'Estado']];
+        data.cargas.forEach(c => {
+          const costos = c.costos || { llenado: { total: 0 }, logistico: 0, total: 0 };
+          carRows.push([c.id, c.fecha, nombrePlanta(c.plantaDestino), c.total_cilindros, 
+            costos.llenado.total || 0, costos.logistico || 0, costos.total || 0, c.estado]);
+        });
+        const ws3 = XLSX.utils.aoa_to_sheet(carRows);
+        XLSX.utils.book_append_sheet(wb, ws3, 'Cargas');
+      }
+
+      if (data.entregas.length) {
+        const entRows = [['ID', 'Comunidad', 'P', 'M', 'G', 'Total', 'Monto Cobrado', 'Fecha', 'Carga ID']];
+        data.entregas.forEach(e => {
+          entRows.push([e.id, e.comunidad, e.pequenos||0, e.medianos||0, e.grandes||0,
+            (e.pequenos||0)+(e.medianos||0)+(e.grandes||0), e.monto_cobrado||0, e.fecha, e.cargaId||'']);
+        });
+        const ws4 = XLSX.utils.aoa_to_sheet(entRows);
+        XLSX.utils.book_append_sheet(wb, ws4, 'Entregas');
+      }
+
+      if (data.gastos.length) {
+        const gasRows = [['ID', 'Concepto', 'Monto', 'Categoría', 'Planta', 'Fecha']];
+        data.gastos.forEach(g => {
+          gasRows.push([g.id, g.concepto, g.monto||0, g.categoria, g.planta ? nombrePlanta(g.planta) : '', g.fecha]);
+        });
+        const ws5 = XLSX.utils.aoa_to_sheet(gasRows);
+        XLSX.utils.book_append_sheet(wb, ws5, 'Gastos');
+      }
+
+      XLSX.writeFile(wb, `GasGuaribe_GAS_Reporte_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    function exportarPDF(data) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('landscape', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      doc.setFontSize(16);
+      doc.text('Gas Guaribe – GAS', pageWidth/2, 15, { align: 'center' });
+      doc.setFontSize(11);
+      doc.text('Gestión Administrativa de Suministro de Gas', pageWidth/2, 22, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text(`Generado: ${new Date().toLocaleString()}`, pageWidth/2, 29, { align: 'center' });
+
+      let y = 36;
+
+      doc.setFontSize(12);
+      doc.text('Resumen', 14, y);
+      y += 6;
+      const resumenData = [
+        ['Métrica', 'Valor'],
+        ['Total Recogidas', data.recogidas.length],
+        ['Total Cilindros', data.recogidas.reduce((acc, r) => acc + (r.pequenos||0)+(r.medianos||0)+(r.grandes||0), 0)],
+        ['Total Cargas', data.cargas.length],
+        ['Total Entregas', data.entregas.length],
+        ['Total Gastos', data.gastos.reduce((acc, g) => acc + (g.monto||0), 0).toFixed(2)],
+        ['Total Ventas', data.entregas.reduce((acc, e) => acc + (e.monto_cobrado||0), 0).toFixed(2)]
+      ];
+      doc.autoTable({
+        startY: y,
+        head: [resumenData[0]],
+        body: resumenData.slice(1),
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [11, 59, 92] },
+        margin: { left: 14, right: 14 }
+      });
+      y = doc.lastAutoTable.finalY + 6;
+
+      if (data.recogidas.length) {
+        doc.text('Recogidas', 14, y);
+        y += 6;
+        const recRows = data.recogidas.map(r => [
+          r.comunidad,
+          r.pequenos||0,
+          r.medianos||0,
+          r.grandes||0,
+          (r.pequenos||0)+(r.medianos||0)+(r.grandes||0),
+          (r.cobro||0).toFixed(2),
+          (r.exonerados || []).map(e => `${e.nombre}(${e.cantidad})`).join(', ')
+        ]);
+        doc.autoTable({
+          startY: y,
+          head: [['Comunidad', 'P', 'M', 'G', 'Total', 'Cobro', 'Exonerados']],
+          body: recRows,
+          theme: 'striped',
+          styles: { fontSize: 7 },
+          headStyles: { fillColor: [11, 59, 92] },
+          margin: { left: 14, right: 14 }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+      }
+
+      if (data.cargas.length) {
+        if (y > 190) { doc.addPage(); y = 20; }
+        doc.text('Cargas', 14, y);
+        y += 6;
+        const carRows = data.cargas.map(c => {
+          const costos = c.costos || { llenado: { total: 0 }, logistico: 0, total: 0 };
+          return [
+            c.id,
+            new Date(c.fecha).toLocaleDateString(),
+            nombrePlanta(c.plantaDestino),
+            c.total_cilindros,
+            (costos.llenado.total || 0).toFixed(2),
+            (costos.logistico || 0).toFixed(2),
+            (costos.total || 0).toFixed(2),
+            c.estado
+          ];
+        });
+        doc.autoTable({
+          startY: y,
+          head: [['ID', 'Fecha', 'Planta', 'Total', 'Costo Llen.', 'Costo Log.', 'Costo Total', 'Estado']],
+          body: carRows,
+          theme: 'striped',
+          styles: { fontSize: 7 },
+          headStyles: { fillColor: [11, 59, 92] },
+          margin: { left: 14, right: 14 }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+      }
+
+      if (data.entregas.length) {
+        if (y > 190) { doc.addPage(); y = 20; }
+        doc.text('Entregas', 14, y);
+        y += 6;
+        const entRows = data.entregas.map(e => [
+          e.comunidad,
+          e.pequenos||0,
+          e.medianos||0,
+          e.grandes||0,
+          (e.pequenos||0)+(e.medianos||0)+(e.grandes||0),
+          (e.monto_cobrado||0).toFixed(2),
+          new Date(e.fecha).toLocaleDateString()
+        ]);
+        doc.autoTable({
+          startY: y,
+          head: [['Comunidad', 'P', 'M', 'G', 'Total', 'Monto', 'Fecha']],
+          body: entRows,
+          theme: 'striped',
+          styles: { fontSize: 7 },
+          headStyles: { fillColor: [11, 59, 92] },
+          margin: { left: 14, right: 14 }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+      }
+
+      if (data.gastos.length) {
+        if (y > 190) { doc.addPage(); y = 20; }
+        doc.text('Gastos', 14, y);
+        y += 6;
+        const gasRows = data.gastos.map(g => [
+          g.concepto,
+          (g.monto||0).toFixed(2),
+          g.categoria,
+          g.planta ? nombrePlanta(g.planta) : '',
+          new Date(g.fecha).toLocaleDateString()
+        ]);
+        doc.autoTable({
+          startY: y,
+          head: [['Concepto', 'Monto', 'Categoría', 'Planta', 'Fecha']],
+          body: gasRows,
+          theme: 'striped',
+          styles: { fontSize: 7 },
+          headStyles: { fillColor: [11, 59, 92] },
+          margin: { left: 14, right: 14 }
+        });
+      }
+
+      doc.save(`GasGuaribe_GAS_Reporte_${new Date().toISOString().slice(0,10)}.pdf`);
     }
 
     // ---------- ACTUALIZAR TODA LA APLICACIÓN ----------
@@ -862,12 +1271,13 @@
       renderDashboard(data);
       renderListaRecogidas(data);
       cargarPreciosUI(data);
+      actualizarFiltroComunidad(data);
       renderListaCarga(data);
       renderListaCargas(data);
       renderListaEntregas(data);
       renderListaGastos(data);
+      cargarPreciosVentaEnEntrega(data);
       
-      // Actualizar select de cargas en entrega
       const select = document.getElementById('eCargaId');
       const currentVal = select.value;
       select.innerHTML = '<option value="">Sin referencia</option>';
@@ -879,8 +1289,8 @@
       });
       select.value = currentVal;
 
-      // Capacidad
       document.getElementById('capacidadCamion').value = data.config.capacidad_camion || 60;
+      actualizarCostosPlanta();
     }
 
     // ---------- CONFIGURAR FORMULARIOS ----------
@@ -969,6 +1379,9 @@
         const g = parseInt(document.getElementById('eGrandes').value) || 0;
         const monto = parseFloat(document.getElementById('eMonto').value) || 0;
         const cargaId = document.getElementById('eCargaId').value ? parseInt(document.getElementById('eCargaId').value) : null;
+        const precioP = parseFloat(document.getElementById('ePrecioP').value) || 0;
+        const precioM = parseFloat(document.getElementById('ePrecioM').value) || 0;
+        const precioG = parseFloat(document.getElementById('ePrecioG').value) || 0;
 
         if (!comunidad) { alert('La comunidad es obligatoria.'); return; }
         if (p + m + g === 0) { alert('Debes entregar al menos un cilindro.'); return; }
@@ -980,6 +1393,7 @@
           pequenos: p,
           medianos: m,
           grandes: g,
+          precios_unitarios: { p: precioP, m: precioM, g: precioG },
           monto_cobrado: monto,
           fecha: new Date().toISOString(),
           cargaId: cargaId
@@ -990,6 +1404,7 @@
         document.getElementById('eMedianos').value = 0;
         document.getElementById('eGrandes').value = 0;
         document.getElementById('eMonto').value = 0;
+        cargarPreciosVentaEnEntrega(data);
         actualizarApp();
         alert('✅ Entrega registrada.');
       });
@@ -1002,6 +1417,7 @@
         const concepto = document.getElementById('gConcepto').value.trim();
         const monto = parseFloat(document.getElementById('gMonto').value);
         const categoria = document.getElementById('gCategoria').value;
+        const planta = document.getElementById('gPlanta').value || null;
 
         if (!concepto || !monto || monto <= 0) {
           alert('Completa todos los campos.');
@@ -1014,6 +1430,7 @@
           concepto,
           monto,
           categoria,
+          planta: planta,
           fecha: new Date().toISOString()
         });
         saveData(data);
@@ -1024,30 +1441,43 @@
     }
 
     // ---------- CONFIGURACIÓN DE PRECIOS ----------
-    function setupPrecios() {
-      document.getElementById('btnGuardarPrecios').addEventListener('click', function() {
+    function setupConfiguracion() {
+      document.getElementById('btnGuardarConfig').addEventListener('click', function() {
         const data = loadData();
-        data.config.precios_plantas = {
-          puerto_la_cruz: parseFloat(document.getElementById('precioPLC').value) || 0,
-          altagracia: parseFloat(document.getElementById('precioALT').value) || 0,
-          valle_pascua: parseFloat(document.getElementById('precioVAL').value) || 0
+        data.config.precios_llenado = {
+          puerto_la_cruz: {
+            p: parseFloat(document.getElementById('cfgPLC_P').value) || 0,
+            m: parseFloat(document.getElementById('cfgPLC_M').value) || 0,
+            g: parseFloat(document.getElementById('cfgPLC_G').value) || 0
+          },
+          altagracia: {
+            p: parseFloat(document.getElementById('cfgALT_P').value) || 0,
+            m: parseFloat(document.getElementById('cfgALT_M').value) || 0,
+            g: parseFloat(document.getElementById('cfgALT_G').value) || 0
+          },
+          valle_pascua: {
+            p: parseFloat(document.getElementById('cfgVAL_P').value) || 0,
+            m: parseFloat(document.getElementById('cfgVAL_M').value) || 0,
+            g: parseFloat(document.getElementById('cfgVAL_G').value) || 0
+          }
+        };
+        data.config.precios_venta = {
+          p: parseFloat(document.getElementById('cfgVentaP').value) || 0,
+          m: parseFloat(document.getElementById('cfgVentaM').value) || 0,
+          g: parseFloat(document.getElementById('cfgVentaG').value) || 0
+        };
+        data.config.gastos_logisticos = {
+          puerto_la_cruz: parseFloat(document.getElementById('cfgLogPLC').value) || 0,
+          altagracia: parseFloat(document.getElementById('cfgLogALT').value) || 0,
+          valle_pascua: parseFloat(document.getElementById('cfgLogVAL').value) || 0
         };
         saveData(data);
-        actualizarPrecioUnitario();
-        alert('✅ Precios guardados correctamente.');
+        actualizarApp();
+        alert('✅ Configuración guardada correctamente.');
       });
-
-      document.getElementById('selectPlanta').addEventListener('change', function() {
-        actualizarPrecioUnitario();
-      });
-
-      // Actualizar precio unitario al cambiar inputs
-      document.getElementById('precioPLC').addEventListener('input', actualizarPrecioUnitario);
-      document.getElementById('precioALT').addEventListener('input', actualizarPrecioUnitario);
-      document.getElementById('precioVAL').addEventListener('input', actualizarPrecioUnitario);
     }
 
-    // ---------- ARMAR CARGA (CON PLANTA Y COSTO) ----------
+    // ---------- ARMAR CARGA ----------
     function setupArmarCarga() {
       document.getElementById('btnArmarCarga').addEventListener('click', function() {
         const data = loadData();
@@ -1077,16 +1507,10 @@
           return;
         }
 
-        // Obtener planta seleccionada y su precio
         const plantaDestino = document.getElementById('selectPlanta').value;
-        const precioMap = {
-          'puerto_la_cruz': parseFloat(document.getElementById('precioPLC').value) || 0,
-          'altagracia': parseFloat(document.getElementById('precioALT').value) || 0,
-          'valle_pascua': parseFloat(document.getElementById('precioVAL').value) || 0
-        };
-        const costoUnitario = precioMap[plantaDestino] || 0;
-        if (costoUnitario <= 0) {
-          alert('El costo de llenado para esta planta es 0 o no está configurado. Configura los precios primero.');
+        const precios = data.config.precios_llenado[plantaDestino] || { p:0, m:0, g:0 };
+        if (precios.p <= 0 && precios.m <= 0 && precios.g <= 0) {
+          alert('Los precios de llenado para esta planta no están configurados. Ve a Configuración.');
           return;
         }
 
@@ -1102,12 +1526,28 @@
           }
         }
 
+        // Calcular costos
+        let totalP = 0, totalM = 0, totalG = 0;
+        ids.forEach(id => {
+          totalP += seleccion[id].p || 0;
+          totalM += seleccion[id].m || 0;
+          totalG += seleccion[id].g || 0;
+        });
+        const costoLlenado = {
+          p: totalP * precios.p,
+          m: totalM * precios.m,
+          g: totalG * precios.g,
+          total: totalP * precios.p + totalM * precios.m + totalG * precios.g
+        };
+        const gastoLogistico = data.config.gastos_logisticos[plantaDestino] || 0;
+        const costoTotal = costoLlenado.total + gastoLogistico;
+
         // Crear carga
         const origen = ids.map(id => ({
           recogidaId: id,
-          p: seleccion[id].p,
-          m: seleccion[id].m,
-          g: seleccion[id].g
+          p: seleccion[id].p || 0,
+          m: seleccion[id].m || 0,
+          g: seleccion[id].g || 0
         }));
 
         const carga = {
@@ -1116,8 +1556,11 @@
           origen: origen,
           total_cilindros: totalSeleccionado,
           plantaDestino: plantaDestino,
-          costoLlenadoUnitario: costoUnitario,
-          costoLlenadoTotal: totalSeleccionado * costoUnitario,
+          costos: {
+            llenado: costoLlenado,
+            logistico: gastoLogistico,
+            total: costoTotal
+          },
           estado: 'armada'
         };
         data.cargas.push(carga);
@@ -1127,15 +1570,15 @@
           const rec = data.recogidas.find(r => r.id === id);
           if (rec) {
             rec.enviado = rec.enviado || { p:0, m:0, g:0 };
-            rec.enviado.p += seleccion[id].p;
-            rec.enviado.m += seleccion[id].m;
-            rec.enviado.g += seleccion[id].g;
+            rec.enviado.p += seleccion[id].p || 0;
+            rec.enviado.m += seleccion[id].m || 0;
+            rec.enviado.g += seleccion[id].g || 0;
           }
         });
 
         saveData(data);
         actualizarApp();
-        alert(`✅ Carga armada exitosamente (${totalSeleccionado} cilindros) hacia ${nombrePlanta(plantaDestino)}. Costo llenado: Bs ${carga.costoLlenadoTotal.toFixed(2)}`);
+        alert(`✅ Carga armada exitosamente (${totalSeleccionado} cilindros) hacia ${nombrePlanta(plantaDestino)}. Costo total estimado: Bs ${costoTotal.toFixed(2)}`);
       });
     }
 
@@ -1163,6 +1606,7 @@
         carga: document.getElementById('carga'),
         entregas: document.getElementById('entregas'),
         gastos: document.getElementById('gastos'),
+        config: document.getElementById('config'),
         reportes: document.getElementById('reportes')
       };
 
@@ -1174,7 +1618,7 @@
           Object.keys(vistas).forEach(key => {
             vistas[key].classList.toggle('activa', key === vista);
           });
-          if (['carga', 'dashboard', 'entregas', 'gastos', 'reportes'].includes(vista)) {
+          if (['carga', 'dashboard', 'entregas', 'gastos', 'config', 'reportes'].includes(vista)) {
             actualizarApp();
           }
         });
@@ -1203,6 +1647,15 @@
         const data = loadData();
         document.getElementById('contenidoReporte').innerHTML = renderReportePlantas(data);
       });
+
+      document.getElementById('btnExportarExcel').addEventListener('click', function() {
+        const data = loadData();
+        exportarExcel(data);
+      });
+      document.getElementById('btnExportarPDF').addEventListener('click', function() {
+        const data = loadData();
+        exportarPDF(data);
+      });
     }
 
     // ---------- INICIALIZACIÓN ----------
@@ -1212,15 +1665,22 @@
       setupFormRecogida();
       setupFormEntrega();
       setupFormGasto();
-      setupPrecios();
+      setupConfiguracion();
       setupArmarCarga();
       setupCapacidad();
       setupReportes();
+      setupEntregaCalculo();
 
-      console.log('✅ GAS GUARIBE v5.0 (con 3 plantas y costos variables) cargado.');
+      // Eventos para actualizar costos al cambiar planta
+      document.getElementById('selectPlanta').addEventListener('change', actualizarCostosPlanta);
+      document.getElementById('filtroComunidad').addEventListener('change', function() {
+        const data = loadData();
+        renderListaCarga(data);
+      });
+
+      console.log('✅ Gas Guaribe – GAS (versión optimizada con costos por planta y tamaño) cargado.');
     }
 
-    // Ejecutar cuando el DOM esté listo
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -1229,6 +1689,5 @@
 
   })();
 </script>
-
 </body>
 </html>
