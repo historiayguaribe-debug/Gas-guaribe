@@ -173,6 +173,7 @@
   <button data-vista="entregas">📦 Entregas</button>
   <button data-vista="cobros">💳 Cobros</button>
   <button data-vista="gastos">💰 Gastos</button>
+  <button data-vista="comunidades">🏘️ Comunidades</button>
   <button data-vista="config">⚙️ Config</button>
   <button data-vista="reportes">📈 Reportes</button>
 </div>
@@ -210,7 +211,10 @@
   <div class="card">
     <form id="formRecogida">
       <label>Comunidad *</label>
-      <input type="text" id="rComunidad" placeholder="Ej: El Bachiller" required>
+      <select id="rComunidad" required>
+        <option value="">Selecciona una comunidad</option>
+      </select>
+      <button type="button" class="btn-secundario" id="btnNuevaComunidad" style="margin-top:4px;">➕ Agregar nueva</button>
 
       <label>Cilindros pequeños</label>
       <input type="number" id="rPequenos" min="0" value="0">
@@ -243,7 +247,7 @@
   </div>
 </div>
 
-<!-- ========== CARGA (CON COSTOS VARIABLES) ========== -->
+<!-- ========== CARGA ========== -->
 <div id="carga" class="vista">
   <h2>Armar carga a planta</h2>
   <div class="card">
@@ -293,13 +297,15 @@
   </div>
 </div>
 
-<!-- ========== ENTREGAS (CON CRÉDITO) ========== -->
+<!-- ========== ENTREGAS ========== -->
 <div id="entregas" class="vista">
   <h2>Registrar entrega</h2>
   <div class="card">
     <form id="formEntrega">
       <label>Comunidad *</label>
-      <input type="text" id="eComunidad" placeholder="Comunidad" required>
+      <select id="eComunidad" required>
+        <option value="">Selecciona una comunidad</option>
+      </select>
 
       <label>Cilindros entregados</label>
       <div class="flex">
@@ -346,7 +352,7 @@
   </div>
 </div>
 
-<!-- ========== COBROS (ABONOS A CRÉDITOS) ========== -->
+<!-- ========== COBROS ========== -->
 <div id="cobros" class="vista">
   <h2>Registrar cobro / abono</h2>
   <div class="card">
@@ -409,6 +415,16 @@
   <div class="card">
     <h3>Gastos registrados</h3>
     <div id="listaGastos"><p class="text-muted">No hay gastos.</p></div>
+  </div>
+</div>
+
+<!-- ========== COMUNIDADES ========== -->
+<div id="comunidades" class="vista">
+  <h2>Comunidades y comercios</h2>
+  <div class="card">
+    <div id="listaComunidades">
+      <p class="text-muted">Cargando...</p>
+    </div>
   </div>
 </div>
 
@@ -497,8 +513,50 @@
   (function() {
     'use strict';
 
+    // ---------- LISTA MAESTRA DE COMUNIDADES ----------
+    const COMUNIDADES_MAESTRAS = [
+      "EL BACHILLER",
+      "LA MIRANDERA",
+      "GUARIBITO",
+      "LOS SAMANES",
+      "SANTA ROSA DE LIMA",
+      "SANTA ROSA",
+      "DELICIAS NORTE",
+      "LAS DELICIAS",
+      "SECTORES UNIDOS",
+      "CHIVIRITAL",
+      "LAS TERRAZAS",
+      "CAÑICITO",
+      "EL CENTRO",
+      "SAN PASCUAL",
+      "SAMAN GACHO",
+      "CARAQUITA",
+      "EL QUIZANDO",
+      "EL DELIRIO",
+      "EL ACUEDUCTO",
+      "SAN LUIS",
+      "INAVI",
+      "EL ASERRADERO",
+      "COLINAS DE INAVI",
+      "19 DE ABRIL",
+      "EL CEDRO",
+      "UVERAL",
+      "LA CEIBA",
+      "LOS MEDANOS",
+      "EL CINCO",
+      "LAS LAJAS",
+      "LAS AGUADITAS",
+      "ARENITAS",
+      "SABANA GRANDE",
+      "ORUS",
+      "GALPON",
+      "ABASTO EL LLANERO",
+      "DISTRIBUIDORA DAVID",
+      "QUESERAS"
+    ];
+
     // ---------- CLAVES LOCALSTORAGE ----------
-    const STORAGE_KEY = 'gas_guaribe_data_v7';
+    const STORAGE_KEY = 'gas_guaribe_data_v8';
 
     // ---------- DATOS POR DEFECTO ----------
     function getDefaultData() {
@@ -515,13 +573,14 @@
             puerto_la_cruz: 20.00,
             altagracia: 35.00,
             valle_pascua: 50.00
-          }
+          },
+          comunidades: COMUNIDADES_MAESTRAS.slice() // copia
         },
         recogidas: [],
         cargas: [],
         entregas: [],
         gastos: [],
-        cobros: []   // Nuevo: historial de abonos
+        cobros: []
       };
     }
 
@@ -535,7 +594,7 @@
           for (let key in def) {
             if (!(key in parsed)) parsed[key] = def[key];
           }
-          // Asegurar subclaves
+          if (!parsed.config.comunidades) parsed.config.comunidades = def.config.comunidades;
           if (!parsed.config.precios_llenado) parsed.config.precios_llenado = def.config.precios_llenado;
           if (!parsed.config.precios_venta) parsed.config.precios_venta = def.config.precios_venta;
           if (!parsed.config.gastos_logisticos) parsed.config.gastos_logisticos = def.config.gastos_logisticos;
@@ -573,6 +632,16 @@
       return map[clave] || clave;
     }
 
+    // ---------- OBTENER TODAS LAS COMUNIDADES (maestras + dinámicas) ----------
+    function obtenerTodasLasComunidades(data) {
+      const maestras = data.config.comunidades || [];
+      const dinamicas = new Set();
+      data.recogidas.forEach(r => dinamicas.add(r.comunidad));
+      data.entregas.forEach(e => dinamicas.add(e.comunidad));
+      const todas = new Set([...maestras, ...dinamicas]);
+      return Array.from(todas).sort();
+    }
+
     // ---------- SALDO DE RECOGIDA ----------
     function obtenerSaldo(recogida) {
       const enviado = recogida.enviado || { p: 0, m: 0, g: 0 };
@@ -588,10 +657,8 @@
     // ---------- SALDO PENDIENTE POR COMUNIDAD ----------
     function calcularSaldosPendientes(data) {
       const saldos = {};
-      // Inicializar con comunidades de recogidas
-      data.recogidas.forEach(r => {
-        if (!saldos[r.comunidad]) saldos[r.comunidad] = 0;
-      });
+      // Inicializar con todas las comunidades maestras
+      (data.config.comunidades || []).forEach(c => saldos[c] = 0);
       // Sumar entregas a crédito
       data.entregas.forEach(e => {
         if (e.tipo_pago === 'credito') {
@@ -605,7 +672,7 @@
           saldos[c.comunidad] -= (c.monto || 0);
         }
       });
-      // Eliminar comunidades con saldo 0
+      // Eliminar comunidades con saldo 0 (opcional)
       Object.keys(saldos).forEach(k => {
         if (saldos[k] <= 0.005) delete saldos[k];
       });
@@ -614,7 +681,6 @@
 
     // ---------- INVENTARIO ----------
     function calcularInventario(data) {
-      // Cilindros en depósito (saldo de recogidas)
       let deposito = { p: 0, m: 0, g: 0 };
       data.recogidas.forEach(r => {
         const saldo = obtenerSaldo(r);
@@ -623,11 +689,9 @@
         deposito.g += saldo.g;
       });
 
-      // Cilindros en planta (en cargas enviadas no regresadas)
       let enPlanta = { p: 0, m: 0, g: 0 };
       data.cargas.forEach(c => {
         if (c.estado === 'enviada') {
-          // Sumar cilindros de origen
           c.origen.forEach(o => {
             enPlanta.p += (o.p || 0);
             enPlanta.m += (o.m || 0);
@@ -672,7 +736,6 @@
       document.getElementById('saldoPendiente').textContent = totalDeuda.toFixed(2);
       document.getElementById('stockDeposito').textContent = stockDeposito;
 
-      // Últimas recogidas
       const ultRec = data.recogidas.slice(-5).reverse();
       const contRec = document.getElementById('ultimasRecogidas');
       if (ultRec.length === 0) {
@@ -687,7 +750,6 @@
         }).join('');
       }
 
-      // Últimas entregas
       const ultEnt = data.entregas.slice(-5).reverse();
       const contEnt = document.getElementById('ultimasEntregas');
       if (ultEnt.length === 0) {
@@ -766,14 +828,12 @@
       document.getElementById('cfgLogALT').value = cfg.gastos_logisticos.altagracia || 0;
       document.getElementById('cfgLogVAL').value = cfg.gastos_logisticos.valle_pascua || 0;
 
-      // Análisis de precios
       actualizarAnalisisPrecios();
     }
 
     function actualizarAnalisisPrecios() {
       const data = loadData();
       const cfg = data.config;
-      // Promedio de costos de llenado entre plantas
       const plantas = ['puerto_la_cruz', 'altagracia', 'valle_pascua'];
       const promedios = { p: 0, m: 0, g: 0 };
       plantas.forEach(p => {
@@ -782,12 +842,8 @@
         promedios.m += prec.m / plantas.length;
         promedios.g += prec.g / plantas.length;
       });
-      // Gastos logísticos promedio
       const logProm = plantas.reduce((acc, p) => acc + (cfg.gastos_logisticos[p] || 0), 0) / plantas.length;
-      // Costo unitario total (incluye llenado + logístico prorrateado)
-      // Asumimos que el gasto logístico se distribuye entre todos los cilindros, pero para el análisis usamos un factor
-      // Simplificamos: costo total = llenado + (logProm / 60) como estimación por cilindro
-      const factorLog = logProm / 60; // distribución por cilindro
+      const factorLog = logProm / 60;
       const costoP = promedios.p + factorLog;
       const costoM = promedios.m + factorLog;
       const costoG = promedios.g + factorLog;
@@ -822,24 +878,6 @@
       const log = data.config.gastos_logisticos[planta] || 0;
       document.getElementById('gastoLogistico').textContent = log.toFixed(2);
       calcularResumenCarga();
-    }
-
-    function actualizarFiltroComunidad(data) {
-      const select = document.getElementById('filtroComunidad');
-      const comunidades = new Set();
-      data.recogidas.forEach(r => {
-        if (obtenerSaldo(r).total > 0) comunidades.add(r.comunidad);
-      });
-      const currentVal = select.value;
-      select.innerHTML = '<option value="">Todas las comunidades</option>';
-      comunidades.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        select.appendChild(opt);
-      });
-      select.value = currentVal;
-      renderListaCarga(data);
     }
 
     function renderListaCarga(data) {
@@ -951,7 +989,6 @@
       const carga = data.cargas.find(c => c.id === id);
       if (!carga) return;
 
-      // Registrar gastos
       if (carga.costos && carga.costos.llenado.total > 0) {
         data.gastos.push({
           id: generarId(),
@@ -1009,6 +1046,29 @@
       saveData(data);
       actualizarApp();
     };
+
+    // ---------- FUNCIONES PARA LLENAR SELECTORES DE COMUNIDAD ----------
+    function llenarSelectComunidades(selectId, data, incluirVacio = true, soloConDeuda = false) {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const comunidades = obtenerTodasLasComunidades(data);
+      let opciones = '';
+      if (incluirVacio) opciones += '<option value="">Selecciona una comunidad</option>';
+      const saldos = calcularSaldosPendientes(data);
+      comunidades.forEach(c => {
+        if (soloConDeuda && (!saldos[c] || saldos[c] <= 0)) return;
+        opciones += `<option value="${c}">${c}</option>`;
+      });
+      select.innerHTML = opciones;
+    }
+
+    function llenarFiltroComunidad(data) {
+      const select = document.getElementById('filtroComunidad');
+      const comunidades = obtenerTodasLasComunidades(data);
+      let opciones = '<option value="">Todas las comunidades</option>';
+      comunidades.forEach(c => opciones += `<option value="${c}">${c}</option>`);
+      select.innerHTML = opciones;
+    }
 
     // ---------- ENTREGAS ----------
     function setupEntregaCalculo() {
@@ -1070,20 +1130,16 @@
     };
 
     // ---------- COBROS ----------
-    function actualizarSelectComunidades(data) {
+    function actualizarSelectComunidadesCobros(data) {
       const select = document.getElementById('cComunidad');
       const saldos = calcularSaldosPendientes(data);
-      const comunidades = Object.keys(saldos);
-      const currentVal = select.value;
-      select.innerHTML = '<option value="">Selecciona una comunidad</option>';
+      const comunidades = Object.keys(saldos).sort();
+      let opciones = '<option value="">Selecciona una comunidad</option>';
       comunidades.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = `${c} (Bs ${saldos[c].toFixed(2)})`;
-        select.appendChild(opt);
+        opciones += `<option value="${c}">${c} (Bs ${saldos[c].toFixed(2)})</option>`;
       });
-      select.value = currentVal;
-      // Mostrar deuda
+      select.innerHTML = opciones;
+      // Mostrar deuda al seleccionar
       document.getElementById('cComunidad').addEventListener('change', function() {
         const saldos = calcularSaldosPendientes(data);
         const deuda = saldos[this.value] || 0;
@@ -1147,6 +1203,73 @@
       actualizarApp();
     };
 
+    // ---------- COMUNIDADES (VISTA) ----------
+    function renderListaComunidades(data) {
+      const cont = document.getElementById('listaComunidades');
+      const mapa = {};
+      const todas = obtenerTodasLasComunidades(data);
+
+      // Inicializar todas las comunidades maestras
+      todas.forEach(nom => {
+        mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
+      });
+
+      // Recoger datos de recogidas
+      data.recogidas.forEach(r => {
+        const nom = r.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
+        mapa[nom].recogidas += 1;
+        mapa[nom].cilindros.p += (r.pequenos || 0);
+        mapa[nom].cilindros.m += (r.medianos || 0);
+        mapa[nom].cilindros.g += (r.grandes || 0);
+        mapa[nom].cobro += (r.cobro || 0);
+      });
+
+      // Entregas
+      data.entregas.forEach(e => {
+        const nom = e.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
+        mapa[nom].entregas += 1;
+        mapa[nom].cilindros.p += (e.pequenos || 0);
+        mapa[nom].cilindros.m += (e.medianos || 0);
+        mapa[nom].cilindros.g += (e.grandes || 0);
+        mapa[nom].cobro += (e.monto_cobrado || 0);
+        if (e.tipo_pago === 'credito') {
+          mapa[nom].deuda += (e.monto_cobrado || 0);
+        }
+      });
+
+      // Restar cobros
+      data.cobros.forEach(c => {
+        if (mapa[c.comunidad]) {
+          mapa[c.comunidad].deuda -= (c.monto || 0);
+        }
+      });
+
+      const claves = Object.keys(mapa).sort();
+      if (claves.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay comunidades registradas.</p>';
+        return;
+      }
+
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+        <tr><th>Comunidad</th><th>Recogidas</th><th>Entregas</th><th>Cilindros (P/M/G)</th><th>Cobro total</th><th>Deuda</th></tr>`;
+      claves.forEach(nom => {
+        const d = mapa[nom];
+        const totalCil = d.cilindros.p + d.cilindros.m + d.cilindros.g;
+        html += `<tr>
+          <td><strong>${nom}</strong></td>
+          <td>${d.recogidas}</td>
+          <td>${d.entregas}</td>
+          <td>${d.cilindros.p}/${d.cilindros.m}/${d.cilindros.g} (${totalCil})</td>
+          <td>${d.cobro.toFixed(2)}</td>
+          <td class="${d.deuda > 0 ? 'text-danger' : 'text-success'}">${d.deuda.toFixed(2)}</td>
+        </tr>`;
+      });
+      html += '</table>';
+      cont.innerHTML = html;
+    }
+
     // ---------- REPORTES ----------
     function renderReporteResumen(data) {
       const totalRec = data.recogidas.length;
@@ -1181,6 +1304,10 @@
 
     function renderReporteComunidades(data) {
       const mapa = {};
+      const todas = obtenerTodasLasComunidades(data);
+      todas.forEach(nom => {
+        mapa[nom] = { p:0, m:0, g:0, cobro:0 };
+      });
       data.recogidas.forEach(r => {
         const nom = r.comunidad || 'Sin comunidad';
         if (!mapa[nom]) mapa[nom] = { p:0, m:0, g:0, cobro:0 };
@@ -1197,7 +1324,7 @@
         mapa[nom].g += (e.grandes||0);
         mapa[nom].cobro += (e.monto_cobrado||0);
       });
-      const claves = Object.keys(mapa);
+      const claves = Object.keys(mapa).sort();
       if (claves.length === 0) return '<p class="text-muted">No hay datos.</p>';
       let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;"><tr><th>Comunidad</th><th>P</th><th>M</th><th>G</th><th>Total</th><th>Cobro</th></tr>`;
       claves.forEach(nom => {
@@ -1272,18 +1399,21 @@
 
     function renderReporteRentabilidad(data) {
       const comunidades = {};
+      const todas = obtenerTodasLasComunidades(data);
+      todas.forEach(nom => comunidades[nom] = { ingresos: 0, costos: 0 });
+
       // Ingresos por comunidad
       data.entregas.forEach(e => {
         const nom = e.comunidad || 'Sin comunidad';
         if (!comunidades[nom]) comunidades[nom] = { ingresos: 0, costos: 0 };
         comunidades[nom].ingresos += (e.monto_cobrado || 0);
       });
-      // Costos directos por comunidad (asociar costos de cargas a las comunidades de origen)
+
+      // Costos directos
       data.cargas.forEach(c => {
         if (c.estado === 'regresada' || c.estado === 'enviada') {
           const costos = c.costos || { llenado: { total: 0 }, logistico: 0, adicionales: 0 };
           const totalCosto = costos.llenado.total + costos.logistico + costos.adicionales;
-          // Distribuir proporcionalmente según cilindros por comunidad
           const origen = c.origen || [];
           const totalCilCarga = c.total_cilindros || 1;
           origen.forEach(o => {
@@ -1297,8 +1427,8 @@
           });
         }
       });
-      // Calcular margen
-      const claves = Object.keys(comunidades);
+
+      const claves = Object.keys(comunidades).sort();
       if (claves.length === 0) return '<p class="text-muted">No hay datos para rentabilidad.</p>';
       let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;"><tr><th>Comunidad</th><th>Ingresos</th><th>Costos</th><th>Margen</th><th>%</th></tr>`;
       claves.forEach(nom => {
@@ -1421,7 +1551,6 @@
       });
       y = doc.lastAutoTable.finalY + 6;
 
-      // Recogidas
       if (data.recogidas.length) {
         doc.text('Recogidas', 14, y);
         y += 6;
@@ -1442,7 +1571,6 @@
         y = doc.lastAutoTable.finalY + 6;
       }
 
-      // Cargas
       if (data.cargas.length) {
         if (y > 190) { doc.addPage(); y = 20; }
         doc.text('Cargas', 14, y);
@@ -1466,7 +1594,6 @@
         y = doc.lastAutoTable.finalY + 6;
       }
 
-      // Entregas
       if (data.entregas.length) {
         if (y > 190) { doc.addPage(); y = 20; }
         doc.text('Entregas', 14, y);
@@ -1489,7 +1616,6 @@
         y = doc.lastAutoTable.finalY + 6;
       }
 
-      // Gastos
       if (data.gastos.length) {
         if (y > 190) { doc.addPage(); y = 20; }
         doc.text('Gastos', 14, y);
@@ -1518,14 +1644,17 @@
       renderDashboard(data);
       renderListaRecogidas(data);
       cargarPreciosUI(data);
-      actualizarFiltroComunidad(data);
+      llenarFiltroComunidad(data);
       renderListaCarga(data);
       renderListaCargas(data);
       renderListaEntregas(data);
       renderListaCobros(data);
       renderListaGastos(data);
+      renderListaComunidades(data);
       cargarPreciosVentaEnEntrega(data);
-      actualizarSelectComunidades(data);
+      actualizarSelectComunidadesCobros(data);
+      llenarSelectComunidades('rComunidad', data);
+      llenarSelectComunidades('eComunidad', data);
 
       const select = document.getElementById('eCargaId');
       const currentVal = select.value;
@@ -1548,6 +1677,23 @@
       const form = document.getElementById('formRecogida');
       const exoArr = [];
       const listaExo = document.getElementById('listaExoneraciones');
+
+      // Botón para agregar nueva comunidad
+      document.getElementById('btnNuevaComunidad').addEventListener('click', function() {
+        const nombre = prompt('Ingresa el nombre de la nueva comunidad o comercio:');
+        if (nombre && nombre.trim()) {
+          const data = loadData();
+          if (!data.config.comunidades) data.config.comunidades = [];
+          if (!data.config.comunidades.includes(nombre.trim())) {
+            data.config.comunidades.push(nombre.trim());
+            saveData(data);
+            actualizarApp();
+            alert(`✅ Comunidad "${nombre.trim()}" agregada.`);
+          } else {
+            alert('Esta comunidad ya existe.');
+          }
+        }
+      });
 
       document.getElementById('agregarExo').addEventListener('click', function() {
         const nombre = document.getElementById('exoNombre').value.trim();
@@ -1585,7 +1731,7 @@
 
       form.addEventListener('submit', function(e) {
         e.preventDefault();
-        const comunidad = document.getElementById('rComunidad').value.trim();
+        const comunidad = document.getElementById('rComunidad').value;
         const p = parseInt(document.getElementById('rPequenos').value) || 0;
         const m = parseInt(document.getElementById('rMedianos').value) || 0;
         const g = parseInt(document.getElementById('rGrandes').value) || 0;
@@ -1623,7 +1769,7 @@
       const form = document.getElementById('formEntrega');
       form.addEventListener('submit', function(e) {
         e.preventDefault();
-        const comunidad = document.getElementById('eComunidad').value.trim();
+        const comunidad = document.getElementById('eComunidad').value;
         const p = parseInt(document.getElementById('ePequenos').value) || 0;
         const m = parseInt(document.getElementById('eMedianos').value) || 0;
         const g = parseInt(document.getElementById('eGrandes').value) || 0;
@@ -1651,7 +1797,6 @@
           cargaId: cargaId
         });
 
-        // Si es crédito, el saldo pendiente se actualizará en el dashboard
         saveData(data);
         form.reset();
         document.getElementById('ePequenos').value = 0;
@@ -1894,6 +2039,7 @@
         entregas: document.getElementById('entregas'),
         cobros: document.getElementById('cobros'),
         gastos: document.getElementById('gastos'),
+        comunidades: document.getElementById('comunidades'),
         config: document.getElementById('config'),
         reportes: document.getElementById('reportes')
       };
@@ -1906,7 +2052,7 @@
           Object.keys(vistas).forEach(key => {
             vistas[key].classList.toggle('activa', key === vista);
           });
-          if (['carga', 'dashboard', 'entregas', 'cobros', 'gastos', 'config', 'reportes'].includes(vista)) {
+          if (['carga', 'dashboard', 'entregas', 'cobros', 'gastos', 'comunidades', 'config', 'reportes'].includes(vista)) {
             actualizarApp();
           }
         });
@@ -1971,7 +2117,7 @@
       });
       document.getElementById('gastosAdicionales').addEventListener('input', calcularResumenCarga);
 
-      console.log('✅ Gas Guaribe – GAS (versión con mejoras administrativas y contables) cargado.');
+      console.log('✅ Gas Guaribe – GAS (versión con lista maestra de comunidades) cargado.');
     }
 
     if (document.readyState === 'loading') {
