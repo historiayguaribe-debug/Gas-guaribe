@@ -1,100 +1,1234 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>GAS GUARIBE</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>GAS GUARIBE - Gestión Municipal</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== RESET Y ESTILOS GLOBALES ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: #f0f4f8;
+      color: #1e293b;
+      padding: 12px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    h1, h2, h3 { font-weight: 600; }
+    h1 { font-size: 1.8rem; color: #0b3b5c; }
+    h2 { font-size: 1.4rem; border-bottom: 2px solid #0b3b5c; padding-bottom: 6px; margin-top: 8px; }
+    h3 { font-size: 1.1rem; color: #1e4a6b; }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    /* ===== NAVEGACIÓN ===== */
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 16px;
+      justify-content: center;
+    }
+    .nav button {
+      flex: 1 0 auto;
+      padding: 8px 6px;
+      background: #e9edf2;
+      border: none;
+      border-radius: 30px;
+      font-weight: 600;
+      color: #1e293b;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 0.75rem;
+      min-width: 55px;
+    }
+    .nav button.activo {
+      background: #0b3b5c;
+      color: #fff;
+    }
+    .nav button:active { transform: scale(0.95); }
+
+    .vista { display: none; }
+    .vista.activa { display: block; }
+
+    /* ===== FORMULARIOS ===== */
+    label {
+      display: block;
+      font-weight: 500;
+      margin: 10px 0 4px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccd7e4;
+      border-radius: 10px;
+      font-size: 1rem;
+      background: #fff;
+      margin-bottom: 4px;
+    }
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .btn-primario, button[type="submit"] {
+      background: #0b3b5c;
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+      width: 100%;
+      margin-top: 12px;
+    }
+    .btn-primario:active, button[type="submit"]:active {
+      background: #082b42;
+      transform: scale(0.97);
+    }
+    .btn-secundario {
+      background: #e9edf2;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-secundario:active { background: #d0d7e0; }
+    .btn-peligro { background: #f8d7da; color: #842029; }
+    .btn-peligro:active { background: #f1c1c7; }
+
+    .flex { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .flex-entre { justify-content: space-between; }
+    .grow { flex: 1; }
+    .text-center { text-align: center; }
+    .text-muted { color: #6a7a8a; font-size: 0.9rem; }
+
+    /* ===== LISTAS ===== */
+    .item-lista {
+      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 0;
+    }
+    .item-lista:last-child { border-bottom: none; }
+    .badge {
+      background: #0b3b5c;
+      color: #fff;
+      padding: 2px 12px;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-success { background: #2d6a4f; }
+    .badge-warning { background: #b9770e; }
+    .badge-info { background: #0d6efd; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .stat {
+      background: #eef3f8;
+      padding: 14px;
+      border-radius: 14px;
+      text-align: center;
+    }
+    .stat span {
+      display: block;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #0b3b5c;
+    }
+
+    .oculto { display: none; }
+
+    /* ===== MÓVIL ===== */
+    @media (max-width: 420px) {
+      body { padding: 8px; }
+      .nav button { font-size: 0.6rem; padding: 6px 2px; }
+      .grid-2 { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .stat span { font-size: 1.4rem; }
+    }
+
+    .mb-8 { margin-bottom: 8px; }
+    .mt-8 { margin-top: 8px; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🏠 GAS GUARIBE</h1>
-            <p class="subtitle"><span id="fechaActual"></span></p>
-        </header>
 
-        <div class="dashboard">
-            <div class="stat-principal">
-                <span class="stat-number-big" id="totalPendientes">0</span>
-                <span class="stat-label-big">📦 Cilindros en almacén</span>
-            </div>
+<!-- ========== NAVEGACIÓN ========== -->
+<div class="nav" id="navPrincipal">
+  <button class="activo" data-vista="dashboard">📊 Inicio</button>
+  <button data-vista="recogida">📥 Recoger</button>
+  <button data-vista="carga">🚚 Carga</button>
+  <button data-vista="entregas">📦 Entregas</button>
+  <button data-vista="gastos">💰 Gastos</button>
+  <button data-vista="reportes">📈 Reportes</button>
+</div>
 
-            <div class="stats">
-                <div class="stat-card clickable" onclick="window.location.href='recogida.html'">
-                    <span class="stat-number" id="recogidasHoy">0</span>
-                    <span class="stat-label">📋 Recogidas hoy</span>
-                </div>
-                <div class="stat-card clickable" onclick="window.location.href='carga.html'">
-                    <span class="stat-number" id="cargasActivas">0</span>
-                    <span class="stat-label">🛻 Cargas activas</span>
-                </div>
-                <div class="stat-card clickable" onclick="window.location.href='entrega.html'">
-                    <span class="stat-number" id="entregasHoy">0</span>
-                    <span class="stat-label">💰 Entregas hoy</span>
-                </div>
-                <div class="stat-card clickable" onclick="window.location.href='reportes.html'">
-                    <span class="stat-number" id="exoneradosHoy">0</span>
-                    <span class="stat-label">🎓 Exonerados hoy</span>
-                </div>
-            </div>
+<!-- ========== VISTA DASHBOARD ========== -->
+<div id="dashboard" class="vista activa">
+  <h1>GAS GUARIBE</h1>
+  <div class="card">
+    <h2>Resumen</h2>
+    <div class="grid-2" id="resumenStats">
+      <div class="stat"><span id="totalRecogidas">0</span>Recogidas</div>
+      <div class="stat"><span id="totalCilindros">0</span>Cilindros</div>
+      <div class="stat"><span id="totalCargas">0</span>Cargas</div>
+      <div class="stat"><span id="totalEntregas">0</span>Entregas</div>
+      <div class="stat" style="grid-column: span 2;"><span id="totalGastos">0</span>Gastos (Bs)</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Últimas recogidas</h3>
+    <div id="ultimasRecogidas"><p class="text-muted">No hay recogidas recientes.</p></div>
+  </div>
+  <div class="card">
+    <h3>Últimas entregas</h3>
+    <div id="ultimasEntregas"><p class="text-muted">No hay entregas recientes.</p></div>
+  </div>
+</div>
 
-            <div class="menu-grid">
-                <a href="recogida.html" class="menu-btn primary">📋 Nueva recogida</a>
-                <a href="carga.html" class="menu-btn primary">🚛 Armar carga</a>
-                <a href="entrega.html" class="menu-btn">💰 Registrar entrega</a>
-                <a href="reportes.html" class="menu-btn">📊 Reportes</a>
-            </div>
+<!-- ========== VISTA RECOGIDA ========== -->
+<div id="recogida" class="vista">
+  <h2>Registrar recogida</h2>
+  <div class="card">
+    <form id="formRecogida">
+      <label>Comunidad *</label>
+      <input type="text" id="rComunidad" placeholder="Ej: El Bachiller" required>
+
+      <label>Cilindros pequeños</label>
+      <input type="number" id="rPequenos" min="0" value="0">
+
+      <label>Cilindros medianos</label>
+      <input type="number" id="rMedianos" min="0" value="0">
+
+      <label>Cilindros grandes</label>
+      <input type="number" id="rGrandes" min="0" value="0">
+
+      <label>Monto cobrado (Bs) - opcional</label>
+      <input type="number" id="rCobro" min="0" step="0.01" value="0">
+
+      <label>Exonerados (opcional)</label>
+      <div id="exoContainer">
+        <div class="flex">
+          <input type="text" id="exoNombre" placeholder="Nombre" class="grow">
+          <input type="number" id="exoCantidad" placeholder="Cant." min="1" style="width:80px;">
+          <button type="button" class="btn-secundario" id="agregarExo">+</button>
         </div>
+        <div id="listaExoneraciones" class="text-muted" style="margin-top:6px; font-size:0.9rem;"></div>
+      </div>
 
-        <footer>
-            <p>GAS GUARIBE v3.0</p>
-        </footer>
+      <button type="submit">Guardar recogida</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Recogidas registradas</h3>
+    <div id="listaRecogidas"><p class="text-muted">No hay recogidas.</p></div>
+  </div>
+</div>
+
+<!-- ========== VISTA CARGA (CON PLANTAS) ========== -->
+<div id="carga" class="vista">
+  <h2>Armar carga a planta</h2>
+  
+  <!-- CONFIGURACIÓN DE PRECIOS POR PLANTA -->
+  <div class="card">
+    <h3>⚙️ Precios de llenado por planta</h3>
+    <p class="text-muted">Costo por cilindro en cada planta (se actualiza automáticamente).</p>
+    <div class="flex" style="margin-top:8px;">
+      <label style="flex:1; font-weight:400;">Puerto La Cruz:</label>
+      <input type="number" id="precioPLC" step="0.01" min="0" style="width:80px;">
+    </div>
+    <div class="flex">
+      <label style="flex:1; font-weight:400;">Altagracia:</label>
+      <input type="number" id="precioALT" step="0.01" min="0" style="width:80px;">
+    </div>
+    <div class="flex">
+      <label style="flex:1; font-weight:400;">Valle de la Pascua:</label>
+      <input type="number" id="precioVAL" step="0.01" min="0" style="width:80px;">
+    </div>
+    <button class="btn-secundario" id="btnGuardarPrecios" style="margin-top:8px;">Guardar precios</button>
+  </div>
+
+  <!-- ARMAR CARGA -->
+  <div class="card">
+    <div class="flex flex-entre mb-8">
+      <span><strong>Capacidad del camión:</strong></span>
+      <input type="number" id="capacidadCamion" value="60" style="width:80px; display:inline-block;">
+      <button class="btn-secundario" id="btnActualizarCapacidad">Actualizar</button>
     </div>
 
-    <script src="app.js"></script>
-    <script>
-        document.getElementById('fechaActual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    <label><strong>Planta de destino *</strong></label>
+    <select id="selectPlanta">
+      <option value="puerto_la_cruz">Puerto La Cruz</option>
+      <option value="altagracia">Altagracia</option>
+      <option value="valle_pascua">Valle de la Pascua</option>
+    </select>
 
-        function actualizarDashboard() {
-            cargarDatos();
-            const recogidas = datos.recogidas || [];
-            const cargas = datos.cargas || [];
-            const entregas = datos.entregas || [];
+    <div class="flex flex-entre">
+      <span><strong>Costo unitario (Bs/cil):</strong></span>
+      <span id="mostrarPrecioUnitario">0.00</span>
+    </div>
 
-            let totalPendiente = 0;
-            recogidas.forEach(r => {
-                const saldo = obtenerSaldoRecogida(r);
-                totalPendiente += saldo.total;
+    <p class="text-muted" style="margin-top:8px;">Asigna cantidades a enviar de cada recogida con saldo disponible.</p>
+    <div id="listaRecogidasCarga"><p class="text-muted">No hay recogidas con saldo.</p></div>
+
+    <button class="btn-primario" id="btnArmarCarga">🚛 Armar carga</button>
+  </div>
+
+  <!-- LISTA DE CARGAS CREADAS -->
+  <div class="card">
+    <h3>Cargas creadas</h3>
+    <div id="listaCargas"><p class="text-muted">No hay cargas.</p></div>
+  </div>
+</div>
+
+<!-- ========== VISTA ENTREGAS ========== -->
+<div id="entregas" class="vista">
+  <h2>Registrar entrega</h2>
+  <div class="card">
+    <form id="formEntrega">
+      <label>Comunidad *</label>
+      <input type="text" id="eComunidad" placeholder="Comunidad" required>
+
+      <label>Cilindros entregados</label>
+      <div class="flex">
+        <input type="number" id="ePequenos" placeholder="P" min="0" value="0" class="grow">
+        <input type="number" id="eMedianos" placeholder="M" min="0" value="0" class="grow">
+        <input type="number" id="eGrandes" placeholder="G" min="0" value="0" class="grow">
+      </div>
+
+      <label>Monto cobrado (Bs)</label>
+      <input type="number" id="eMonto" step="0.01" min="0" value="0">
+
+      <label>Referencia a carga (opcional)</label>
+      <select id="eCargaId"><option value="">Sin referencia</option></select>
+
+      <button type="submit">Registrar entrega</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Entregas realizadas</h3>
+    <div id="listaEntregas"><p class="text-muted">No hay entregas.</p></div>
+  </div>
+</div>
+
+<!-- ========== VISTA GASTOS ========== -->
+<div id="gastos" class="vista">
+  <h2>Registrar gasto</h2>
+  <div class="card">
+    <form id="formGasto">
+      <label>Concepto *</label>
+      <input type="text" id="gConcepto" placeholder="Ej: Combustible" required>
+
+      <label>Monto (Bs) *</label>
+      <input type="number" id="gMonto" step="0.01" min="0" required>
+
+      <label>Categoría</label>
+      <select id="gCategoria">
+        <option value="transporte">Transporte</option>
+        <option value="planta">Planta (llenado)</option>
+        <option value="mantenimiento">Mantenimiento</option>
+        <option value="administrativo">Administrativo</option>
+        <option value="otro">Otro</option>
+      </select>
+
+      <button type="submit">Registrar gasto</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Gastos registrados</h3>
+    <div id="listaGastos"><p class="text-muted">No hay gastos.</p></div>
+  </div>
+</div>
+
+<!-- ========== VISTA REPORTES ========== -->
+<div id="reportes" class="vista">
+  <h2>Reportes</h2>
+  <div class="card">
+    <div class="flex" style="gap:8px; flex-wrap:wrap;">
+      <button class="btn-secundario" id="btnReporteResumen">📊 Resumen</button>
+      <button class="btn-secundario" id="btnReporteComunidades">🏘️ Por comunidad</button>
+      <button class="btn-secundario" id="btnReporteExoneraciones">📋 Exonerados</button>
+      <button class="btn-secundario" id="btnReporteGastos">💸 Gastos</button>
+      <button class="btn-secundario" id="btnReportePlantas">🏭 Por planta</button>
+    </div>
+    <div id="contenidoReporte" style="margin-top:16px;">
+      <p class="text-muted">Selecciona un reporte.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ======================== JAVASCRIPT ========================== -->
+<!-- ============================================================ -->
+<script>
+  (function() {
+    'use strict';
+
+    // ---------- CLAVES LOCALSTORAGE ----------
+    const STORAGE_KEY = 'gas_guaribe_data_v5';
+
+    // ---------- DATOS POR DEFECTO ----------
+    function getDefaultData() {
+      return {
+        config: { 
+          capacidad_camion: 60,
+          precios_plantas: {
+            puerto_la_cruz: 15.00,
+            altagracia: 18.50,
+            valle_pascua: 22.00
+          }
+        },
+        recogidas: [],
+        cargas: [],
+        entregas: [],
+        gastos: []
+      };
+    }
+
+    // ---------- FUNCIONES DE PERSISTENCIA ----------
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const def = getDefaultData();
+          for (let key in def) {
+            if (!(key in parsed)) parsed[key] = def[key];
+          }
+          // Asegurar subclaves
+          if (!parsed.config.precios_plantas) parsed.config.precios_plantas = def.config.precios_plantas;
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Error cargando datos:', e);
+      }
+      return getDefaultData();
+    }
+
+    function saveData(data) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.error('Error guardando datos:', e);
+      }
+    }
+
+    // ---------- UTILIDADES ----------
+    function generarId() {
+      return Date.now() + Math.floor(Math.random() * 1000);
+    }
+
+    function formatearFecha(fechaISO) {
+      const d = new Date(fechaISO);
+      return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function nombrePlanta(clave) {
+      const map = {
+        'puerto_la_cruz': 'Puerto La Cruz',
+        'altagracia': 'Altagracia',
+        'valle_pascua': 'Valle de la Pascua'
+      };
+      return map[clave] || clave;
+    }
+
+    // ---------- CÁLCULO DE SALDO DE UNA RECOGIDA ----------
+    function obtenerSaldo(recogida) {
+      const enviado = recogida.enviado || { p: 0, m: 0, g: 0 };
+      const saldoP = (recogida.pequenos || 0) - (enviado.p || 0);
+      const saldoM = (recogida.medianos || 0) - (enviado.m || 0);
+      const saldoG = (recogida.grandes || 0) - (enviado.g || 0);
+      return {
+        p: saldoP,
+        m: saldoM,
+        g: saldoG,
+        total: saldoP + saldoM + saldoG
+      };
+    }
+
+    // ---------- RENDERIZADO DE VISTAS ----------
+    function renderDashboard(data) {
+      const totalRec = data.recogidas.length;
+      let totalCil = 0;
+      data.recogidas.forEach(r => totalCil += (r.pequenos||0)+(r.medianos||0)+(r.grandes||0));
+      const totalCargas = data.cargas.length;
+      const totalEnt = data.entregas.length;
+      let totalGastos = 0;
+      data.gastos.forEach(g => totalGastos += (g.monto || 0));
+
+      document.getElementById('totalRecogidas').textContent = totalRec;
+      document.getElementById('totalCilindros').textContent = totalCil;
+      document.getElementById('totalCargas').textContent = totalCargas;
+      document.getElementById('totalEntregas').textContent = totalEnt;
+      document.getElementById('totalGastos').textContent = totalGastos.toFixed(2);
+
+      // Últimas 5 recogidas
+      const ultRec = data.recogidas.slice(-5).reverse();
+      const contRec = document.getElementById('ultimasRecogidas');
+      if (ultRec.length === 0) {
+        contRec.innerHTML = '<p class="text-muted">No hay recogidas recientes.</p>';
+      } else {
+        contRec.innerHTML = ultRec.map(r => {
+          const total = (r.pequenos||0)+(r.medianos||0)+(r.grandes||0);
+          return `<div class="item-lista flex flex-entre">
+            <span><strong>${r.comunidad}</strong> (${total} cil.)</span>
+            <span class="badge">${formatearFecha(r.fecha)}</span>
+          </div>`;
+        }).join('');
+      }
+
+      // Últimas 5 entregas
+      const ultEnt = data.entregas.slice(-5).reverse();
+      const contEnt = document.getElementById('ultimasEntregas');
+      if (ultEnt.length === 0) {
+        contEnt.innerHTML = '<p class="text-muted">No hay entregas recientes.</p>';
+      } else {
+        contEnt.innerHTML = ultEnt.map(e => {
+          const total = (e.pequenos||0)+(e.medianos||0)+(e.grandes||0);
+          return `<div class="item-lista flex flex-entre">
+            <span><strong>${e.comunidad}</strong> (${total} cil.) - Bs ${(e.monto_cobrado||0).toFixed(2)}</span>
+            <span class="badge">${formatearFecha(e.fecha)}</span>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // ---------- VISTA RECOGIDA: LISTA ----------
+    function renderListaRecogidas(data) {
+      const cont = document.getElementById('listaRecogidas');
+      if (data.recogidas.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay recogidas.</p>';
+        return;
+      }
+      cont.innerHTML = data.recogidas.map(r => {
+        const saldo = obtenerSaldo(r);
+        const exos = r.exonerados ? r.exonerados.map(e => `${e.nombre}(${e.cantidad})`).join(', ') : 'Ninguno';
+        return `<div class="item-lista" data-id="${r.id}">
+          <div class="flex flex-entre">
+            <span><strong>${r.comunidad}</strong></span>
+            <span class="badge">${formatearFecha(r.fecha)}</span>
+          </div>
+          <div class="flex" style="font-size:0.9rem;">
+            <span>P:${r.pequenos||0} M:${r.medianos||0} G:${r.grandes||0}</span>
+            <span> | Saldo: P${saldo.p} M${saldo.m} G${saldo.g}</span>
+            <span> | Cobro: Bs ${(r.cobro||0).toFixed(2)}</span>
+          </div>
+          <div class="text-muted" style="font-size:0.8rem;">Exonerados: ${exos}</div>
+          <div class="flex" style="margin-top:6px;">
+            <button class="btn-secundario" style="padding:4px 12px;" onclick="editarRecogida(${r.id})">✏️</button>
+            <button class="btn-secundario btn-peligro" style="padding:4px 12px;" onclick="eliminarRecogida(${r.id})">🗑️</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    window.editarRecogida = function(id) {
+      alert('Función de edición: puedes eliminar y volver a crear.');
+    };
+    window.eliminarRecogida = function(id) {
+      if (!confirm('¿Eliminar esta recogida?')) return;
+      const data = loadData();
+      data.recogidas = data.recogidas.filter(r => r.id !== id);
+      saveData(data);
+      actualizarApp();
+    };
+
+    // ---------- VISTA CARGA: PRECIOS Y LISTA DE RECOGIDAS DISPONIBLES ----------
+    function cargarPreciosUI(data) {
+      const p = data.config.precios_plantas;
+      document.getElementById('precioPLC').value = p.puerto_la_cruz || 0;
+      document.getElementById('precioALT').value = p.altagracia || 0;
+      document.getElementById('precioVAL').value = p.valle_pascua || 0;
+      actualizarPrecioUnitario();
+    }
+
+    function actualizarPrecioUnitario() {
+      const select = document.getElementById('selectPlanta');
+      const precioMap = {
+        'puerto_la_cruz': parseFloat(document.getElementById('precioPLC').value) || 0,
+        'altagracia': parseFloat(document.getElementById('precioALT').value) || 0,
+        'valle_pascua': parseFloat(document.getElementById('precioVAL').value) || 0
+      };
+      const planta = select.value;
+      document.getElementById('mostrarPrecioUnitario').textContent = precioMap[planta].toFixed(2);
+    }
+
+    function renderListaCarga(data) {
+      const cont = document.getElementById('listaRecogidasCarga');
+      const disponibles = data.recogidas.filter(r => obtenerSaldo(r).total > 0);
+
+      if (disponibles.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay recogidas con saldo disponible.</p>';
+        return;
+      }
+
+      let html = '';
+      disponibles.forEach(r => {
+        const saldo = obtenerSaldo(r);
+        html += `<div class="item-lista" data-id="${r.id}">
+          <div class="flex flex-entre">
+            <span><strong>${r.comunidad}</strong> (saldo: P${saldo.p} M${saldo.m} G${saldo.g})</span>
+            <span class="badge">${formatearFecha(r.fecha)}</span>
+          </div>
+          <div class="flex" style="margin-top:4px;">
+            <label style="display:flex; align-items:center; gap:4px; font-weight:400;">
+              <span>P</span>
+              <input type="number" class="cantidad-carga" data-id="${r.id}" data-tipo="p" min="0" max="${saldo.p}" value="0" style="width:50px; padding:4px;">
+            </label>
+            <label style="display:flex; align-items:center; gap:4px; font-weight:400;">
+              <span>M</span>
+              <input type="number" class="cantidad-carga" data-id="${r.id}" data-tipo="m" min="0" max="${saldo.m}" value="0" style="width:50px; padding:4px;">
+            </label>
+            <label style="display:flex; align-items:center; gap:4px; font-weight:400;">
+              <span>G</span>
+              <input type="number" class="cantidad-carga" data-id="${r.id}" data-tipo="g" min="0" max="${saldo.g}" value="0" style="width:50px; padding:4px;">
+            </label>
+          </div>
+        </div>`;
+      });
+      cont.innerHTML = html;
+    }
+
+    // ---------- VISTA CARGA: LISTA DE CARGAS CREADAS ----------
+    function renderListaCargas(data) {
+      const cont = document.getElementById('listaCargas');
+      if (data.cargas.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay cargas creadas.</p>';
+        return;
+      }
+      cont.innerHTML = data.cargas.map(c => {
+        const estado = c.estado || 'armada';
+        let badgeClass = '';
+        let estadoTexto = estado.toUpperCase();
+        if (estado === 'enviada') { badgeClass = 'badge-success'; estadoTexto = 'ENVIADA A PLANTA'; }
+        else if (estado === 'regresada') { badgeClass = 'badge-warning'; estadoTexto = 'REGRESADA'; }
+        else { badgeClass = 'badge-info'; estadoTexto = 'ARMADA'; }
+
+        const plantaNom = nombrePlanta(c.plantaDestino) || 'Sin planta';
+        return `<div class="item-lista">
+          <div class="flex flex-entre">
+            <span><strong>Carga #${c.id}</strong> (${c.total_cilindros} cil.)</span>
+            <span class="badge ${badgeClass}">${estadoTexto}</span>
+          </div>
+          <div class="text-muted" style="font-size:0.85rem;">
+            Fecha: ${formatearFecha(c.fecha)}<br>
+            Planta: <strong>${plantaNom}</strong> | Costo llenado: Bs ${(c.costoLlenadoTotal || 0).toFixed(2)} (${(c.costoLlenadoUnitario || 0).toFixed(2)} Bs/cil)<br>
+            Origen: ${c.origen.map(o => `ID ${o.recogidaId} (P${o.p} M${o.m} G${o.g})`).join('; ')}
+          </div>
+          <div class="flex" style="margin-top:4px;">
+            ${estado === 'armada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="enviarCarga(${c.id})">📤 Enviar a planta</button>` : ''}
+            ${estado === 'enviada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="regresarCarga(${c.id})">📦 Regresar (entregar)</button>` : ''}
+            <button class="btn-secundario btn-peligro" style="padding:4px 12px;" onclick="eliminarCarga(${c.id})">🗑️</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // Funciones globales para cargas (con integración a gastos)
+    window.enviarCarga = function(id) {
+      const data = loadData();
+      const carga = data.cargas.find(c => c.id === id);
+      if (!carga) return;
+      
+      // Registrar el gasto de llenado automáticamente
+      if (carga.costoLlenadoTotal && carga.costoLlenadoTotal > 0) {
+        data.gastos.push({
+          id: generarId(),
+          concepto: `Llenado planta ${nombrePlanta(carga.plantaDestino)} (Carga #${carga.id})`,
+          monto: carga.costoLlenadoTotal,
+          categoria: 'planta',
+          fecha: new Date().toISOString(),
+          cargaId: carga.id
+        });
+      }
+
+      carga.estado = 'enviada';
+      saveData(data);
+      actualizarApp();
+      alert(`✅ Carga enviada a ${nombrePlanta(carga.plantaDestino)}. Gasto de llenado registrado automáticamente.`);
+    };
+
+    window.regresarCarga = function(id) {
+      const data = loadData();
+      const carga = data.cargas.find(c => c.id === id);
+      if (!carga) return;
+      carga.estado = 'regresada';
+      saveData(data);
+      actualizarApp();
+      alert('✅ Carga marcada como regresada. Ahora puedes registrar entregas.');
+    };
+
+    window.eliminarCarga = function(id) {
+      if (!confirm('¿Eliminar esta carga?')) return;
+      const data = loadData();
+      data.cargas = data.cargas.filter(c => c.id !== id);
+      saveData(data);
+      actualizarApp();
+    };
+
+    // ---------- VISTA ENTREGAS: LISTA ----------
+    function renderListaEntregas(data) {
+      const cont = document.getElementById('listaEntregas');
+      if (data.entregas.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay entregas.</p>';
+        return;
+      }
+      cont.innerHTML = data.entregas.map(e => {
+        const total = (e.pequenos||0)+(e.medianos||0)+(e.grandes||0);
+        return `<div class="item-lista">
+          <div class="flex flex-entre">
+            <span><strong>${e.comunidad}</strong> (${total} cil.)</span>
+            <span class="badge">${formatearFecha(e.fecha)}</span>
+          </div>
+          <div>P:${e.pequenos||0} M:${e.medianos||0} G:${e.grandes||0} | Cobro: Bs ${(e.monto_cobrado||0).toFixed(2)}</div>
+          <button class="btn-secundario btn-peligro" style="padding:4px 12px; margin-top:4px;" onclick="eliminarEntrega(${e.id})">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+
+    window.eliminarEntrega = function(id) {
+      if (!confirm('¿Eliminar esta entrega?')) return;
+      const data = loadData();
+      data.entregas = data.entregas.filter(e => e.id !== id);
+      saveData(data);
+      actualizarApp();
+    };
+
+    // ---------- VISTA GASTOS: LISTA ----------
+    function renderListaGastos(data) {
+      const cont = document.getElementById('listaGastos');
+      if (data.gastos.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay gastos.</p>';
+        return;
+      }
+      cont.innerHTML = data.gastos.map(g => {
+        return `<div class="item-lista">
+          <div class="flex flex-entre">
+            <span><strong>${g.concepto}</strong> (${g.categoria})</span>
+            <span class="badge">Bs ${(g.monto||0).toFixed(2)}</span>
+          </div>
+          <div class="text-muted" style="font-size:0.85rem;">${formatearFecha(g.fecha)}</div>
+          <button class="btn-secundario btn-peligro" style="padding:4px 12px; margin-top:4px;" onclick="eliminarGasto(${g.id})">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+
+    window.eliminarGasto = function(id) {
+      if (!confirm('¿Eliminar este gasto?')) return;
+      const data = loadData();
+      data.gastos = data.gastos.filter(g => g.id !== id);
+      saveData(data);
+      actualizarApp();
+    };
+
+    // ---------- REPORTES ----------
+    function renderReporteResumen(data) {
+      const totalRec = data.recogidas.length;
+      let totalCil = 0;
+      data.recogidas.forEach(r => totalCil += (r.pequenos||0)+(r.medianos||0)+(r.grandes||0));
+      const totalCargas = data.cargas.length;
+      const totalEnt = data.entregas.length;
+      let totalVentas = 0;
+      data.entregas.forEach(e => totalVentas += (e.monto_cobrado||0));
+      let totalGastos = 0;
+      data.gastos.forEach(g => totalGastos += (g.monto||0));
+      const ganancia = totalVentas - totalGastos;
+
+      return `
+        <div class="grid-2">
+          <div class="stat"><span>${totalRec}</span>Recogidas</div>
+          <div class="stat"><span>${totalCil}</span>Cilindros</div>
+          <div class="stat"><span>${totalCargas}</span>Cargas</div>
+          <div class="stat"><span>${totalEnt}</span>Entregas</div>
+          <div class="stat"><span>${totalVentas.toFixed(2)}</span>Ventas (Bs)</div>
+          <div class="stat"><span>${totalGastos.toFixed(2)}</span>Gastos (Bs)</div>
+          <div class="stat" style="grid-column: span 2;"><span>${ganancia.toFixed(2)}</span>Ganancia (Bs)</div>
+        </div>
+      `;
+    }
+
+    function renderReporteComunidades(data) {
+      const mapa = {};
+      data.recogidas.forEach(r => {
+        const nom = r.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { p:0, m:0, g:0, cobro:0 };
+        mapa[nom].p += (r.pequenos||0);
+        mapa[nom].m += (r.medianos||0);
+        mapa[nom].g += (r.grandes||0);
+        mapa[nom].cobro += (r.cobro||0);
+      });
+      data.entregas.forEach(e => {
+        const nom = e.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { p:0, m:0, g:0, cobro:0 };
+        mapa[nom].p += (e.pequenos||0);
+        mapa[nom].m += (e.medianos||0);
+        mapa[nom].g += (e.grandes||0);
+        mapa[nom].cobro += (e.monto_cobrado||0);
+      });
+
+      const claves = Object.keys(mapa);
+      if (claves.length === 0) return '<p class="text-muted">No hay datos.</p>';
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+        <tr><th>Comunidad</th><th>P</th><th>M</th><th>G</th><th>Total</th><th>Cobro</th></tr>`;
+      claves.forEach(nom => {
+        const d = mapa[nom];
+        const total = d.p + d.m + d.g;
+        html += `<tr><td><strong>${nom}</strong></td><td>${d.p}</td><td>${d.m}</td><td>${d.g}</td><td>${total}</td><td>${d.cobro.toFixed(2)}</td></tr>`;
+      });
+      html += '</table>';
+      return html;
+    }
+
+    function renderReporteExoneraciones(data) {
+      const lista = [];
+      data.recogidas.forEach(r => {
+        if (r.exonerados && r.exonerados.length) {
+          r.exonerados.forEach(ex => {
+            lista.push({
+              comunidad: r.comunidad,
+              nombre: ex.nombre,
+              cantidad: ex.cantidad,
+              fecha: r.fecha
             });
-            document.getElementById('totalPendientes').textContent = totalPendiente;
+          });
+        }
+      });
+      if (lista.length === 0) return '<p class="text-muted">No hay exoneraciones registradas.</p>';
+      return `<ul style="list-style:none; padding:0;">${lista.map(ex =>
+        `<li style="padding:6px 0; border-bottom:1px solid #e2e8f0;">${ex.nombre} (${ex.cantidad}) - ${ex.comunidad} <span class="text-muted">${formatearFecha(ex.fecha)}</span></li>`
+      ).join('')}</ul>`;
+    }
 
-            const hoy = new Date().toDateString();
-            const recogidasHoy = recogidas.filter(r => new Date(r.fecha).toDateString() === hoy);
-            document.getElementById('recogidasHoy').textContent = recogidasHoy.length;
+    function renderReporteGastos(data) {
+      const categorias = {};
+      data.gastos.forEach(g => {
+        const cat = g.categoria || 'otro';
+        if (!categorias[cat]) categorias[cat] = 0;
+        categorias[cat] += (g.monto||0);
+      });
+      const total = data.gastos.reduce((acc, g) => acc + (g.monto||0), 0);
+      let html = `<p><strong>Total gastos:</strong> Bs ${total.toFixed(2)}</p>`;
+      html += '<ul style="list-style:none; padding:0;">';
+      for (let cat in categorias) {
+        html += `<li style="padding:4px 0;">${cat}: Bs ${categorias[cat].toFixed(2)}</li>`;
+      }
+      html += '</ul>';
+      return html;
+    }
 
-            const activas = cargas.filter(c => c.estado === 'activa');
-            document.getElementById('cargasActivas').textContent = activas.length;
+    // NUEVO REPORTE POR PLANTA
+    function renderReportePlantas(data) {
+      const mapa = {};
+      data.cargas.forEach(c => {
+        const planta = c.plantaDestino || 'sin_definir';
+        if (!mapa[planta]) mapa[planta] = { cilindros: 0, costo: 0, cargas: 0 };
+        mapa[planta].cilindros += (c.total_cilindros || 0);
+        mapa[planta].costo += (c.costoLlenadoTotal || 0);
+        mapa[planta].cargas += 1;
+      });
 
-            const entregasHoy = entregas.filter(e => new Date(e.fecha).toDateString() === hoy);
-            const totalEntregadosHoy = entregasHoy.reduce((sum, e) => sum + e.pequenos + e.medianos + e.grandes, 0);
-            document.getElementById('entregasHoy').textContent = totalEntregadosHoy;
+      const claves = Object.keys(mapa);
+      if (claves.length === 0) return '<p class="text-muted">No hay cargas registradas en plantas.</p>';
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+        <tr><th>Planta</th><th>Cargas</th><th>Cilindros</th><th>Costo total (Bs)</th></tr>`;
+      claves.forEach(key => {
+        const d = mapa[key];
+        const nom = nombrePlanta(key);
+        html += `<tr><td><strong>${nom}</strong></td><td>${d.cargas}</td><td>${d.cilindros}</td><td>${d.costo.toFixed(2)}</td></tr>`;
+      });
+      html += '</table>';
+      return html;
+    }
 
-            let exoneradosHoy = 0;
-            entregasHoy.forEach(e => {
-                if (e.exonerados) {
-                    e.exonerados.forEach(ex => {
-                        exoneradosHoy += ex.pequenos + ex.medianos + ex.grandes;
-                    });
-                }
-            });
-            document.getElementById('exoneradosHoy').textContent = exoneradosHoy;
+    // ---------- ACTUALIZAR TODA LA APLICACIÓN ----------
+    function actualizarApp() {
+      const data = loadData();
+      renderDashboard(data);
+      renderListaRecogidas(data);
+      cargarPreciosUI(data);
+      renderListaCarga(data);
+      renderListaCargas(data);
+      renderListaEntregas(data);
+      renderListaGastos(data);
+      
+      // Actualizar select de cargas en entrega
+      const select = document.getElementById('eCargaId');
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">Sin referencia</option>';
+      data.cargas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `Carga #${c.id} (${c.total_cilindros} cil.) - ${nombrePlanta(c.plantaDestino)}`;
+        select.appendChild(opt);
+      });
+      select.value = currentVal;
+
+      // Capacidad
+      document.getElementById('capacidadCamion').value = data.config.capacidad_camion || 60;
+    }
+
+    // ---------- CONFIGURAR FORMULARIOS ----------
+    function setupFormRecogida() {
+      const form = document.getElementById('formRecogida');
+      const exoArr = [];
+      const listaExo = document.getElementById('listaExoneraciones');
+
+      document.getElementById('agregarExo').addEventListener('click', function() {
+        const nombre = document.getElementById('exoNombre').value.trim();
+        const cantidad = parseInt(document.getElementById('exoCantidad').value);
+        if (!nombre || !cantidad || cantidad <= 0) {
+          alert('Ingresa nombre y cantidad válida.');
+          return;
+        }
+        exoArr.push({ nombre, cantidad });
+        renderExoList();
+        document.getElementById('exoNombre').value = '';
+        document.getElementById('exoCantidad').value = '';
+      });
+
+      function renderExoList() {
+        if (exoArr.length === 0) {
+          listaExo.textContent = 'Sin exoneraciones.';
+          return;
+        }
+        listaExo.innerHTML = exoArr.map((ex, idx) =>
+          `<span style="display:inline-block; background:#e9edf2; padding:2px 10px; border-radius:20px; margin:2px;">
+            ${ex.nombre} (${ex.cantidad})
+            <button type="button" style="background:none; border:none; cursor:pointer; font-weight:bold;" data-idx="${idx}">✕</button>
+          </span>`
+        ).join(' ');
+        listaExo.querySelectorAll('button[data-idx]').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const idx = parseInt(this.dataset.idx);
+            exoArr.splice(idx, 1);
+            renderExoList();
+          });
+        });
+      }
+      renderExoList();
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const comunidad = document.getElementById('rComunidad').value.trim();
+        const p = parseInt(document.getElementById('rPequenos').value) || 0;
+        const m = parseInt(document.getElementById('rMedianos').value) || 0;
+        const g = parseInt(document.getElementById('rGrandes').value) || 0;
+        const cobro = parseFloat(document.getElementById('rCobro').value) || 0;
+
+        if (!comunidad) { alert('La comunidad es obligatoria.'); return; }
+        if (p + m + g === 0) { alert('Debes registrar al menos un cilindro.'); return; }
+
+        const data = loadData();
+        data.recogidas.push({
+          id: generarId(),
+          comunidad,
+          pequenos: p,
+          medianos: m,
+          grandes: g,
+          cobro: cobro,
+          fecha: new Date().toISOString(),
+          enviado: { p:0, m:0, g:0 },
+          exonerados: exoArr.slice()
+        });
+        saveData(data);
+        form.reset();
+        document.getElementById('rPequenos').value = 0;
+        document.getElementById('rMedianos').value = 0;
+        document.getElementById('rGrandes').value = 0;
+        document.getElementById('rCobro').value = 0;
+        exoArr.length = 0;
+        renderExoList();
+        actualizarApp();
+        alert('✅ Recogida registrada exitosamente.');
+      });
+    }
+
+    function setupFormEntrega() {
+      const form = document.getElementById('formEntrega');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const comunidad = document.getElementById('eComunidad').value.trim();
+        const p = parseInt(document.getElementById('ePequenos').value) || 0;
+        const m = parseInt(document.getElementById('eMedianos').value) || 0;
+        const g = parseInt(document.getElementById('eGrandes').value) || 0;
+        const monto = parseFloat(document.getElementById('eMonto').value) || 0;
+        const cargaId = document.getElementById('eCargaId').value ? parseInt(document.getElementById('eCargaId').value) : null;
+
+        if (!comunidad) { alert('La comunidad es obligatoria.'); return; }
+        if (p + m + g === 0) { alert('Debes entregar al menos un cilindro.'); return; }
+
+        const data = loadData();
+        data.entregas.push({
+          id: generarId(),
+          comunidad,
+          pequenos: p,
+          medianos: m,
+          grandes: g,
+          monto_cobrado: monto,
+          fecha: new Date().toISOString(),
+          cargaId: cargaId
+        });
+        saveData(data);
+        form.reset();
+        document.getElementById('ePequenos').value = 0;
+        document.getElementById('eMedianos').value = 0;
+        document.getElementById('eGrandes').value = 0;
+        document.getElementById('eMonto').value = 0;
+        actualizarApp();
+        alert('✅ Entrega registrada.');
+      });
+    }
+
+    function setupFormGasto() {
+      const form = document.getElementById('formGasto');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const concepto = document.getElementById('gConcepto').value.trim();
+        const monto = parseFloat(document.getElementById('gMonto').value);
+        const categoria = document.getElementById('gCategoria').value;
+
+        if (!concepto || !monto || monto <= 0) {
+          alert('Completa todos los campos.');
+          return;
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            actualizarDashboard();
-            setInterval(actualizarDashboard, 30000);
+        const data = loadData();
+        data.gastos.push({
+          id: generarId(),
+          concepto,
+          monto,
+          categoria,
+          fecha: new Date().toISOString()
         });
-    </script>
+        saveData(data);
+        form.reset();
+        actualizarApp();
+        alert('✅ Gasto registrado.');
+      });
+    }
+
+    // ---------- CONFIGURACIÓN DE PRECIOS ----------
+    function setupPrecios() {
+      document.getElementById('btnGuardarPrecios').addEventListener('click', function() {
+        const data = loadData();
+        data.config.precios_plantas = {
+          puerto_la_cruz: parseFloat(document.getElementById('precioPLC').value) || 0,
+          altagracia: parseFloat(document.getElementById('precioALT').value) || 0,
+          valle_pascua: parseFloat(document.getElementById('precioVAL').value) || 0
+        };
+        saveData(data);
+        actualizarPrecioUnitario();
+        alert('✅ Precios guardados correctamente.');
+      });
+
+      document.getElementById('selectPlanta').addEventListener('change', function() {
+        actualizarPrecioUnitario();
+      });
+
+      // Actualizar precio unitario al cambiar inputs
+      document.getElementById('precioPLC').addEventListener('input', actualizarPrecioUnitario);
+      document.getElementById('precioALT').addEventListener('input', actualizarPrecioUnitario);
+      document.getElementById('precioVAL').addEventListener('input', actualizarPrecioUnitario);
+    }
+
+    // ---------- ARMAR CARGA (CON PLANTA Y COSTO) ----------
+    function setupArmarCarga() {
+      document.getElementById('btnArmarCarga').addEventListener('click', function() {
+        const data = loadData();
+        const inputs = document.querySelectorAll('.cantidad-carga');
+        const seleccion = {};
+        let totalSeleccionado = 0;
+        inputs.forEach(inp => {
+          const val = parseInt(inp.value) || 0;
+          if (val > 0) {
+            const id = parseInt(inp.dataset.id);
+            const tipo = inp.dataset.tipo;
+            if (!seleccion[id]) seleccion[id] = { p:0, m:0, g:0 };
+            seleccion[id][tipo] = val;
+            totalSeleccionado += val;
+          }
+        });
+
+        const ids = Object.keys(seleccion).map(Number);
+        if (ids.length === 0) {
+          alert('Selecciona al menos una recogida con cantidad > 0.');
+          return;
+        }
+
+        const capacidad = parseInt(document.getElementById('capacidadCamion').value) || 60;
+        if (totalSeleccionado > capacidad) {
+          alert(`La carga excede la capacidad (${capacidad} cil.). Total: ${totalSeleccionado}.`);
+          return;
+        }
+
+        // Obtener planta seleccionada y su precio
+        const plantaDestino = document.getElementById('selectPlanta').value;
+        const precioMap = {
+          'puerto_la_cruz': parseFloat(document.getElementById('precioPLC').value) || 0,
+          'altagracia': parseFloat(document.getElementById('precioALT').value) || 0,
+          'valle_pascua': parseFloat(document.getElementById('precioVAL').value) || 0
+        };
+        const costoUnitario = precioMap[plantaDestino] || 0;
+        if (costoUnitario <= 0) {
+          alert('El costo de llenado para esta planta es 0 o no está configurado. Configura los precios primero.');
+          return;
+        }
+
+        // Verificar saldos
+        for (let id of ids) {
+          const rec = data.recogidas.find(r => r.id === id);
+          if (!rec) { alert(`Recogida ${id} no encontrada.`); return; }
+          const saldo = obtenerSaldo(rec);
+          const sel = seleccion[id];
+          if (sel.p > saldo.p || sel.m > saldo.m || sel.g > saldo.g) {
+            alert(`La cantidad seleccionada para la recogida ${rec.comunidad} excede el saldo disponible.`);
+            return;
+          }
+        }
+
+        // Crear carga
+        const origen = ids.map(id => ({
+          recogidaId: id,
+          p: seleccion[id].p,
+          m: seleccion[id].m,
+          g: seleccion[id].g
+        }));
+
+        const carga = {
+          id: generarId(),
+          fecha: new Date().toISOString(),
+          origen: origen,
+          total_cilindros: totalSeleccionado,
+          plantaDestino: plantaDestino,
+          costoLlenadoUnitario: costoUnitario,
+          costoLlenadoTotal: totalSeleccionado * costoUnitario,
+          estado: 'armada'
+        };
+        data.cargas.push(carga);
+
+        // Actualizar enviado de las recogidas
+        ids.forEach(id => {
+          const rec = data.recogidas.find(r => r.id === id);
+          if (rec) {
+            rec.enviado = rec.enviado || { p:0, m:0, g:0 };
+            rec.enviado.p += seleccion[id].p;
+            rec.enviado.m += seleccion[id].m;
+            rec.enviado.g += seleccion[id].g;
+          }
+        });
+
+        saveData(data);
+        actualizarApp();
+        alert(`✅ Carga armada exitosamente (${totalSeleccionado} cilindros) hacia ${nombrePlanta(plantaDestino)}. Costo llenado: Bs ${carga.costoLlenadoTotal.toFixed(2)}`);
+      });
+    }
+
+    // ---------- CONFIGURAR CAPACIDAD ----------
+    function setupCapacidad() {
+      document.getElementById('btnActualizarCapacidad').addEventListener('click', function() {
+        const val = parseInt(document.getElementById('capacidadCamion').value);
+        if (!val || val <= 0) {
+          alert('Ingresa un número válido.');
+          return;
+        }
+        const data = loadData();
+        data.config.capacidad_camion = val;
+        saveData(data);
+        alert('Capacidad actualizada.');
+      });
+    }
+
+    // ---------- NAVEGACIÓN ----------
+    function setupNavegacion() {
+      const botones = document.querySelectorAll('#navPrincipal button');
+      const vistas = {
+        dashboard: document.getElementById('dashboard'),
+        recogida: document.getElementById('recogida'),
+        carga: document.getElementById('carga'),
+        entregas: document.getElementById('entregas'),
+        gastos: document.getElementById('gastos'),
+        reportes: document.getElementById('reportes')
+      };
+
+      botones.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const vista = this.dataset.vista;
+          botones.forEach(b => b.classList.remove('activo'));
+          this.classList.add('activo');
+          Object.keys(vistas).forEach(key => {
+            vistas[key].classList.toggle('activa', key === vista);
+          });
+          if (['carga', 'dashboard', 'entregas', 'gastos', 'reportes'].includes(vista)) {
+            actualizarApp();
+          }
+        });
+      });
+    }
+
+    // ---------- REPORTES: EVENTOS ----------
+    function setupReportes() {
+      document.getElementById('btnReporteResumen').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteResumen(data);
+      });
+      document.getElementById('btnReporteComunidades').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteComunidades(data);
+      });
+      document.getElementById('btnReporteExoneraciones').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteExoneraciones(data);
+      });
+      document.getElementById('btnReporteGastos').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteGastos(data);
+      });
+      document.getElementById('btnReportePlantas').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReportePlantas(data);
+      });
+    }
+
+    // ---------- INICIALIZACIÓN ----------
+    function init() {
+      actualizarApp();
+      setupNavegacion();
+      setupFormRecogida();
+      setupFormEntrega();
+      setupFormGasto();
+      setupPrecios();
+      setupArmarCarga();
+      setupCapacidad();
+      setupReportes();
+
+      console.log('✅ GAS GUARIBE v5.0 (con 3 plantas y costos variables) cargado.');
+    }
+
+    // Ejecutar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+  })();
+</script>
+
 </body>
 </html>
