@@ -173,9 +173,9 @@
   <button data-vista="entregas">📦 Entregas</button>
   <button data-vista="cobros">💳 Cobros</button>
   <button data-vista="gastos">💰 Gastos</button>
-  <button data-vista="comunidades">🏘️ Comunidades</button>
   <button data-vista="config">⚙️ Config</button>
   <button data-vista="reportes">📈 Reportes</button>
+  <button data-vista="comunidades">🏘️ Comunidades</button>
 </div>
 
 <!-- ========== DASHBOARD ========== -->
@@ -247,7 +247,7 @@
   </div>
 </div>
 
-<!-- ========== CARGA ========== -->
+<!-- ========== CARGA (CON CARGA RÁPIDA) ========== -->
 <div id="carga" class="vista">
   <h2>Armar carga a planta</h2>
   <div class="card">
@@ -276,6 +276,11 @@
     <select id="filtroComunidad">
       <option value="">Todas las comunidades</option>
     </select>
+
+    <div class="flex" style="margin-top:8px;">
+      <button class="btn-secundario" id="btnCargaRapida" style="flex:1;">⚡ Cargar todo</button>
+      <button class="btn-secundario" id="btnLimpiarSeleccion" style="flex:1;">🧹 Limpiar</button>
+    </div>
 
     <p class="text-muted" style="margin-top:8px;">Selecciona cantidades a enviar de cada recogida con saldo disponible.</p>
     <div id="listaRecogidasCarga"><p class="text-muted">No hay recogidas con saldo.</p></div>
@@ -418,16 +423,6 @@
   </div>
 </div>
 
-<!-- ========== COMUNIDADES ========== -->
-<div id="comunidades" class="vista">
-  <h2>Comunidades y comercios</h2>
-  <div class="card">
-    <div id="listaComunidades">
-      <p class="text-muted">Cargando...</p>
-    </div>
-  </div>
-</div>
-
 <!-- ========== CONFIGURACIÓN ========== -->
 <div id="config" class="vista">
   <h2>⚙️ Configuración</h2>
@@ -506,6 +501,16 @@
   </div>
 </div>
 
+<!-- ========== COMUNIDADES ========== -->
+<div id="comunidades" class="vista">
+  <h2>Comunidades y comercios</h2>
+  <div class="card">
+    <div id="listaComunidades">
+      <p class="text-muted">Cargando...</p>
+    </div>
+  </div>
+</div>
+
 <!-- ============================================================ -->
 <!-- ======================== JAVASCRIPT ========================== -->
 <!-- ============================================================ -->
@@ -515,44 +520,16 @@
 
     // ---------- LISTA MAESTRA DE COMUNIDADES ----------
     const COMUNIDADES_MAESTRAS = [
-      "EL BACHILLER",
-      "LA MIRANDERA",
-      "GUARIBITO",
-      "LOS SAMANES",
-      "SANTA ROSA DE LIMA",
-      "SANTA ROSA",
-      "DELICIAS NORTE",
-      "LAS DELICIAS",
-      "SECTORES UNIDOS",
-      "CHIVIRITAL",
-      "LAS TERRAZAS",
-      "CAÑICITO",
-      "EL CENTRO",
-      "SAN PASCUAL",
-      "SAMAN GACHO",
-      "CARAQUITA",
-      "EL QUIZANDO",
-      "EL DELIRIO",
-      "EL ACUEDUCTO",
-      "SAN LUIS",
-      "INAVI",
-      "EL ASERRADERO",
-      "COLINAS DE INAVI",
-      "19 DE ABRIL",
-      "EL CEDRO",
-      "UVERAL",
-      "LA CEIBA",
-      "LOS MEDANOS",
-      "EL CINCO",
-      "LAS LAJAS",
-      "LAS AGUADITAS",
-      "ARENITAS",
-      "SABANA GRANDE",
-      "ORUS",
-      "GALPON",
-      "ABASTO EL LLANERO",
-      "DISTRIBUIDORA DAVID",
-      "QUESERAS"
+      "EL BACHILLER", "LA MIRANDERA", "GUARIBITO", "LOS SAMANES",
+      "SANTA ROSA DE LIMA", "SANTA ROSA", "DELICIAS NORTE", "LAS DELICIAS",
+      "SECTORES UNIDOS", "CHIVIRITAL", "LAS TERRAZAS", "CAÑICITO",
+      "EL CENTRO", "SAN PASCUAL", "SAMAN GACHO", "CARAQUITA",
+      "EL QUIZANDO", "EL DELIRIO", "EL ACUEDUCTO", "SAN LUIS",
+      "INAVI", "EL ASERRADERO", "COLINAS DE INAVI", "19 DE ABRIL",
+      "EL CEDRO", "UVERAL", "LA CEIBA", "LOS MEDANOS",
+      "EL CINCO", "LAS LAJAS", "LAS AGUADITAS", "ARENITAS",
+      "SABANA GRANDE", "ORUS", "GALPON", "ABASTO EL LLANERO",
+      "DISTRIBUIDORA DAVID", "QUESERAS"
     ];
 
     // ---------- CLAVES LOCALSTORAGE ----------
@@ -574,7 +551,7 @@
             altagracia: 35.00,
             valle_pascua: 50.00
           },
-          comunidades: COMUNIDADES_MAESTRAS.slice() // copia
+          comunidades: COMUNIDADES_MAESTRAS
         },
         recogidas: [],
         cargas: [],
@@ -594,10 +571,10 @@
           for (let key in def) {
             if (!(key in parsed)) parsed[key] = def[key];
           }
-          if (!parsed.config.comunidades) parsed.config.comunidades = def.config.comunidades;
           if (!parsed.config.precios_llenado) parsed.config.precios_llenado = def.config.precios_llenado;
           if (!parsed.config.precios_venta) parsed.config.precios_venta = def.config.precios_venta;
           if (!parsed.config.gastos_logisticos) parsed.config.gastos_logisticos = def.config.gastos_logisticos;
+          if (!parsed.config.comunidades) parsed.config.comunidades = def.config.comunidades;
           if (!parsed.cobros) parsed.cobros = [];
           return parsed;
         }
@@ -632,16 +609,6 @@
       return map[clave] || clave;
     }
 
-    // ---------- OBTENER TODAS LAS COMUNIDADES (maestras + dinámicas) ----------
-    function obtenerTodasLasComunidades(data) {
-      const maestras = data.config.comunidades || [];
-      const dinamicas = new Set();
-      data.recogidas.forEach(r => dinamicas.add(r.comunidad));
-      data.entregas.forEach(e => dinamicas.add(e.comunidad));
-      const todas = new Set([...maestras, ...dinamicas]);
-      return Array.from(todas).sort();
-    }
-
     // ---------- SALDO DE RECOGIDA ----------
     function obtenerSaldo(recogida) {
       const enviado = recogida.enviado || { p: 0, m: 0, g: 0 };
@@ -654,25 +621,32 @@
       };
     }
 
+    // ---------- OBTENER TODAS LAS COMUNIDADES (maestras + dinámicas) ----------
+    function obtenerTodasLasComunidades(data) {
+      const maestras = data.config.comunidades || [];
+      const dinamicas = new Set();
+      data.recogidas.forEach(r => dinamicas.add(r.comunidad));
+      data.entregas.forEach(e => dinamicas.add(e.comunidad));
+      const todas = new Set([...maestras, ...dinamicas]);
+      return Array.from(todas).sort();
+    }
+
     // ---------- SALDO PENDIENTE POR COMUNIDAD ----------
     function calcularSaldosPendientes(data) {
       const saldos = {};
-      // Inicializar con todas las comunidades maestras
-      (data.config.comunidades || []).forEach(c => saldos[c] = 0);
-      // Sumar entregas a crédito
+      const todas = obtenerTodasLasComunidades(data);
+      todas.forEach(c => saldos[c] = 0);
       data.entregas.forEach(e => {
         if (e.tipo_pago === 'credito') {
-          if (!saldos[e.comunidad]) saldos[e.comunidad] = 0;
-          saldos[e.comunidad] += (e.monto_cobrado || 0);
+          saldos[e.comunidad] = (saldos[e.comunidad] || 0) + (e.monto_cobrado || 0);
         }
       });
-      // Restar cobros
       data.cobros.forEach(c => {
-        if (saldos[c.comunidad]) {
+        if (saldos[c.comunidad] !== undefined) {
           saldos[c.comunidad] -= (c.monto || 0);
         }
       });
-      // Eliminar comunidades con saldo 0 (opcional)
+      // Eliminar comunidades con saldo 0 o negativo
       Object.keys(saldos).forEach(k => {
         if (saldos[k] <= 0.005) delete saldos[k];
       });
@@ -688,7 +662,6 @@
         deposito.m += saldo.m;
         deposito.g += saldo.g;
       });
-
       let enPlanta = { p: 0, m: 0, g: 0 };
       data.cargas.forEach(c => {
         if (c.estado === 'enviada') {
@@ -699,7 +672,6 @@
           });
         }
       });
-
       return {
         deposito: deposito,
         enPlanta: enPlanta,
@@ -880,6 +852,21 @@
       calcularResumenCarga();
     }
 
+    function actualizarFiltroComunidad(data) {
+      const select = document.getElementById('filtroComunidad');
+      const todas = obtenerTodasLasComunidades(data);
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">Todas las comunidades</option>';
+      todas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        select.appendChild(opt);
+      });
+      select.value = currentVal;
+      renderListaCarga(data);
+    }
+
     function renderListaCarga(data) {
       const cont = document.getElementById('listaRecogidasCarga');
       const filtro = document.getElementById('filtroComunidad').value;
@@ -950,6 +937,78 @@
       document.getElementById('resumenCostoTotal').textContent = costoTotal.toFixed(2);
     }
 
+    // ---------- CARGA RÁPIDA ----------
+    function cargarRapido() {
+      const data = loadData();
+      const capacidad = parseInt(document.getElementById('capacidadCamion').value) || 60;
+      const filtro = document.getElementById('filtroComunidad').value;
+
+      let disponibles = data.recogidas.filter(r => obtenerSaldo(r).total > 0);
+      if (filtro) {
+        disponibles = disponibles.filter(r => r.comunidad === filtro);
+      }
+      if (disponibles.length === 0) {
+        alert('No hay recogidas con saldo disponible para esta comunidad.');
+        return;
+      }
+
+      let totalCil = 0;
+      const asignaciones = {};
+      disponibles.forEach(r => {
+        const saldo = obtenerSaldo(r);
+        const p = saldo.p, m = saldo.m, g = saldo.g;
+        asignaciones[r.id] = { p, m, g };
+        totalCil += p + m + g;
+      });
+
+      // Si excede la capacidad, ajustar proporcionalmente
+      if (totalCil > capacidad) {
+        const factor = capacidad / totalCil;
+        Object.keys(asignaciones).forEach(id => {
+          asignaciones[id].p = Math.floor(asignaciones[id].p * factor);
+          asignaciones[id].m = Math.floor(asignaciones[id].m * factor);
+          asignaciones[id].g = Math.floor(asignaciones[id].g * factor);
+        });
+        let nuevoTotal = 0;
+        Object.values(asignaciones).forEach(a => nuevoTotal += a.p + a.m + a.g);
+        if (nuevoTotal > capacidad) {
+          const ids = Object.keys(asignaciones);
+          for (let i = ids.length - 1; i >= 0 && nuevoTotal > capacidad; i--) {
+            const id = ids[i];
+            const a = asignaciones[id];
+            while (nuevoTotal > capacidad && (a.p > 0 || a.m > 0 || a.g > 0)) {
+              if (a.p > 0) { a.p--; nuevoTotal--; }
+              else if (a.m > 0) { a.m--; nuevoTotal--; }
+              else if (a.g > 0) { a.g--; nuevoTotal--; }
+            }
+          }
+        }
+        alert(`⚠️ La carga excede la capacidad (${totalCil} cil.). Se ha ajustado automáticamente a ${capacidad} cilindros.`);
+      } else {
+        alert(`✅ Se cargarán ${totalCil} cilindros de ${disponibles.length} recogidas.`);
+      }
+
+      document.querySelectorAll('.cantidad-carga').forEach(inp => {
+        const id = parseInt(inp.dataset.id);
+        const tipo = inp.dataset.tipo;
+        if (asignaciones[id]) {
+          inp.value = asignaciones[id][tipo] || 0;
+        } else {
+          inp.value = 0;
+        }
+      });
+
+      calcularResumenCarga();
+    }
+
+    function limpiarSeleccion() {
+      document.querySelectorAll('.cantidad-carga').forEach(inp => {
+        inp.value = 0;
+      });
+      calcularResumenCarga();
+    }
+
+    // ---------- LISTA DE CARGAS CREADAS ----------
     function renderListaCargas(data) {
       const cont = document.getElementById('listaCargas');
       if (data.cargas.length === 0) {
@@ -1047,29 +1106,6 @@
       actualizarApp();
     };
 
-    // ---------- FUNCIONES PARA LLENAR SELECTORES DE COMUNIDAD ----------
-    function llenarSelectComunidades(selectId, data, incluirVacio = true, soloConDeuda = false) {
-      const select = document.getElementById(selectId);
-      if (!select) return;
-      const comunidades = obtenerTodasLasComunidades(data);
-      let opciones = '';
-      if (incluirVacio) opciones += '<option value="">Selecciona una comunidad</option>';
-      const saldos = calcularSaldosPendientes(data);
-      comunidades.forEach(c => {
-        if (soloConDeuda && (!saldos[c] || saldos[c] <= 0)) return;
-        opciones += `<option value="${c}">${c}</option>`;
-      });
-      select.innerHTML = opciones;
-    }
-
-    function llenarFiltroComunidad(data) {
-      const select = document.getElementById('filtroComunidad');
-      const comunidades = obtenerTodasLasComunidades(data);
-      let opciones = '<option value="">Todas las comunidades</option>';
-      comunidades.forEach(c => opciones += `<option value="${c}">${c}</option>`);
-      select.innerHTML = opciones;
-    }
-
     // ---------- ENTREGAS ----------
     function setupEntregaCalculo() {
       ['ePequenos', 'eMedianos', 'eGrandes', 'ePrecioP', 'ePrecioM', 'ePrecioG'].forEach(id => {
@@ -1130,16 +1166,19 @@
     };
 
     // ---------- COBROS ----------
-    function actualizarSelectComunidadesCobros(data) {
+    function actualizarSelectComunidades(data) {
       const select = document.getElementById('cComunidad');
       const saldos = calcularSaldosPendientes(data);
-      const comunidades = Object.keys(saldos).sort();
-      let opciones = '<option value="">Selecciona una comunidad</option>';
+      const comunidades = Object.keys(saldos);
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">Selecciona una comunidad</option>';
       comunidades.forEach(c => {
-        opciones += `<option value="${c}">${c} (Bs ${saldos[c].toFixed(2)})</option>`;
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = `${c} (Bs ${saldos[c].toFixed(2)})`;
+        select.appendChild(opt);
       });
-      select.innerHTML = opciones;
-      // Mostrar deuda al seleccionar
+      select.value = currentVal;
       document.getElementById('cComunidad').addEventListener('change', function() {
         const saldos = calcularSaldosPendientes(data);
         const deuda = saldos[this.value] || 0;
@@ -1203,73 +1242,6 @@
       actualizarApp();
     };
 
-    // ---------- COMUNIDADES (VISTA) ----------
-    function renderListaComunidades(data) {
-      const cont = document.getElementById('listaComunidades');
-      const mapa = {};
-      const todas = obtenerTodasLasComunidades(data);
-
-      // Inicializar todas las comunidades maestras
-      todas.forEach(nom => {
-        mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
-      });
-
-      // Recoger datos de recogidas
-      data.recogidas.forEach(r => {
-        const nom = r.comunidad || 'Sin comunidad';
-        if (!mapa[nom]) mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
-        mapa[nom].recogidas += 1;
-        mapa[nom].cilindros.p += (r.pequenos || 0);
-        mapa[nom].cilindros.m += (r.medianos || 0);
-        mapa[nom].cilindros.g += (r.grandes || 0);
-        mapa[nom].cobro += (r.cobro || 0);
-      });
-
-      // Entregas
-      data.entregas.forEach(e => {
-        const nom = e.comunidad || 'Sin comunidad';
-        if (!mapa[nom]) mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
-        mapa[nom].entregas += 1;
-        mapa[nom].cilindros.p += (e.pequenos || 0);
-        mapa[nom].cilindros.m += (e.medianos || 0);
-        mapa[nom].cilindros.g += (e.grandes || 0);
-        mapa[nom].cobro += (e.monto_cobrado || 0);
-        if (e.tipo_pago === 'credito') {
-          mapa[nom].deuda += (e.monto_cobrado || 0);
-        }
-      });
-
-      // Restar cobros
-      data.cobros.forEach(c => {
-        if (mapa[c.comunidad]) {
-          mapa[c.comunidad].deuda -= (c.monto || 0);
-        }
-      });
-
-      const claves = Object.keys(mapa).sort();
-      if (claves.length === 0) {
-        cont.innerHTML = '<p class="text-muted">No hay comunidades registradas.</p>';
-        return;
-      }
-
-      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-        <tr><th>Comunidad</th><th>Recogidas</th><th>Entregas</th><th>Cilindros (P/M/G)</th><th>Cobro total</th><th>Deuda</th></tr>`;
-      claves.forEach(nom => {
-        const d = mapa[nom];
-        const totalCil = d.cilindros.p + d.cilindros.m + d.cilindros.g;
-        html += `<tr>
-          <td><strong>${nom}</strong></td>
-          <td>${d.recogidas}</td>
-          <td>${d.entregas}</td>
-          <td>${d.cilindros.p}/${d.cilindros.m}/${d.cilindros.g} (${totalCil})</td>
-          <td>${d.cobro.toFixed(2)}</td>
-          <td class="${d.deuda > 0 ? 'text-danger' : 'text-success'}">${d.deuda.toFixed(2)}</td>
-        </tr>`;
-      });
-      html += '</table>';
-      cont.innerHTML = html;
-    }
-
     // ---------- REPORTES ----------
     function renderReporteResumen(data) {
       const totalRec = data.recogidas.length;
@@ -1305,9 +1277,7 @@
     function renderReporteComunidades(data) {
       const mapa = {};
       const todas = obtenerTodasLasComunidades(data);
-      todas.forEach(nom => {
-        mapa[nom] = { p:0, m:0, g:0, cobro:0 };
-      });
+      todas.forEach(nom => mapa[nom] = { p:0, m:0, g:0, cobro:0 });
       data.recogidas.forEach(r => {
         const nom = r.comunidad || 'Sin comunidad';
         if (!mapa[nom]) mapa[nom] = { p:0, m:0, g:0, cobro:0 };
@@ -1400,16 +1370,14 @@
     function renderReporteRentabilidad(data) {
       const comunidades = {};
       const todas = obtenerTodasLasComunidades(data);
-      todas.forEach(nom => comunidades[nom] = { ingresos: 0, costos: 0 });
+      todas.forEach(c => comunidades[c] = { ingresos: 0, costos: 0 });
 
-      // Ingresos por comunidad
       data.entregas.forEach(e => {
         const nom = e.comunidad || 'Sin comunidad';
         if (!comunidades[nom]) comunidades[nom] = { ingresos: 0, costos: 0 };
         comunidades[nom].ingresos += (e.monto_cobrado || 0);
       });
 
-      // Costos directos
       data.cargas.forEach(c => {
         if (c.estado === 'regresada' || c.estado === 'enviada') {
           const costos = c.costos || { llenado: { total: 0 }, logistico: 0, adicionales: 0 };
@@ -1439,6 +1407,66 @@
       });
       html += '</table>';
       return html;
+    }
+
+    // ---------- COMUNIDADES ----------
+    function renderListaComunidades(data) {
+      const cont = document.getElementById('listaComunidades');
+      const mapa = {};
+      const todas = obtenerTodasLasComunidades(data);
+      todas.forEach(nom => mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 });
+
+      data.recogidas.forEach(r => {
+        const nom = r.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
+        mapa[nom].recogidas += 1;
+        mapa[nom].cilindros.p += (r.pequenos || 0);
+        mapa[nom].cilindros.m += (r.medianos || 0);
+        mapa[nom].cilindros.g += (r.grandes || 0);
+        mapa[nom].cobro += (r.cobro || 0);
+      });
+
+      data.entregas.forEach(e => {
+        const nom = e.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
+        mapa[nom].entregas += 1;
+        mapa[nom].cilindros.p += (e.pequenos || 0);
+        mapa[nom].cilindros.m += (e.medianos || 0);
+        mapa[nom].cilindros.g += (e.grandes || 0);
+        mapa[nom].cobro += (e.monto_cobrado || 0);
+        if (e.tipo_pago === 'credito') {
+          mapa[nom].deuda += (e.monto_cobrado || 0);
+        }
+      });
+
+      data.cobros.forEach(c => {
+        if (mapa[c.comunidad]) {
+          mapa[c.comunidad].deuda -= (c.monto || 0);
+        }
+      });
+
+      const claves = Object.keys(mapa).sort();
+      if (claves.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay comunidades registradas.</p>';
+        return;
+      }
+
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+        <tr><th>Comunidad</th><th>Recogidas</th><th>Entregas</th><th>Cilindros (P/M/G)</th><th>Cobro total</th><th>Deuda</th></tr>`;
+      claves.forEach(nom => {
+        const d = mapa[nom];
+        const totalCil = d.cilindros.p + d.cilindros.m + d.cilindros.g;
+        html += `<tr>
+          <td><strong>${nom}</strong></td>
+          <td>${d.recogidas}</td>
+          <td>${d.entregas}</td>
+          <td>${d.cilindros.p}/${d.cilindros.m}/${d.cilindros.g} (${totalCil})</td>
+          <td>${d.cobro.toFixed(2)}</td>
+          <td class="${d.deuda > 0.005 ? 'text-danger' : 'text-success'}">${d.deuda.toFixed(2)}</td>
+        </tr>`;
+      });
+      html += '</table>';
+      cont.innerHTML = html;
     }
 
     // ---------- EXPORTAR ----------
@@ -1644,7 +1672,7 @@
       renderDashboard(data);
       renderListaRecogidas(data);
       cargarPreciosUI(data);
-      llenarFiltroComunidad(data);
+      actualizarFiltroComunidad(data);
       renderListaCarga(data);
       renderListaCargas(data);
       renderListaEntregas(data);
@@ -1652,9 +1680,22 @@
       renderListaGastos(data);
       renderListaComunidades(data);
       cargarPreciosVentaEnEntrega(data);
-      actualizarSelectComunidadesCobros(data);
-      llenarSelectComunidades('rComunidad', data);
-      llenarSelectComunidades('eComunidad', data);
+      actualizarSelectComunidades(data);
+
+      // Actualizar selects de comunidades en recogida y entrega
+      const todas = obtenerTodasLasComunidades(data);
+      ['rComunidad', 'eComunidad'].forEach(id => {
+        const sel = document.getElementById(id);
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">Selecciona una comunidad</option>';
+        todas.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          sel.appendChild(opt);
+        });
+        sel.value = currentVal;
+      });
 
       const select = document.getElementById('eCargaId');
       const currentVal = select.value;
@@ -1678,19 +1719,20 @@
       const exoArr = [];
       const listaExo = document.getElementById('listaExoneraciones');
 
-      // Botón para agregar nueva comunidad
+      // Botón para agregar nueva comunidad (si no está en la lista maestra)
       document.getElementById('btnNuevaComunidad').addEventListener('click', function() {
-        const nombre = prompt('Ingresa el nombre de la nueva comunidad o comercio:');
-        if (nombre && nombre.trim()) {
+        const nueva = prompt('Ingresa el nombre de la nueva comunidad o comercio:');
+        if (nueva && nueva.trim() !== '') {
+          const nombre = nueva.trim().toUpperCase();
           const data = loadData();
           if (!data.config.comunidades) data.config.comunidades = [];
-          if (!data.config.comunidades.includes(nombre.trim())) {
-            data.config.comunidades.push(nombre.trim());
+          if (!data.config.comunidades.includes(nombre)) {
+            data.config.comunidades.push(nombre);
             saveData(data);
             actualizarApp();
-            alert(`✅ Comunidad "${nombre.trim()}" agregada.`);
+            alert(`✅ Comunidad "${nombre}" agregada correctamente.`);
           } else {
-            alert('Esta comunidad ya existe.');
+            alert('⚠️ Esta comunidad ya existe en la lista.');
           }
         }
       });
@@ -1737,7 +1779,7 @@
         const g = parseInt(document.getElementById('rGrandes').value) || 0;
         const cobro = parseFloat(document.getElementById('rCobro').value) || 0;
 
-        if (!comunidad) { alert('La comunidad es obligatoria.'); return; }
+        if (!comunidad) { alert('Selecciona una comunidad.'); return; }
         if (p + m + g === 0) { alert('Debes registrar al menos un cilindro.'); return; }
 
         const data = loadData();
@@ -1780,7 +1822,7 @@
         const precioM = parseFloat(document.getElementById('ePrecioM').value) || 0;
         const precioG = parseFloat(document.getElementById('ePrecioG').value) || 0;
 
-        if (!comunidad) { alert('La comunidad es obligatoria.'); return; }
+        if (!comunidad) { alert('Selecciona una comunidad.'); return; }
         if (p + m + g === 0) { alert('Debes entregar al menos un cilindro.'); return; }
 
         const data = loadData();
@@ -1796,7 +1838,6 @@
           fecha: new Date().toISOString(),
           cargaId: cargaId
         });
-
         saveData(data);
         form.reset();
         document.getElementById('ePequenos').value = 0;
@@ -2039,9 +2080,9 @@
         entregas: document.getElementById('entregas'),
         cobros: document.getElementById('cobros'),
         gastos: document.getElementById('gastos'),
-        comunidades: document.getElementById('comunidades'),
         config: document.getElementById('config'),
-        reportes: document.getElementById('reportes')
+        reportes: document.getElementById('reportes'),
+        comunidades: document.getElementById('comunidades')
       };
 
       botones.forEach(btn => {
@@ -2052,7 +2093,7 @@
           Object.keys(vistas).forEach(key => {
             vistas[key].classList.toggle('activa', key === vista);
           });
-          if (['carga', 'dashboard', 'entregas', 'cobros', 'gastos', 'comunidades', 'config', 'reportes'].includes(vista)) {
+          if (['carga', 'dashboard', 'entregas', 'cobros', 'gastos', 'config', 'reportes', 'comunidades'].includes(vista)) {
             actualizarApp();
           }
         });
@@ -2110,6 +2151,10 @@
       setupReportes();
       setupEntregaCalculo();
 
+      // Eventos de carga rápida
+      document.getElementById('btnCargaRapida').addEventListener('click', cargarRapido);
+      document.getElementById('btnLimpiarSeleccion').addEventListener('click', limpiarSeleccion);
+
       document.getElementById('selectPlanta').addEventListener('change', actualizarCostosPlanta);
       document.getElementById('filtroComunidad').addEventListener('change', function() {
         const data = loadData();
@@ -2117,7 +2162,7 @@
       });
       document.getElementById('gastosAdicionales').addEventListener('input', calcularResumenCarga);
 
-      console.log('✅ Gas Guaribe – GAS (versión con lista maestra de comunidades) cargado.');
+      console.log('✅ Gas Guaribe – GAS (versión con carga rápida y comunidades maestras) cargado.');
     }
 
     if (document.readyState === 'loading') {
