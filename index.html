@@ -77,6 +77,7 @@
     .modal-overlay.activo { display: flex; }
     .modal { background: #fff; border-radius: 16px; padding: 24px; max-width: 500px; width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
     .modal h2 { margin-top: 0; }
+    .info-box { background: #eef3f8; border-radius: 8px; padding: 8px 12px; margin: 6px 0; font-size: 0.9rem; }
     @media (max-width: 420px) { body { padding: 8px; } .nav button { font-size: 0.6rem; padding: 6px 2px; } .grid-2 { grid-template-columns: 1fr 1fr; gap: 6px; } .stat span { font-size: 1.4rem; } .modal { padding: 16px; } }
     .mb-8 { margin-bottom: 8px; }
     .mt-8 { margin-top: 8px; }
@@ -220,7 +221,7 @@
   </div>
 </div>
 
-<!-- ========== CARGA (SIN FILTRO - TODAS LAS RECOGIDAS) ========== -->
+<!-- ========== CARGA ========== -->
 <div id="carga" class="vista">
   <h2>Armar carga a planta</h2>
   <div class="card">
@@ -273,7 +274,7 @@
   </div>
 </div>
 
-<!-- ========== ENTREGAS ========== -->
+<!-- ========== ENTREGAS (con visualización de stock en planta) ========== -->
 <div id="entregas" class="vista">
   <h2>Registrar entrega</h2>
   <div class="card">
@@ -282,6 +283,12 @@
       <select id="eComunidad" required>
         <option value="">Selecciona una comunidad</option>
       </select>
+
+      <!-- Mostrar stock en planta -->
+      <div id="stockEnPlanta" class="info-box oculto">
+        <strong>📦 Disponible en planta para esta comunidad:</strong><br>
+        P: <span id="stockP">0</span> | M: <span id="stockM">0</span> | G: <span id="stockG">0</span>
+      </div>
 
       <label>Cilindros entregados</label>
       <div class="flex">
@@ -328,7 +335,7 @@
   </div>
 </div>
 
-<!-- ========== COBROS ========== -->
+<!-- ========== COBROS (con método de pago) ========== -->
 <div id="cobros" class="vista">
   <h2>Registrar cobro / abono</h2>
   <div class="card">
@@ -341,6 +348,13 @@
 
       <label>Monto abonado (Bs) *</label>
       <input type="number" id="cMonto" step="0.01" min="0.01" required>
+
+      <label>Método de pago</label>
+      <select id="cMetodoPago">
+        <option value="efectivo">Efectivo</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="punto_venta">Punto de Venta</option>
+      </select>
 
       <label>Concepto (opcional)</label>
       <input type="text" id="cConcepto" placeholder="Ej: Abono parcial">
@@ -517,14 +531,13 @@
       "DISTRIBUIDORA DAVID", "QUESERAS"
     ];
 
-    // ---------- CLAVES LOCALSTORAGE ----------
-    const STORAGE_KEY = 'gas_guaribe_data_v12';
+    const STORAGE_KEY = 'gas_guaribe_data_v13';
     let exoArrGlobal = [];
     let valoresSeleccionados = {};
 
     function getDefaultData() {
       return {
-        _version: '2',
+        _version: '3',
         config: {
           capacidad_camion: 60,
           precios_llenado: {
@@ -548,7 +561,7 @@
       };
     }
 
-    // ---------- FUNCIONES DE PERSISTENCIA ----------
+    // ---------- PERSISTENCIA ----------
     function loadData() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -573,6 +586,13 @@
               }
             });
             parsed._version = '2';
+          }
+          if (parsed._version === '2') {
+            // Migrar cobros para añadir método de pago
+            parsed.cobros.forEach(c => {
+              if (!c.metodo_pago) c.metodo_pago = 'efectivo';
+            });
+            parsed._version = '3';
           }
           return parsed;
         }
@@ -647,6 +667,25 @@
       };
     }
 
+    // ---------- STOCK EN PLANTA POR COMUNIDAD ----------
+    function calcularStockEnPlanta(data, comunidad) {
+      let stock = { p: 0, m: 0, g: 0 };
+      data.cargas.forEach(c => {
+        if (c.estado === 'enviada') {
+          c.origen.forEach(o => {
+            const rec = data.recogidas.find(r => r.id === o.recogidaId);
+            if (rec && rec.comunidad === comunidad) {
+              stock.p += o.p || 0;
+              stock.m += o.m || 0;
+              stock.g += o.g || 0;
+            }
+          });
+        }
+      });
+      return stock;
+    }
+
+    // ---------- OBTENER TODAS LAS COMUNIDADES ----------
     function obtenerTodasLasComunidades(data) {
       const maestras = data.config.comunidades || [];
       const dinamicas = new Set();
@@ -727,6 +766,20 @@
           cSel.appendChild(opt);
         });
         cSel.value = cVal;
+      }
+
+      // Actualizar el select de cargas en entregas
+      const eCarga = document.getElementById('eCargaId');
+      if (eCarga) {
+        const val = eCarga.value;
+        eCarga.innerHTML = '<option value="">Sin referencia</option>';
+        data.cargas.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `Carga #${c.id} (${c.total_cilindros} cil.) - ${nombrePlanta(c.plantaDestino)}`;
+          eCarga.appendChild(opt);
+        });
+        eCarga.value = val;
       }
     }
 
@@ -1111,7 +1164,7 @@
       });
     }
 
-    // ========== CARGA (SIN FILTRO - TODAS LAS RECOGIDAS) ==========
+    // ========== CARGA ==========
     function renderListaCarga(data) {
       const cont = document.getElementById('listaRecogidasCarga');
       let disponibles = data.recogidas.filter(r => obtenerSaldo(r).total > 0);
@@ -1412,9 +1465,27 @@
       });
     }
 
-    // ========== FUNCIONES RESTANTES (simplificadas) ==========
+    // ========== ENTREGAS (con stock en planta) ==========
+    function actualizarStockEnPlanta() {
+      const data = loadData();
+      const comunidad = document.getElementById('eComunidad').value;
+      const stockDiv = document.getElementById('stockEnPlanta');
+      if (!comunidad) {
+        stockDiv.classList.add('oculto');
+        return;
+      }
+      const stock = calcularStockEnPlanta(data, comunidad);
+      document.getElementById('stockP').textContent = stock.p;
+      document.getElementById('stockM').textContent = stock.m;
+      document.getElementById('stockG').textContent = stock.g;
+      stockDiv.classList.remove('oculto');
+    }
+
     function setupFormEntrega() {
       const form = document.getElementById('formEntrega');
+      // Al cambiar la comunidad, actualizar stock en planta
+      document.getElementById('eComunidad').addEventListener('change', actualizarStockEnPlanta);
+
       form.addEventListener('submit', function(e) {
         e.preventDefault();
         const comunidad = document.getElementById('eComunidad').value;
@@ -1426,6 +1497,12 @@
         const tipoPago = document.getElementById('eTipoPago').value;
         if (p + m + g === 0) { showToast('Debes entregar al menos un cilindro.', 'error'); return; }
         const data = loadData();
+        // Verificar que no se entregue más de lo disponible en planta
+        const stock = calcularStockEnPlanta(data, comunidad);
+        if (p > stock.p || m > stock.m || g > stock.g) {
+          showToast('⚠️ No hay suficientes cilindros en planta para esta comunidad.', 'error');
+          return;
+        }
         data.entregas.push({
           id: generarId(),
           comunidad,
@@ -1449,12 +1526,14 @@
       });
     }
 
+    // ========== COBROS (con método de pago) ==========
     function setupFormCobro() {
       const form = document.getElementById('formCobro');
       form.addEventListener('submit', function(e) {
         e.preventDefault();
         const comunidad = document.getElementById('cComunidad').value;
         const monto = parseFloat(document.getElementById('cMonto').value);
+        const metodoPago = document.getElementById('cMetodoPago').value;
         const concepto = document.getElementById('cConcepto').value.trim() || 'Abono';
         if (!comunidad) { showToast('Selecciona una comunidad.', 'error'); return; }
         if (!monto || monto <= 0) { showToast('Ingresa un monto válido.', 'error'); return; }
@@ -1468,6 +1547,7 @@
           id: generarId(),
           comunidad,
           monto,
+          metodo_pago: metodoPago,
           concepto,
           fecha: new Date().toISOString()
         });
@@ -1475,11 +1555,13 @@
         form.reset();
         document.getElementById('cMonto').value = '';
         document.getElementById('cConcepto').value = '';
+        document.getElementById('cMetodoPago').value = 'efectivo';
         actualizarTodo();
         showToast('✅ Cobro registrado.', 'success');
       });
     }
 
+    // ========== FORMULARIO DE GASTOS ==========
     function setupFormGasto() {
       const form = document.getElementById('formGasto');
       form.addEventListener('submit', function(e) {
@@ -1508,6 +1590,7 @@
       });
     }
 
+    // ========== CONFIGURACIÓN ==========
     function setupConfiguracion() {
       document.getElementById('btnGuardarConfig').addEventListener('click', function() {
         const data = loadData();
@@ -1524,6 +1607,7 @@
       });
     }
 
+    // ========== REPORTES ==========
     function setupReportes() {
       document.getElementById('btnReporteResumen').addEventListener('click', function() {
         const data = loadData();
@@ -1794,6 +1878,7 @@
       showToast('Carga y gastos eliminados.', 'success');
     };
 
+    // ========== ELIMINACIÓN DE REGISTROS ==========
     window.eliminarEntrega = function(id) {
       if (!confirm('¿Eliminar esta entrega?')) return;
       const data = loadData();
@@ -1821,7 +1906,7 @@
       showToast('Gasto eliminado.', 'success');
     };
 
-    // ========== RENDERIZADO DE LISTAS (restantes) ==========
+    // ========== RENDERIZADO DE LISTAS ==========
     function renderListaEntregas(data) {
       const cont = document.getElementById('listaEntregas');
       if (data.entregas.length === 0) {
@@ -1850,13 +1935,17 @@
         return;
       }
       const sorted = [...data.cobros].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      const metodos = { efectivo: 'Efectivo', transferencia: 'Transferencia', punto_venta: 'Punto de Venta' };
       cont.innerHTML = sorted.map(c => {
+        const metodo = metodos[c.metodo_pago] || c.metodo_pago || 'Efectivo';
         return `<div class="item-lista">
           <div class="flex flex-entre">
             <span><strong>${c.comunidad}</strong> - ${c.concepto || 'Abono'}</span>
             <span class="badge">Bs ${(c.monto||0).toFixed(2)}</span>
           </div>
-          <div class="text-muted" style="font-size:0.85rem;">${formatearFecha(c.fecha)}</div>
+          <div class="text-muted" style="font-size:0.85rem;">
+            ${formatearFecha(c.fecha)} - ${metodo}
+          </div>
           <button class="btn-secundario btn-peligro" style="padding:4px 12px; margin-top:4px;" onclick="eliminarCobro(${c.id})">🗑️</button>
         </div>`;
       }).join('');
@@ -1946,6 +2035,10 @@
       renderListaComunidades(data);
       cargarPreciosVentaEnEntrega(data);
       calcularResumenCarga();
+      // Actualizar stock en planta si estamos en entregas
+      if (document.getElementById('entregas').classList.contains('activa')) {
+        actualizarStockEnPlanta();
+      }
     }
 
     // ========== INICIALIZACIÓN ==========
@@ -1970,6 +2063,7 @@
           const data = loadData();
           renderListaEntregas(data);
           cargarPreciosVentaEnEntrega(data);
+          actualizarStockEnPlanta();
         } else if (vista === 'cobros') {
           const data = loadData();
           renderListaCobros(data);
@@ -2054,7 +2148,7 @@
         this.value = '';
       });
 
-      showToast('🚀 Sistema listo. Todas las recogidas con saldo se muestran en Armar carga.', 'info', 5000);
+      showToast('🚀 Sistema listo. En entregas verás el stock disponible en planta.', 'info', 5000);
     }
 
     // ========== ARRANQUE ==========
