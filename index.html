@@ -23,86 +23,23 @@
     h1 { font-size: 1.8rem; color: #0b3b5c; }
     h2 { font-size: 1.4rem; border-bottom: 2px solid #0b3b5c; padding-bottom: 6px; margin-top: 8px; }
     h3 { font-size: 1.1rem; color: #1e4a6b; }
-
-    .card {
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 18px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    }
-
-    .nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-bottom: 16px;
-      justify-content: center;
-    }
-    .nav button {
-      flex: 1 0 auto;
-      padding: 8px 6px;
-      background: #e9edf2;
-      border: none;
-      border-radius: 30px;
-      font-weight: 600;
-      color: #1e293b;
-      cursor: pointer;
-      transition: 0.2s;
-      font-size: 0.75rem;
-      min-width: 55px;
-    }
+    .card { background: #ffffff; border-radius: 16px; padding: 18px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; justify-content: center; }
+    .nav button { flex: 1 0 auto; padding: 8px 6px; background: #e9edf2; border: none; border-radius: 30px; font-weight: 600; color: #1e293b; cursor: pointer; transition: 0.2s; font-size: 0.75rem; min-width: 55px; }
     .nav button.activo { background: #0b3b5c; color: #fff; }
     .nav button:active { transform: scale(0.95); }
-
     .vista { display: none; }
     .vista.activa { display: block; }
-
     label { display: block; font-weight: 500; margin: 10px 0 4px; }
-    input, select, textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ccd7e4;
-      border-radius: 10px;
-      font-size: 1rem;
-      background: #fff;
-      margin-bottom: 4px;
-    }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccd7e4; border-radius: 10px; font-size: 1rem; background: #fff; margin-bottom: 4px; }
     input[type="number"] { -moz-appearance: textfield; }
     input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-    .btn-primario, button[type="submit"] {
-      background: #0b3b5c;
-      color: #fff;
-      border: none;
-      padding: 14px;
-      border-radius: 30px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: 0.2s;
-      width: 100%;
-      margin-top: 12px;
-    }
-    .btn-primario:active, button[type="submit"]:active {
-      background: #082b42;
-      transform: scale(0.97);
-    }
-    .btn-secundario {
-      background: #e9edf2;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 30px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+    .btn-primario, button[type="submit"] { background: #0b3b5c; color: #fff; border: none; padding: 14px; border-radius: 30px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 12px; }
+    .btn-primario:active, button[type="submit"]:active { background: #082b42; transform: scale(0.97); }
+    .btn-secundario { background: #e9edf2; border: none; padding: 10px 16px; border-radius: 30px; font-weight: 500; cursor: pointer; transition: 0.2s; }
     .btn-secundario:active { background: #d0d7e0; }
     .btn-peligro { background: #f8d7da; color: #842029; }
     .btn-peligro:active { background: #f1c1c7; }
-    .btn-exito { background: #d4edda; color: #0f5132; }
-    .btn-exito:active { background: #c1e0c9; }
-
     .flex { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .flex-entre { justify-content: space-between; }
     .grow { flex: 1; }
@@ -110,144 +47,37 @@
     .text-muted { color: #6a7a8a; font-size: 0.9rem; }
     .text-success { color: #2d6a4f; }
     .text-danger { color: #842029; }
-
-    .item-lista {
-      border-bottom: 1px solid #e2e8f0;
-      padding: 12px 0;
-    }
+    .item-lista { border-bottom: 1px solid #e2e8f0; padding: 12px 0; }
     .item-lista:last-child { border-bottom: none; }
-    .badge {
-      background: #0b3b5c;
-      color: #fff;
-      padding: 2px 12px;
-      border-radius: 30px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      white-space: nowrap;
-    }
+    .badge { background: #0b3b5c; color: #fff; padding: 2px 12px; border-radius: 30px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
     .badge-success { background: #2d6a4f; }
     .badge-warning { background: #b9770e; }
     .badge-info { background: #0d6efd; }
     .badge-danger { background: #842029; }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .stat {
-      background: #eef3f8;
-      padding: 14px;
-      border-radius: 14px;
-      text-align: center;
-      transition: 0.2s;
-      cursor: pointer;
-    }
-    .stat:hover {
-      background: #dde6ef;
-      transform: scale(1.02);
-    }
-    .stat span {
-      display: block;
-      font-size: 2rem;
-      font-weight: 700;
-      color: #0b3b5c;
-    }
-
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat { background: #eef3f8; padding: 14px; border-radius: 14px; text-align: center; transition: 0.2s; cursor: pointer; }
+    .stat:hover { background: #dde6ef; transform: scale(1.02); }
+    .stat span { display: block; font-size: 2rem; font-weight: 700; color: #0b3b5c; }
     .oculto { display: none; }
-
-    /* ===== TOAST ===== */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      max-width: 350px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .toast {
-      background: #fff;
-      padding: 14px 18px;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      animation: slideIn 0.3s ease;
-      border-left: 5px solid #0b3b5c;
-    }
+    .toast-container { position: fixed; top: 20px; right: 20px; max-width: 350px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast { background: #fff; padding: 14px 18px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 12px; animation: slideIn 0.3s ease; border-left: 5px solid #0b3b5c; }
     .toast-success { border-left-color: #2d6a4f; }
     .toast-error { border-left-color: #842029; }
     .toast-info { border-left-color: #0d6efd; }
     .toast-icon { font-size: 1.4rem; }
-    .toast-close {
-      background: none;
-      border: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-      color: #6a7a8a;
-      margin-left: auto;
-    }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(50px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
+    .toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #6a7a8a; margin-left: auto; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
     .toast-out { animation: slideOut 0.3s ease forwards; }
-    @keyframes slideOut {
-      from { opacity: 1; transform: translateX(0); }
-      to { opacity: 0; transform: translateX(50px); }
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(0,0,0,0.1);
-      border-radius: 50%;
-      border-top-color: #0b3b5c;
-      animation: spin 0.8s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes slideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(50px); } }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: #0b3b5c; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { display: none; align-items: center; gap: 8px; }
     .loading-text.activo { display: inline-flex; }
-
-    /* ===== MODAL ===== */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 9998;
-      align-items: center;
-      justify-content: center;
-    }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998; align-items: center; justify-content: center; }
     .modal-overlay.activo { display: flex; }
-    .modal {
-      background: #fff;
-      border-radius: 16px;
-      padding: 24px;
-      max-width: 500px;
-      width: 95%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    }
+    .modal { background: #fff; border-radius: 16px; padding: 24px; max-width: 500px; width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
     .modal h2 { margin-top: 0; }
-
-    @media (max-width: 420px) {
-      body { padding: 8px; }
-      .nav button { font-size: 0.6rem; padding: 6px 2px; }
-      .grid-2 { grid-template-columns: 1fr 1fr; gap: 6px; }
-      .stat span { font-size: 1.4rem; }
-      .modal { padding: 16px; }
-    }
-
+    @media (max-width: 420px) { body { padding: 8px; } .nav button { font-size: 0.6rem; padding: 6px 2px; } .grid-2 { grid-template-columns: 1fr 1fr; gap: 6px; } .stat span { font-size: 1.4rem; } .modal { padding: 16px; } }
     .mb-8 { margin-bottom: 8px; }
     .mt-8 { margin-top: 8px; }
     .p-2 { padding: 6px; }
@@ -390,7 +220,7 @@
   </div>
 </div>
 
-<!-- ========== CARGA (CORREGIDA) ========== -->
+<!-- ========== CARGA (SIN FILTRO - TODAS LAS RECOGIDAS) ========== -->
 <div id="carga" class="vista">
   <h2>Armar carga a planta</h2>
   <div class="card">
@@ -413,20 +243,16 @@
     </div>
 
     <label><strong>Gastos adicionales (combustible, peajes, viáticos)</strong></label>
-    <input type="number" id="gastosAdicionales" step="0.01" min="0" value="0" placeholder="0.00" title="Combustible, peajes, viáticos y otros gastos de viaje">
-
-    <label><strong>Mostrar comunidad (filtro visual)</strong></label>
-    <select id="filtroComunidad">
-      <option value="">Todas las comunidades</option>
-    </select>
-    <span class="text-muted" style="font-size:0.8rem;">ℹ️ Puedes seleccionar cilindros de varias comunidades. El filtro solo muestra/oculta recogidas.</span>
+    <input type="number" id="gastosAdicionales" step="0.01" min="0" value="0" placeholder="0.00">
 
     <div class="flex" style="margin-top:8px;">
       <button class="btn-secundario" id="btnCargaRapida" style="flex:1;">⚡ Cargar todo</button>
       <button class="btn-secundario" id="btnLimpiarSeleccion" style="flex:1;">🧹 Limpiar</button>
     </div>
 
-    <p class="text-muted" style="margin-top:8px;">Asigna cantidades a enviar de cada recogida con saldo disponible.</p>
+    <p class="text-muted" style="margin-top:8px;">
+      Todas las recogidas con saldo disponible. Selecciona cantidades de cualquier comunidad.
+    </p>
     <div id="listaRecogidasCarga"><p class="text-muted">No hay recogidas con saldo.</p></div>
 
     <div id="resumenCarga" style="margin-top:12px; background:#eef3f8; border-radius:10px; padding:12px;">
@@ -438,7 +264,7 @@
       <div class="flex flex-entre" style="font-weight:bold;"><span>Costo total estimado:</span><span id="resumenCostoTotal">0.00</span></div>
     </div>
 
-    <button class="btn-primario" id="btnArmarCarga">🚛 Armar carga (con todas las selecciones)</button>
+    <button class="btn-primario" id="btnArmarCarga">🚛 Armar carga</button>
   </div>
 
   <div class="card">
@@ -693,8 +519,9 @@
 
     // ---------- CLAVES LOCALSTORAGE ----------
     const STORAGE_KEY = 'gas_guaribe_data_v12';
+    let exoArrGlobal = [];
+    let valoresSeleccionados = {};
 
-    // ---------- DATOS POR DEFECTO ----------
     function getDefaultData() {
       return {
         _version: '2',
@@ -765,7 +592,7 @@
       }
     }
 
-    // ---------- SISTEMA DE NOTIFICACIONES ----------
+    // ---------- NOTIFICACIONES ----------
     function showToast(message, type = 'info', duration = 3500) {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
@@ -796,11 +623,7 @@
              ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     }
     function nombrePlanta(clave) {
-      const map = {
-        'puerto_la_cruz': 'Puerto La Cruz',
-        'altagracia': 'Altagracia',
-        'valle_pascua': 'Valle de la Pascua'
-      };
+      const map = { 'puerto_la_cruz': 'Puerto La Cruz', 'altagracia': 'Altagracia', 'valle_pascua': 'Valle de la Pascua' };
       return map[clave] || clave;
     }
     function fmt(n) {
@@ -824,7 +647,6 @@
       };
     }
 
-    // ---------- OBTENER TODAS LAS COMUNIDADES ----------
     function obtenerTodasLasComunidades(data) {
       const maestras = data.config.comunidades || [];
       const dinamicas = new Set();
@@ -834,7 +656,6 @@
       return Array.from(todas).sort();
     }
 
-    // ---------- SALDO PENDIENTE POR COMUNIDAD ----------
     function calcularSaldosPendientes(data) {
       const saldos = {};
       const todas = obtenerTodasLasComunidades(data);
@@ -855,7 +676,6 @@
       return saldos;
     }
 
-    // ---------- INVENTARIO ----------
     function calcularInventario(data) {
       let deposito = { p: 0, m: 0, g: 0 };
       data.recogidas.forEach(r => {
@@ -877,7 +697,7 @@
       return { deposito, enPlanta, total: { p: deposito.p + enPlanta.p, m: deposito.m + enPlanta.m, g: deposito.g + enPlanta.g } };
     }
 
-    // ==================== ACTUALIZAR SELECTORES DE COMUNIDAD ====================
+    // ==================== ACTUALIZAR SELECTORES ====================
     function actualizarSelectsComunidades(data) {
       const todas = obtenerTodasLasComunidades(data);
       ['rComunidad', 'eComunidad'].forEach(id => {
@@ -894,7 +714,6 @@
         sel.value = val;
       });
 
-      // Cobros
       const cSel = document.getElementById('cComunidad');
       if (cSel) {
         const cVal = cSel.value;
@@ -908,20 +727,6 @@
           cSel.appendChild(opt);
         });
         cSel.value = cVal;
-      }
-
-      // Filtro de carga
-      const fSel = document.getElementById('filtroComunidad');
-      if (fSel) {
-        const fVal = fSel.value;
-        fSel.innerHTML = '<option value="">Todas las comunidades</option>';
-        todas.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c;
-          opt.textContent = c;
-          fSel.appendChild(opt);
-        });
-        fSel.value = fVal;
       }
     }
 
@@ -1044,7 +849,7 @@
       }).join('');
     }
 
-    // ---------- EDITAR RECOGIDA (MODAL) ----------
+    // ---------- EDITAR RECOGIDA ----------
     window.abrirEditarRecogida = function(id) {
       const data = loadData();
       const rec = data.recogidas.find(r => r.id === id);
@@ -1129,7 +934,6 @@
     };
 
     // ---------- CÁLCULO DE SUBTOTALES EN RECOGIDA ----------
-    let exoArrGlobal = [];
     function calcularSubtotalesRecogida() {
       const data = loadData();
       const precios = data.config.precios_venta || { p: 0, m: 0, g: 0 };
@@ -1307,33 +1111,10 @@
       });
     }
 
-    // ========== CARGA (CORREGIDA) ==========
-    // Guardar valores seleccionados al cambiar filtro
-    let valoresSeleccionados = {};
-
-    function guardarValoresCarga() {
-      document.querySelectorAll('.cantidad-carga').forEach(inp => {
-        const key = `${inp.dataset.id}-${inp.dataset.tipo}`;
-        valoresSeleccionados[key] = inp.value;
-      });
-    }
-
-    function restaurarValoresCarga() {
-      document.querySelectorAll('.cantidad-carga').forEach(inp => {
-        const key = `${inp.dataset.id}-${inp.dataset.tipo}`;
-        if (valoresSeleccionados[key] !== undefined) {
-          inp.value = valoresSeleccionados[key];
-        }
-      });
-      calcularResumenCarga();
-    }
-
+    // ========== CARGA (SIN FILTRO - TODAS LAS RECOGIDAS) ==========
     function renderListaCarga(data) {
-      guardarValoresCarga();
       const cont = document.getElementById('listaRecogidasCarga');
-      const filtro = document.getElementById('filtroComunidad').value;
       let disponibles = data.recogidas.filter(r => obtenerSaldo(r).total > 0);
-      if (filtro) disponibles = disponibles.filter(r => r.comunidad === filtro);
       disponibles.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
       if (disponibles.length === 0) {
         cont.innerHTML = '<p class="text-muted">No hay recogidas con saldo disponible.</p>';
@@ -1374,7 +1155,24 @@
       calcularResumenCarga();
     }
 
+    function guardarValoresCarga() {
+      document.querySelectorAll('.cantidad-carga').forEach(inp => {
+        const key = `${inp.dataset.id}-${inp.dataset.tipo}`;
+        valoresSeleccionados[key] = inp.value;
+      });
+    }
+
+    function restaurarValoresCarga() {
+      document.querySelectorAll('.cantidad-carga').forEach(inp => {
+        const key = `${inp.dataset.id}-${inp.dataset.tipo}`;
+        if (valoresSeleccionados[key] !== undefined) {
+          inp.value = valoresSeleccionados[key];
+        }
+      });
+    }
+
     function calcularResumenCarga() {
+      guardarValoresCarga();
       const data = loadData();
       const planta = document.getElementById('selectPlanta').value;
       const precios = data.config.precios_llenado[planta] || { p:0, m:0, g:0 };
@@ -1405,7 +1203,6 @@
       document.getElementById('resumenGastosAdic').textContent = gastosAdic.toFixed(2);
       document.getElementById('resumenCostoTotal').textContent = costoTotal.toFixed(2);
 
-      // Desglose por comunidad
       const desgloseDiv = document.getElementById('desgloseComunidades');
       const comunidades = Object.keys(porComunidad);
       if (comunidades.length === 0) {
@@ -1423,11 +1220,9 @@
     function cargarRapido() {
       const data = loadData();
       const capacidad = parseInt(document.getElementById('capacidadCamion').value) || 60;
-      const filtro = document.getElementById('filtroComunidad').value;
       let disponibles = data.recogidas.filter(r => obtenerSaldo(r).total > 0);
-      if (filtro) disponibles = disponibles.filter(r => r.comunidad === filtro);
       if (disponibles.length === 0) {
-        showToast('No hay recogidas con saldo disponible para esta comunidad.', 'info');
+        showToast('No hay recogidas con saldo disponible.', 'info');
         return;
       }
       let totalCil = disponibles.reduce((acc, r) => acc + obtenerSaldo(r).total, 0);
@@ -1480,7 +1275,52 @@
       calcularResumenCarga();
     }
 
-    // ---------- ARMAR CARGA (con todas las selecciones) ----------
+    function actualizarCostosPlanta() {
+      const data = loadData();
+      const planta = document.getElementById('selectPlanta').value;
+      const precios = data.config.precios_llenado[planta] || { p:0, m:0, g:0 };
+      document.getElementById('costoP').textContent = precios.p.toFixed(2);
+      document.getElementById('costoM').textContent = precios.m.toFixed(2);
+      document.getElementById('costoG').textContent = precios.g.toFixed(2);
+      const log = data.config.gastos_logisticos[planta] || 0;
+      document.getElementById('gastoLogistico').textContent = log.toFixed(2);
+      calcularResumenCarga();
+    }
+
+    function renderListaCargas(data) {
+      const cont = document.getElementById('listaCargas');
+      if (data.cargas.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay cargas creadas.</p>';
+        return;
+      }
+      const sorted = [...data.cargas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(c => {
+        const estado = c.estado || 'armada';
+        let badgeClass = '', estadoTexto = estado.toUpperCase();
+        if (estado === 'enviada') { badgeClass = 'badge-success'; estadoTexto = 'ENVIADA A PLANTA'; }
+        else if (estado === 'regresada') { badgeClass = 'badge-warning'; estadoTexto = 'REGRESADA'; }
+        else { badgeClass = 'badge-info'; estadoTexto = 'ARMADA'; }
+        const plantaNom = nombrePlanta(c.plantaDestino) || 'Sin planta';
+        const costos = c.costos || { llenado: { total: 0 }, logistico: 0, adicionales: 0, total: 0 };
+        return `<div class="item-lista">
+          <div class="flex flex-entre">
+            <span><strong>Carga #${c.id}</strong> (${c.total_cilindros} cil.)</span>
+            <span class="badge ${badgeClass}">${estadoTexto}</span>
+          </div>
+          <div class="text-muted" style="font-size:0.85rem;">
+            Fecha: ${formatearFecha(c.fecha)}<br>
+            Planta: <strong>${plantaNom}</strong> | Costo llenado: Bs ${(costos.llenado.total || 0).toFixed(2)} | Logístico: Bs ${(costos.logistico || 0).toFixed(2)} | Adicionales: Bs ${(costos.adicionales || 0).toFixed(2)} | Total: Bs ${(costos.total || 0).toFixed(2)}
+          </div>
+          <div class="flex" style="margin-top:4px;">
+            ${estado === 'armada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="enviarCarga(${c.id})">📤 Enviar a planta</button>` : ''}
+            ${estado === 'enviada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="regresarCarga(${c.id})">📦 Regresar (entregar)</button>` : ''}
+            <button class="btn-secundario btn-peligro" style="padding:4px 12px;" onclick="eliminarCarga(${c.id})">🗑️</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ---------- FUNCIONES DE FORMULARIOS ----------
     function setupArmarCarga() {
       document.getElementById('btnArmarCarga').addEventListener('click', function() {
         guardarValoresCarga();
@@ -1555,14 +1395,24 @@
           }
         });
         saveData(data);
-        // Limpiar selección después de armar la carga
         limpiarSeleccion();
         actualizarTodo();
         showToast(`✅ Carga armada (${totalSeleccionado} cil.) hacia ${nombrePlanta(plantaDestino)}.`, 'success');
       });
     }
 
-    // ========== FUNCIONES DE FORMULARIOS (simplificadas) ==========
+    function setupCapacidad() {
+      document.getElementById('btnActualizarCapacidad').addEventListener('click', function() {
+        const val = parseInt(document.getElementById('capacidadCamion').value);
+        if (!val || val <= 0) { showToast('Ingresa un número válido.', 'error'); return; }
+        const data = loadData();
+        data.config.capacidad_camion = val;
+        saveData(data);
+        showToast('Capacidad actualizada.', 'success');
+      });
+    }
+
+    // ========== FUNCIONES RESTANTES (simplificadas) ==========
     function setupFormEntrega() {
       const form = document.getElementById('formEntrega');
       form.addEventListener('submit', function(e) {
@@ -1671,17 +1521,6 @@
         saveData(data);
         actualizarTodo();
         showToast('✅ Configuración guardada correctamente.', 'success');
-      });
-    }
-
-    function setupCapacidad() {
-      document.getElementById('btnActualizarCapacidad').addEventListener('click', function() {
-        const val = parseInt(document.getElementById('capacidadCamion').value);
-        if (!val || val <= 0) { showToast('Ingresa un número válido.', 'error'); return; }
-        const data = loadData();
-        data.config.capacidad_camion = val;
-        saveData(data);
-        showToast('Capacidad actualizada.', 'success');
       });
     }
 
@@ -1914,41 +1753,7 @@
       return html;
     }
 
-    // ---------- FUNCIONES DE CARGA (listado) ----------
-    function renderListaCargas(data) {
-      const cont = document.getElementById('listaCargas');
-      if (data.cargas.length === 0) {
-        cont.innerHTML = '<p class="text-muted">No hay cargas creadas.</p>';
-        return;
-      }
-      const sorted = [...data.cargas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
-      cont.innerHTML = sorted.map(c => {
-        const estado = c.estado || 'armada';
-        let badgeClass = '', estadoTexto = estado.toUpperCase();
-        if (estado === 'enviada') { badgeClass = 'badge-success'; estadoTexto = 'ENVIADA A PLANTA'; }
-        else if (estado === 'regresada') { badgeClass = 'badge-warning'; estadoTexto = 'REGRESADA'; }
-        else { badgeClass = 'badge-info'; estadoTexto = 'ARMADA'; }
-        const plantaNom = nombrePlanta(c.plantaDestino) || 'Sin planta';
-        const costos = c.costos || { llenado: { total: 0 }, logistico: 0, adicionales: 0, total: 0 };
-        return `<div class="item-lista">
-          <div class="flex flex-entre">
-            <span><strong>Carga #${c.id}</strong> (${c.total_cilindros} cil.)</span>
-            <span class="badge ${badgeClass}">${estadoTexto}</span>
-          </div>
-          <div class="text-muted" style="font-size:0.85rem;">
-            Fecha: ${formatearFecha(c.fecha)}<br>
-            Planta: <strong>${plantaNom}</strong> | Costo llenado: Bs ${(costos.llenado.total || 0).toFixed(2)} | Logístico: Bs ${(costos.logistico || 0).toFixed(2)} | Adicionales: Bs ${(costos.adicionales || 0).toFixed(2)} | Total: Bs ${(costos.total || 0).toFixed(2)}
-          </div>
-          <div class="flex" style="margin-top:4px;">
-            ${estado === 'armada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="enviarCarga(${c.id})">📤 Enviar a planta</button>` : ''}
-            ${estado === 'enviada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="regresarCarga(${c.id})">📦 Regresar (entregar)</button>` : ''}
-            <button class="btn-secundario btn-peligro" style="padding:4px 12px;" onclick="eliminarCarga(${c.id})">🗑️</button>
-          </div>
-        </div>`;
-      }).join('');
-    }
-
-    // ---------- FUNCIONES DE MANEJO DE CARGAS ----------
+    // ========== FUNCIONES DE MANEJO DE CARGAS ==========
     window.enviarCarga = function(id) {
       if (!confirm('¿Enviar esta carga a planta? Se registrarán los gastos automáticamente.')) return;
       const data = loadData();
@@ -1989,7 +1794,6 @@
       showToast('Carga y gastos eliminados.', 'success');
     };
 
-    // ---------- FUNCIONES DE ELIMINACIÓN ----------
     window.eliminarEntrega = function(id) {
       if (!confirm('¿Eliminar esta entrega?')) return;
       const data = loadData();
@@ -2017,7 +1821,7 @@
       showToast('Gasto eliminado.', 'success');
     };
 
-    // ---------- RENDERIZADO DE LISTAS ----------
+    // ========== RENDERIZADO DE LISTAS (restantes) ==========
     function renderListaEntregas(data) {
       const cont = document.getElementById('listaEntregas');
       if (data.entregas.length === 0) {
@@ -2128,7 +1932,7 @@
       cont.innerHTML = html;
     }
 
-    // ---------- ACTUALIZAR TODO ----------
+    // ========== ACTUALIZAR TODO ==========
     function actualizarTodo() {
       const data = loadData();
       renderDashboard(data);
@@ -2144,7 +1948,7 @@
       calcularResumenCarga();
     }
 
-    // ---------- INICIALIZACIÓN ----------
+    // ========== INICIALIZACIÓN ==========
     function init() {
       actualizarTodo();
 
@@ -2194,6 +1998,7 @@
         if (btn) btn.click();
       });
 
+      // Configurar formularios
       setupFormRecogida();
       setupFormEntrega();
       setupFormCobro();
@@ -2206,13 +2011,7 @@
 
       document.getElementById('btnCargaRapida').addEventListener('click', cargarRapido);
       document.getElementById('btnLimpiarSeleccion').addEventListener('click', limpiarSeleccion);
-      document.getElementById('selectPlanta').addEventListener('change', function() {
-        actualizarCostosPlanta();
-      });
-      document.getElementById('filtroComunidad').addEventListener('change', function() {
-        const data = loadData();
-        renderListaCarga(data);
-      });
+      document.getElementById('selectPlanta').addEventListener('change', actualizarCostosPlanta);
       document.getElementById('gastosAdicionales').addEventListener('input', calcularResumenCarga);
 
       // Backup y restauración
@@ -2255,19 +2054,7 @@
         this.value = '';
       });
 
-      showToast('🚀 Sistema listo. Recuerda que puedes seleccionar cilindros de varias comunidades en una misma carga.', 'info', 5000);
-    }
-
-    function actualizarCostosPlanta() {
-      const data = loadData();
-      const planta = document.getElementById('selectPlanta').value;
-      const precios = data.config.precios_llenado[planta] || { p:0, m:0, g:0 };
-      document.getElementById('costoP').textContent = precios.p.toFixed(2);
-      document.getElementById('costoM').textContent = precios.m.toFixed(2);
-      document.getElementById('costoG').textContent = precios.g.toFixed(2);
-      const log = data.config.gastos_logisticos[planta] || 0;
-      document.getElementById('gastoLogistico').textContent = log.toFixed(2);
-      calcularResumenCarga();
+      showToast('🚀 Sistema listo. Todas las recogidas con saldo se muestran en Armar carga.', 'info', 5000);
     }
 
     // ========== ARRANQUE ==========
