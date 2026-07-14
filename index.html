@@ -332,8 +332,9 @@
   <div class="card">
     <form id="formRecogida">
       <label>Comunidad *</label>
-      <input type="text" id="rComunidadInput" list="rComunidadList" placeholder="Escribe para buscar..." required>
-      <datalist id="rComunidadList"></datalist>
+      <select id="rComunidad" required>
+        <option value="">Selecciona una comunidad</option>
+      </select>
       <button type="button" class="btn-secundario" id="btnNuevaComunidad" style="margin-top:4px;">➕ Agregar nueva</button>
 
       <label>Cilindros pequeños (P)</label>
@@ -452,8 +453,9 @@
   <div class="card">
     <form id="formEntrega">
       <label>Comunidad *</label>
-      <input type="text" id="eComunidadInput" list="eComunidadList" placeholder="Escribe para buscar..." required>
-      <datalist id="eComunidadList"></datalist>
+      <select id="eComunidad" required>
+        <option value="">Selecciona una comunidad</option>
+      </select>
 
       <label>Cilindros entregados</label>
       <div class="flex">
@@ -875,61 +877,59 @@
       return { deposito, enPlanta, total: { p: deposito.p + enPlanta.p, m: deposito.m + enPlanta.m, g: deposito.g + enPlanta.g } };
     }
 
-    // ==================== NAVEGACIÓN CENTRALIZADA ====================
-    let vistaActual = 'dashboard';
-    function navegarA(vista) {
-      vistaActual = vista;
-      document.querySelectorAll('#navPrincipal button').forEach(btn => {
-        btn.classList.toggle('activo', btn.dataset.vista === vista);
-      });
-      document.querySelectorAll('.vista').forEach(el => {
-        el.classList.toggle('activa', el.id === vista);
-      });
-      // Renderizar solo la vista activa (optimización)
-      if (['carga', 'dashboard', 'entregas', 'cobros', 'gastos', 'config', 'reportes', 'comunidades'].includes(vista)) {
-        requestAnimationFrame(() => renderizarVista(vista));
-      }
-    }
+    // ==================== ACTUALIZAR SELECTORES DE COMUNIDAD ====================
+    function actualizarSelectsComunidades(data) {
+      const todas = obtenerTodasLasComunidades(data);
 
-    // ==================== RENDERIZADO OPTIMIZADO ====================
-    function renderizarVista(vista) {
-      const data = loadData();
-      // Renderizar siempre el dashboard (se actualiza en todas las vistas)
-      renderDashboard(data);
-      // Renderizar solo la vista solicitada
-      switch(vista) {
-        case 'recogida':
-          renderListaRecogidas(data);
-          break;
-        case 'carga':
-          renderListaCarga(data);
-          renderListaCargas(data);
-          actualizarCostosPlanta();
-          break;
-        case 'entregas':
-          renderListaEntregas(data);
-          cargarPreciosVentaEnEntrega(data);
-          break;
-        case 'cobros':
-          renderListaCobros(data);
-          actualizarSelectComunidades(data);
-          break;
-        case 'gastos':
-          renderListaGastos(data);
-          break;
-        case 'config':
-          cargarPreciosUI(data);
-          break;
-        case 'reportes':
-          // No renderizar nada automáticamente, esperar acción del usuario
-          break;
-        case 'comunidades':
-          renderListaComunidades(data);
-          break;
-        default:
-          // Dashboard ya se renderizó
-          break;
-      }
+      // Recogida
+      const rSelect = document.getElementById('rComunidad');
+      const rVal = rSelect.value;
+      rSelect.innerHTML = '<option value="">Selecciona una comunidad</option>';
+      todas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        rSelect.appendChild(opt);
+      });
+      rSelect.value = rVal;
+
+      // Entregas
+      const eSelect = document.getElementById('eComunidad');
+      const eVal = eSelect.value;
+      eSelect.innerHTML = '<option value="">Selecciona una comunidad</option>';
+      todas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        eSelect.appendChild(opt);
+      });
+      eSelect.value = eVal;
+
+      // Cobros (todas las comunidades, con deuda al lado)
+      const cSelect = document.getElementById('cComunidad');
+      const cVal = cSelect.value;
+      const saldos = calcularSaldosPendientes(data);
+      cSelect.innerHTML = '<option value="">Selecciona una comunidad</option>';
+      todas.forEach(c => {
+        const opt = document.createElement('option');
+        const deuda = saldos[c] || 0;
+        opt.value = c;
+        opt.textContent = deuda > 0 ? `${c} (Bs ${deuda.toFixed(2)})` : c;
+        cSelect.appendChild(opt);
+      });
+      cSelect.value = cVal;
+
+      // Filtro de carga
+      const fSelect = document.getElementById('filtroComunidad');
+      const fVal = fSelect.value;
+      fSelect.innerHTML = '<option value="">Todas las comunidades</option>';
+      todas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        fSelect.appendChild(opt);
+      });
+      fSelect.value = fVal;
     }
 
     // ==================== RENDERIZADO ====================
@@ -1126,7 +1126,7 @@
 
       saveData(data);
       document.getElementById('modalEditar').classList.remove('activo');
-      renderizarVista(vistaActual);
+      actualizarTodo();
       showToast('✅ Recogida actualizada correctamente.', 'success');
     });
 
@@ -1141,7 +1141,7 @@
       const data = loadData();
       data.recogidas = data.recogidas.filter(r => r.id !== id);
       saveData(data);
-      renderizarVista(vistaActual);
+      actualizarTodo();
       showToast('Recogida eliminada.', 'success');
     };
 
@@ -1162,7 +1162,6 @@
         else if (ex.tamanio === 'g') exoG += ex.cantidad;
       });
       
-      // Validar que no excedan
       const aviso = document.getElementById('avisoPreciosCero');
       if (precios.p === 0 && precios.m === 0 && precios.g === 0) {
         aviso.classList.remove('oculto');
@@ -1224,7 +1223,7 @@
           if (!data.config.comunidades.includes(nombre)) {
             data.config.comunidades.push(nombre);
             saveData(data);
-            renderizarVista(vistaActual);
+            actualizarTodo();
             showToast(`✅ Comunidad "${nombre}" agregada correctamente.`, 'success');
           } else {
             showToast('⚠️ Esta comunidad ya existe en la lista.', 'error');
@@ -1243,7 +1242,6 @@
         const p = parseInt(document.getElementById('rPequenos').value) || 0;
         const m = parseInt(document.getElementById('rMedianos').value) || 0;
         const g = parseInt(document.getElementById('rGrandes').value) || 0;
-        // Validar que no exceda
         let exoP=0, exoM=0, exoG=0;
         exoArrGlobal.forEach(ex => {
           if (ex.tamanio === 'p') exoP += ex.cantidad;
@@ -1306,9 +1304,8 @@
 
       form.addEventListener('submit', function(e) {
         e.preventDefault();
-        const comunidad = document.getElementById('rComunidadInput').value.trim();
-        const comunidadNorm = normalizarTexto(comunidad);
-        if (!comunidadNorm) { showToast('Ingresa una comunidad válida.', 'error'); return; }
+        const comunidad = document.getElementById('rComunidad').value;
+        if (!comunidad) { showToast('Selecciona una comunidad.', 'error'); return; }
         const p = parseInt(document.getElementById('rPequenos').value) || 0;
         const m = parseInt(document.getElementById('rMedianos').value) || 0;
         const g = parseInt(document.getElementById('rGrandes').value) || 0;
@@ -1318,7 +1315,7 @@
         const data = loadData();
         data.recogidas.push({
           id: generarId(),
-          comunidad: comunidadNorm,
+          comunidad: comunidad,
           pequenos: p,
           medianos: m,
           grandes: g,
@@ -1337,16 +1334,62 @@
         exoArrGlobal.length = 0;
         renderExoList();
         calcularSubtotalesRecogida();
-        renderizarVista(vistaActual);
+        actualizarTodo();
         showToast('✅ Recogida registrada exitosamente.', 'success');
       });
     }
 
-    // ========== FUNCIONES DE CARGA (actualizadas) ==========
-    // (Las funciones de carga, entregas, cobros, gastos, reportes y exportación
-    // son las mismas de la versión anterior, solo se añade la lógica de exonerados en carga)
+    // ========== ACTUALIZAR TODO ==========
+    function actualizarTodo() {
+      const data = loadData();
+      renderDashboard(data);
+      actualizarSelectsComunidades(data);
+      renderListaRecogidas(data);
+      // Las demás vistas se actualizan al navegar a ellas
+    }
 
-    // Función para calcular resumen de carga con exonerados
+    // ========== FUNCIONES DE CARGA (simplificadas) ==========
+    function renderListaCarga(data) {
+      const cont = document.getElementById('listaRecogidasCarga');
+      const filtro = document.getElementById('filtroComunidad').value;
+      let disponibles = data.recogidas.filter(r => obtenerSaldo(r).total > 0);
+      if (filtro) disponibles = disponibles.filter(r => r.comunidad === filtro);
+      disponibles.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      if (disponibles.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay recogidas con saldo disponible.</p>';
+        return;
+      }
+      let html = '';
+      disponibles.forEach(r => {
+        const saldo = obtenerSaldo(r);
+        html += `<div class="item-lista" data-id="${r.id}">
+          <div class="flex flex-entre">
+            <span><strong>${r.comunidad}</strong> (saldo: P${saldo.p} M${saldo.m} G${saldo.g})</span>
+            <span class="badge">${formatearFecha(r.fecha)}</span>
+          </div>
+          <div class="flex" style="margin-top:4px;">
+            <label style="display:flex; align-items:center; gap:4px; font-weight:400;">
+              <span>P</span>
+              <input type="number" class="cantidad-carga" data-id="${r.id}" data-tipo="p" min="0" max="${saldo.p}" value="0" style="width:50px; padding:4px;">
+            </label>
+            <label style="display:flex; align-items:center; gap:4px; font-weight:400;">
+              <span>M</span>
+              <input type="number" class="cantidad-carga" data-id="${r.id}" data-tipo="m" min="0" max="${saldo.m}" value="0" style="width:50px; padding:4px;">
+            </label>
+            <label style="display:flex; align-items:center; gap:4px; font-weight:400;">
+              <span>G</span>
+              <input type="number" class="cantidad-carga" data-id="${r.id}" data-tipo="g" min="0" max="${saldo.g}" value="0" style="width:50px; padding:4px;">
+            </label>
+          </div>
+        </div>`;
+      });
+      cont.innerHTML = html;
+      document.querySelectorAll('.cantidad-carga').forEach(inp => {
+        inp.addEventListener('input', calcularResumenCarga);
+      });
+      calcularResumenCarga();
+    }
+
     function calcularResumenCarga() {
       const data = loadData();
       const planta = document.getElementById('selectPlanta').value;
@@ -1354,44 +1397,24 @@
       const gastoLogBase = data.config.gastos_logisticos[planta] || 0;
       const gastosAdic = parseFloat(document.getElementById('gastosAdicionales').value) || 0;
       let totalP = 0, totalM = 0, totalG = 0;
-      // También calcular exonerados
-      let exoP = 0, exoM = 0, exoG = 0;
       document.querySelectorAll('.cantidad-carga').forEach(inp => {
         const val = parseInt(inp.value) || 0;
         const tipo = inp.dataset.tipo;
-        const id = parseInt(inp.dataset.id);
         if (tipo === 'p') totalP += val;
         else if (tipo === 'm') totalM += val;
         else if (tipo === 'g') totalG += val;
-        // Obtener exonerados de la recogida origen
-        const rec = data.recogidas.find(r => r.id === id);
-        if (rec && rec.exonerados) {
-          rec.exonerados.forEach(ex => {
-            if (ex.tamanio === tipo) {
-              const enviadoActual = rec.enviado ? rec.enviado[tipo] || 0 : 0;
-              const saldo = obtenerSaldo(rec);
-              // Solo si el cilindro está siendo enviado ahora y es exonerado
-              // No podemos saber exactamente cuáles son exonerados, pero podemos estimar
-              // Por simplicidad, contamos los exonerados como proporción del saldo enviado
-              // Mejor: marcamos los exonerados en la carga al armarla (en la función armarCarga)
-            }
-          });
-        }
       });
-      // Estimación: si se envía todo el saldo, los exonerados se incluyen
-      // Se calculará exactamente en armarCarga
       const totalCil = totalP + totalM + totalG;
       const costoLlenado = totalP * precios.p + totalM * precios.m + totalG * precios.g;
       const costoTotal = costoLlenado + gastoLogBase + gastosAdic;
       document.getElementById('resumenTotalCil').textContent = totalCil;
-      // Resumen de exonerados se actualizará al armar carga
       document.getElementById('resumenCostoLlenado').textContent = costoLlenado.toFixed(2);
       document.getElementById('resumenGastoLog').textContent = gastoLogBase.toFixed(2);
       document.getElementById('resumenGastosAdic').textContent = gastosAdic.toFixed(2);
       document.getElementById('resumenCostoTotal').textContent = costoTotal.toFixed(2);
     }
 
-    // ---------- CARGA RÁPIDA (con confirmación) ----------
+    // ========== CARGA RÁPIDA ==========
     function cargarRapido() {
       const data = loadData();
       const capacidad = parseInt(document.getElementById('capacidadCamion').value) || 60;
@@ -1446,14 +1469,409 @@
       calcularResumenCarga();
     }
 
-    // ---------- ARMAR CARGA (con conteo de exonerados) ----------
+    function limpiarSeleccion() {
+      document.querySelectorAll('.cantidad-carga').forEach(inp => inp.value = 0);
+      calcularResumenCarga();
+    }
+
+    // ========== INICIALIZACIÓN ==========
+    function init() {
+      actualizarTodo();
+
+      // Navegación
+      document.getElementById('navPrincipal').addEventListener('click', function(e) {
+        const btn = e.target.closest('button');
+        if (!btn || !btn.dataset.vista) return;
+        const vista = btn.dataset.vista;
+        document.querySelectorAll('#navPrincipal button').forEach(b => b.classList.toggle('activo', b === btn));
+        document.querySelectorAll('.vista').forEach(el => el.classList.toggle('activa', el.id === vista));
+        if (vista === 'carga') {
+          const data = loadData();
+          renderListaCarga(data);
+          renderListaCargas(data);
+          actualizarCostosPlanta();
+        } else if (vista === 'recogida') {
+          calcularSubtotalesRecogida();
+        } else if (vista === 'entregas') {
+          const data = loadData();
+          renderListaEntregas(data);
+          cargarPreciosVentaEnEntrega(data);
+        } else if (vista === 'cobros') {
+          const data = loadData();
+          renderListaCobros(data);
+          actualizarSelectsComunidades(data);
+        } else if (vista === 'gastos') {
+          const data = loadData();
+          renderListaGastos(data);
+        } else if (vista === 'config') {
+          const data = loadData();
+          cargarPreciosUI(data);
+        } else if (vista === 'reportes') {
+          // no hacer nada, esperar acción
+        } else if (vista === 'comunidades') {
+          const data = loadData();
+          renderListaComunidades(data);
+        } else {
+          actualizarTodo();
+        }
+      });
+
+      // Click en estadísticas del dashboard
+      document.getElementById('resumenStats').addEventListener('click', function(e) {
+        const stat = e.target.closest('.stat');
+        if (!stat || !stat.dataset.vista) return;
+        const vista = stat.dataset.vista;
+        const btn = document.querySelector(`#navPrincipal button[data-vista="${vista}"]`);
+        if (btn) btn.click();
+      });
+
+      // Configurar formularios
+      setupFormRecogida();
+      setupFormEntrega();
+      setupFormCobro();
+      setupFormGasto();
+      setupConfiguracion();
+      setupArmarCarga();
+      setupCapacidad();
+      setupReportes();
+      setupEntregaCalculo();
+
+      document.getElementById('btnCargaRapida').addEventListener('click', cargarRapido);
+      document.getElementById('btnLimpiarSeleccion').addEventListener('click', limpiarSeleccion);
+      document.getElementById('selectPlanta').addEventListener('change', actualizarCostosPlanta);
+      document.getElementById('filtroComunidad').addEventListener('change', function() {
+        const data = loadData();
+        renderListaCarga(data);
+        calcularResumenCarga();
+      });
+      document.getElementById('gastosAdicionales').addEventListener('input', calcularResumenCarga);
+
+      showToast('🚀 Sistema listo. Selecciona una comunidad de la lista desplegable.', 'success', 4000);
+    }
+
+    // ========== FUNCIONES RESTANTES (implementación mínima) ==========
+    function actualizarCostosPlanta() {
+      const data = loadData();
+      const planta = document.getElementById('selectPlanta').value;
+      const precios = data.config.precios_llenado[planta] || { p:0, m:0, g:0 };
+      document.getElementById('costoP').textContent = precios.p.toFixed(2);
+      document.getElementById('costoM').textContent = precios.m.toFixed(2);
+      document.getElementById('costoG').textContent = precios.g.toFixed(2);
+      const log = data.config.gastos_logisticos[planta] || 0;
+      document.getElementById('gastoLogistico').textContent = log.toFixed(2);
+      calcularResumenCarga();
+    }
+
+    function renderListaCargas(data) {
+      const cont = document.getElementById('listaCargas');
+      if (data.cargas.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay cargas creadas.</p>';
+        return;
+      }
+      const sorted = [...data.cargas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(c => {
+        const estado = c.estado || 'armada';
+        let badgeClass = '', estadoTexto = estado.toUpperCase();
+        if (estado === 'enviada') { badgeClass = 'badge-success'; estadoTexto = 'ENVIADA A PLANTA'; }
+        else if (estado === 'regresada') { badgeClass = 'badge-warning'; estadoTexto = 'REGRESADA'; }
+        else { badgeClass = 'badge-info'; estadoTexto = 'ARMADA'; }
+        const plantaNom = nombrePlanta(c.plantaDestino) || 'Sin planta';
+        const costos = c.costos || { llenado: { total: 0 }, logistico: 0, adicionales: 0, total: 0 };
+        return `<div class="item-lista">
+          <div class="flex flex-entre">
+            <span><strong>Carga #${c.id}</strong> (${c.total_cilindros} cil.)</span>
+            <span class="badge ${badgeClass}">${estadoTexto}</span>
+          </div>
+          <div class="text-muted" style="font-size:0.85rem;">
+            Fecha: ${formatearFecha(c.fecha)}<br>
+            Planta: <strong>${plantaNom}</strong> | Costo llenado: Bs ${(costos.llenado.total || 0).toFixed(2)} | Logístico: Bs ${(costos.logistico || 0).toFixed(2)} | Adicionales: Bs ${(costos.adicionales || 0).toFixed(2)} | Total: Bs ${(costos.total || 0).toFixed(2)}
+          </div>
+          <div class="flex" style="margin-top:4px;">
+            ${estado === 'armada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="enviarCarga(${c.id})">📤 Enviar a planta</button>` : ''}
+            ${estado === 'enviada' ? `<button class="btn-secundario" style="padding:4px 12px;" onclick="regresarCarga(${c.id})">📦 Regresar (entregar)</button>` : ''}
+            <button class="btn-secundario btn-peligro" style="padding:4px 12px;" onclick="eliminarCarga(${c.id})">🗑️</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderListaEntregas(data) {
+      const cont = document.getElementById('listaEntregas');
+      if (data.entregas.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay entregas.</p>';
+        return;
+      }
+      const sorted = [...data.entregas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(e => {
+        const total = (e.pequenos||0)+(e.medianos||0)+(e.grandes||0);
+        const tipo = e.tipo_pago === 'credito' ? ' (Crédito)' : '';
+        return `<div class="item-lista">
+          <div class="flex flex-entre">
+            <span><strong>${e.comunidad}</strong> (${total} cil.)${tipo}</span>
+            <span class="badge">${formatearFecha(e.fecha)}</span>
+          </div>
+          <div>P:${e.pequenos||0} M:${e.medianos||0} G:${e.grandes||0} | Cobro: Bs ${(e.monto_cobrado||0).toFixed(2)}</div>
+          <button class="btn-secundario btn-peligro" style="padding:4px 12px; margin-top:4px;" onclick="eliminarEntrega(${e.id})">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+
+    function renderListaCobros(data) {
+      const cont = document.getElementById('listaCobros');
+      if (data.cobros.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay cobros registrados.</p>';
+        return;
+      }
+      const sorted = [...data.cobros].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(c => {
+        return `<div class="item-lista">
+          <div class="flex flex-entre">
+            <span><strong>${c.comunidad}</strong> - ${c.concepto || 'Abono'}</span>
+            <span class="badge">Bs ${(c.monto||0).toFixed(2)}</span>
+          </div>
+          <div class="text-muted" style="font-size:0.85rem;">${formatearFecha(c.fecha)}</div>
+          <button class="btn-secundario btn-peligro" style="padding:4px 12px; margin-top:4px;" onclick="eliminarCobro(${c.id})">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+
+    function renderListaGastos(data) {
+      const cont = document.getElementById('listaGastos');
+      if (data.gastos.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay gastos.</p>';
+        return;
+      }
+      const sorted = [...data.gastos].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      cont.innerHTML = sorted.map(g => {
+        const planta = g.planta ? nombrePlanta(g.planta) : '';
+        return `<div class="item-lista">
+          <div class="flex flex-entre">
+            <span><strong>${g.concepto}</strong> (${g.categoria}) ${planta ? ' - '+planta : ''}</span>
+            <span class="badge">Bs ${(g.monto||0).toFixed(2)}</span>
+          </div>
+          <div class="text-muted" style="font-size:0.85rem;">${formatearFecha(g.fecha)}</div>
+          <button class="btn-secundario btn-peligro" style="padding:4px 12px; margin-top:4px;" onclick="eliminarGasto(${g.id})">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+
+    function renderListaComunidades(data) {
+      const cont = document.getElementById('listaComunidades');
+      const mapa = {};
+      const todas = obtenerTodasLasComunidades(data);
+      todas.forEach(nom => mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 });
+      data.recogidas.forEach(r => {
+        const nom = r.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
+        mapa[nom].recogidas += 1;
+        mapa[nom].cilindros.p += (r.pequenos || 0);
+        mapa[nom].cilindros.m += (r.medianos || 0);
+        mapa[nom].cilindros.g += (r.grandes || 0);
+        mapa[nom].cobro += (r.cobro || 0);
+      });
+      data.entregas.forEach(e => {
+        const nom = e.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { recogidas: 0, entregas: 0, cilindros: { p:0, m:0, g:0 }, cobro: 0, deuda: 0 };
+        mapa[nom].entregas += 1;
+        mapa[nom].cilindros.p += (e.pequenos || 0);
+        mapa[nom].cilindros.m += (e.medianos || 0);
+        mapa[nom].cilindros.g += (e.grandes || 0);
+        mapa[nom].cobro += (e.monto_cobrado || 0);
+        if (e.tipo_pago === 'credito') mapa[nom].deuda += (e.monto_cobrado || 0);
+      });
+      data.cobros.forEach(c => {
+        if (mapa[c.comunidad]) mapa[c.comunidad].deuda -= (c.monto || 0);
+      });
+      const claves = Object.keys(mapa).sort();
+      if (claves.length === 0) {
+        cont.innerHTML = '<p class="text-muted">No hay comunidades registradas.</p>';
+        return;
+      }
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+        <tr><th>Comunidad</th><th>Recogidas</th><th>Entregas</th><th>Cilindros (P/M/G)</th><th>Cobro total</th><th>Deuda</th></tr>`;
+      claves.forEach(nom => {
+        const d = mapa[nom];
+        const totalCil = d.cilindros.p + d.cilindros.m + d.cilindros.g;
+        html += `<tr>
+          <td><strong>${nom}</strong></td>
+          <td>${d.recogidas}</td>
+          <td>${d.entregas}</td>
+          <td>${d.cilindros.p}/${d.cilindros.m}/${d.cilindros.g} (${totalCil})</td>
+          <td>${d.cobro.toFixed(2)}</td>
+          <td class="${d.deuda > 0.005 ? 'text-danger' : 'text-success'}">${d.deuda.toFixed(2)}</td>
+        </tr>`;
+      });
+      html += '</table>';
+      cont.innerHTML = html;
+    }
+
+    // ========== FUNCIONES DE CONFIGURACIÓN ==========
+    function cargarPreciosUI(data) {
+      const cfg = data.config;
+      document.getElementById('cfgPLC_P').value = cfg.precios_llenado.puerto_la_cruz.p || 0;
+      document.getElementById('cfgPLC_M').value = cfg.precios_llenado.puerto_la_cruz.m || 0;
+      document.getElementById('cfgPLC_G').value = cfg.precios_llenado.puerto_la_cruz.g || 0;
+      document.getElementById('cfgALT_P').value = cfg.precios_llenado.altagracia.p || 0;
+      document.getElementById('cfgALT_M').value = cfg.precios_llenado.altagracia.m || 0;
+      document.getElementById('cfgALT_G').value = cfg.precios_llenado.altagracia.g || 0;
+      document.getElementById('cfgVAL_P').value = cfg.precios_llenado.valle_pascua.p || 0;
+      document.getElementById('cfgVAL_M').value = cfg.precios_llenado.valle_pascua.m || 0;
+      document.getElementById('cfgVAL_G').value = cfg.precios_llenado.valle_pascua.g || 0;
+      document.getElementById('cfgVentaP').value = cfg.precios_venta.p || 0;
+      document.getElementById('cfgVentaM').value = cfg.precios_venta.m || 0;
+      document.getElementById('cfgVentaG').value = cfg.precios_venta.g || 0;
+      document.getElementById('cfgLogPLC').value = cfg.gastos_logisticos.puerto_la_cruz || 0;
+      document.getElementById('cfgLogALT').value = cfg.gastos_logisticos.altagracia || 0;
+      document.getElementById('cfgLogVAL').value = cfg.gastos_logisticos.valle_pascua || 0;
+    }
+
+    // ========== FUNCIONES DE REPORTES (simplificadas) ==========
+    function renderReporteResumen(data) {
+      const totalRec = data.recogidas.length;
+      let totalCil = 0;
+      data.recogidas.forEach(r => totalCil += (r.pequenos||0)+(r.medianos||0)+(r.grandes||0));
+      const totalCargas = data.cargas.length;
+      const totalEnt = data.entregas.length;
+      let totalVentas = 0, totalGastos = 0, totalCobros = 0;
+      data.entregas.forEach(e => totalVentas += (e.monto_cobrado||0));
+      data.gastos.forEach(g => totalGastos += (g.monto||0));
+      data.cobros.forEach(c => totalCobros += (c.monto||0));
+      const saldos = calcularSaldosPendientes(data);
+      const totalDeuda = Object.values(saldos).reduce((a,b) => a+b, 0);
+      const ganancia = totalVentas - totalGastos;
+      return `
+        <div class="grid-2">
+          <div class="stat"><span>${fmt(totalRec)}</span>Recogidas</div>
+          <div class="stat"><span>${fmt(totalCil)}</span>Cilindros</div>
+          <div class="stat"><span>${fmt(totalCargas)}</span>Cargas</div>
+          <div class="stat"><span>${fmt(totalEnt)}</span>Entregas</div>
+          <div class="stat"><span>${totalVentas.toFixed(2)}</span>Ventas (Bs)</div>
+          <div class="stat"><span>${totalGastos.toFixed(2)}</span>Gastos (Bs)</div>
+          <div class="stat"><span>${totalCobros.toFixed(2)}</span>Cobros (Bs)</div>
+          <div class="stat"><span>${totalDeuda.toFixed(2)}</span>Saldo pendiente</div>
+          <div class="stat" style="grid-column: span 2;"><span>${ganancia.toFixed(2)}</span>Ganancia (Bs)</div>
+        </div>
+      `;
+    }
+
+    // ========== FUNCIONES DE FORMULARIOS (simplificadas) ==========
+    function setupFormEntrega() {
+      const form = document.getElementById('formEntrega');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const comunidad = document.getElementById('eComunidad').value;
+        if (!comunidad) { showToast('Selecciona una comunidad.', 'error'); return; }
+        const p = parseInt(document.getElementById('ePequenos').value) || 0;
+        const m = parseInt(document.getElementById('eMedianos').value) || 0;
+        const g = parseInt(document.getElementById('eGrandes').value) || 0;
+        const monto = parseFloat(document.getElementById('eMonto').value) || 0;
+        const tipoPago = document.getElementById('eTipoPago').value;
+        if (p + m + g === 0) { showToast('Debes entregar al menos un cilindro.', 'error'); return; }
+        const data = loadData();
+        data.entregas.push({
+          id: generarId(),
+          comunidad,
+          pequenos: p,
+          medianos: m,
+          grandes: g,
+          monto_cobrado: monto,
+          tipo_pago: tipoPago,
+          fecha: new Date().toISOString(),
+          cargaId: null
+        });
+        saveData(data);
+        form.reset();
+        document.getElementById('ePequenos').value = 0;
+        document.getElementById('eMedianos').value = 0;
+        document.getElementById('eGrandes').value = 0;
+        document.getElementById('eMonto').value = 0;
+        cargarPreciosVentaEnEntrega(data);
+        actualizarTodo();
+        showToast('✅ Entrega registrada.', 'success');
+      });
+    }
+
+    function setupFormCobro() {
+      const form = document.getElementById('formCobro');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const comunidad = document.getElementById('cComunidad').value;
+        const monto = parseFloat(document.getElementById('cMonto').value);
+        const concepto = document.getElementById('cConcepto').value.trim() || 'Abono';
+        if (!comunidad) { showToast('Selecciona una comunidad.', 'error'); return; }
+        if (!monto || monto <= 0) { showToast('Ingresa un monto válido.', 'error'); return; }
+        const data = loadData();
+        const saldos = calcularSaldosPendientes(data);
+        const deuda = saldos[comunidad] || 0;
+        if (monto > deuda) {
+          if (!confirm(`El monto abonado (${monto.toFixed(2)}) supera la deuda (${deuda.toFixed(2)}). ¿Continuar?`)) return;
+        }
+        data.cobros.push({
+          id: generarId(),
+          comunidad,
+          monto,
+          concepto,
+          fecha: new Date().toISOString()
+        });
+        saveData(data);
+        form.reset();
+        document.getElementById('cMonto').value = '';
+        document.getElementById('cConcepto').value = '';
+        actualizarTodo();
+        showToast('✅ Cobro registrado.', 'success');
+      });
+    }
+
+    function setupFormGasto() {
+      const form = document.getElementById('formGasto');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const concepto = document.getElementById('gConcepto').value.trim();
+        const monto = parseFloat(document.getElementById('gMonto').value);
+        const categoria = document.getElementById('gCategoria').value;
+        const planta = document.getElementById('gPlanta').value || null;
+        if (!concepto || !monto || monto <= 0) {
+          showToast('Completa todos los campos.', 'error');
+          return;
+        }
+        const data = loadData();
+        data.gastos.push({
+          id: generarId(),
+          concepto,
+          monto,
+          categoria,
+          planta: planta,
+          fecha: new Date().toISOString()
+        });
+        saveData(data);
+        form.reset();
+        actualizarTodo();
+        showToast('✅ Gasto registrado.', 'success');
+      });
+    }
+
+    function setupConfiguracion() {
+      document.getElementById('btnGuardarConfig').addEventListener('click', function() {
+        const data = loadData();
+        data.config.precios_llenado = {
+          puerto_la_cruz: { p: parseFloat(document.getElementById('cfgPLC_P').value) || 0, m: parseFloat(document.getElementById('cfgPLC_M').value) || 0, g: parseFloat(document.getElementById('cfgPLC_G').value) || 0 },
+          altagracia: { p: parseFloat(document.getElementById('cfgALT_P').value) || 0, m: parseFloat(document.getElementById('cfgALT_M').value) || 0, g: parseFloat(document.getElementById('cfgALT_G').value) || 0 },
+          valle_pascua: { p: parseFloat(document.getElementById('cfgVAL_P').value) || 0, m: parseFloat(document.getElementById('cfgVAL_M').value) || 0, g: parseFloat(document.getElementById('cfgVAL_G').value) || 0 }
+        };
+        data.config.precios_venta = { p: parseFloat(document.getElementById('cfgVentaP').value) || 0, m: parseFloat(document.getElementById('cfgVentaM').value) || 0, g: parseFloat(document.getElementById('cfgVentaG').value) || 0 };
+        data.config.gastos_logisticos = { puerto_la_cruz: parseFloat(document.getElementById('cfgLogPLC').value) || 0, altagracia: parseFloat(document.getElementById('cfgLogALT').value) || 0, valle_pascua: parseFloat(document.getElementById('cfgLogVAL').value) || 0 };
+        saveData(data);
+        actualizarTodo();
+        showToast('✅ Configuración guardada correctamente.', 'success');
+      });
+    }
+
     function setupArmarCarga() {
       document.getElementById('btnArmarCarga').addEventListener('click', function() {
         const data = loadData();
         const inputs = document.querySelectorAll('.cantidad-carga');
         const seleccion = {};
         let totalSeleccionado = 0;
-        let exoneradosEnCarga = 0;
         inputs.forEach(inp => {
           const val = parseInt(inp.value) || 0;
           if (val > 0) {
@@ -1462,20 +1880,6 @@
             if (!seleccion[id]) seleccion[id] = { p:0, m:0, g:0 };
             seleccion[id][tipo] = val;
             totalSeleccionado += val;
-            // Estimar exonerados en la selección
-            const rec = data.recogidas.find(r => r.id === id);
-            if (rec && rec.exonerados) {
-              const saldo = obtenerSaldo(rec);
-              // Si se envía una cantidad, proporción de exonerados en el saldo total
-              const proporciones = rec.exonerados.filter(ex => ex.tamanio === tipo);
-              proporciones.forEach(ex => {
-                const totalTipo = rec[tipo] || 0;
-                if (totalTipo > 0) {
-                  const prop = ex.cantidad / totalTipo;
-                  exoneradosEnCarga += Math.round(val * prop);
-                }
-              });
-            }
           }
         });
         const ids = Object.keys(seleccion).map(Number);
@@ -1519,7 +1923,7 @@
           fecha: new Date().toISOString(),
           origen: origen,
           total_cilindros: totalSeleccionado,
-          exonerados_incluidos: exoneradosEnCarga,
+          exonerados_incluidos: 0,
           plantaDestino: plantaDestino,
           costos: { llenado: costoLlenado, logistico: gastoLogBase, adicionales: gastosAdic, total: costoTotal },
           estado: 'armada'
@@ -1535,12 +1939,86 @@
           }
         });
         saveData(data);
-        renderizarVista(vistaActual);
-        showToast(`✅ Carga armada (${totalSeleccionado} cil., ${exoneradosEnCarga} exonerados) hacia ${nombrePlanta(plantaDestino)}.`, 'success');
+        actualizarTodo();
+        showToast(`✅ Carga armada (${totalSeleccionado} cil.) hacia ${nombrePlanta(plantaDestino)}.`, 'success');
       });
     }
 
-    // ---------- ENVIAR CARGA (con eliminación de gastos asociados) ----------
+    function setupCapacidad() {
+      document.getElementById('btnActualizarCapacidad').addEventListener('click', function() {
+        const val = parseInt(document.getElementById('capacidadCamion').value);
+        if (!val || val <= 0) { showToast('Ingresa un número válido.', 'error'); return; }
+        const data = loadData();
+        data.config.capacidad_camion = val;
+        saveData(data);
+        showToast('Capacidad actualizada.', 'success');
+      });
+    }
+
+    function setupReportes() {
+      document.getElementById('btnReporteResumen').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteResumen(data);
+      });
+      document.getElementById('btnReporteComunidades').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteComunidades(data);
+      });
+      document.getElementById('btnReporteExoneraciones').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteExoneraciones(data);
+      });
+      document.getElementById('btnReporteGastos').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteGastos(data);
+      });
+      document.getElementById('btnReportePlantas').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReportePlantas(data);
+      });
+      document.getElementById('btnReporteRentabilidad').addEventListener('click', function() {
+        const data = loadData();
+        document.getElementById('contenidoReporte').innerHTML = renderReporteRentabilidad(data);
+      });
+    }
+
+    function setupEntregaCalculo() {
+      ['ePequenos', 'eMedianos', 'eGrandes', 'ePrecioP', 'ePrecioM', 'ePrecioG'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calcularMontoEntrega);
+      });
+    }
+
+    function calcularMontoEntrega() {
+      const p = parseInt(document.getElementById('ePequenos').value) || 0;
+      const m = parseInt(document.getElementById('eMedianos').value) || 0;
+      const g = parseInt(document.getElementById('eGrandes').value) || 0;
+      const precioP = parseFloat(document.getElementById('ePrecioP').value) || 0;
+      const precioM = parseFloat(document.getElementById('ePrecioM').value) || 0;
+      const precioG = parseFloat(document.getElementById('ePrecioG').value) || 0;
+      const total = p*precioP + m*precioM + g*precioG;
+      document.getElementById('montoCalculado').textContent = total.toFixed(2);
+      document.getElementById('eMonto').value = total.toFixed(2);
+    }
+
+    function cargarPreciosVentaEnEntrega(data) {
+      const precios = data.config.precios_venta || { p:0, m:0, g:0 };
+      document.getElementById('ePrecioP').value = precios.p;
+      document.getElementById('ePrecioM').value = precios.m;
+      document.getElementById('ePrecioG').value = precios.g;
+      calcularMontoEntrega();
+    }
+
+    // Funciones de eliminación
+    window.eliminarCarga = function(id) {
+      if (!confirm('¿Eliminar esta carga? También se eliminarán los gastos asociados.')) return;
+      const data = loadData();
+      data.gastos = data.gastos.filter(g => g.cargaId !== id);
+      data.cargas = data.cargas.filter(c => c.id !== id);
+      saveData(data);
+      actualizarTodo();
+      showToast('Carga y gastos eliminados.', 'success');
+    };
+
     window.enviarCarga = function(id) {
       if (!confirm('¿Enviar esta carga a planta? Se registrarán los gastos automáticamente.')) return;
       const data = loadData();
@@ -1557,150 +2035,175 @@
       }
       carga.estado = 'enviada';
       saveData(data);
-      renderizarVista(vistaActual);
+      actualizarTodo();
       showToast(`✅ Carga enviada a ${nombrePlanta(carga.plantaDestino)}.`, 'success');
     };
 
-    window.eliminarCarga = function(id) {
-      if (!confirm('¿Eliminar esta carga? También se eliminarán los gastos asociados.')) return;
+    window.regresarCarga = function(id) {
       const data = loadData();
-      // Eliminar gastos asociados a esta carga
-      data.gastos = data.gastos.filter(g => g.cargaId !== id);
-      data.cargas = data.cargas.filter(c => c.id !== id);
+      const carga = data.cargas.find(c => c.id === id);
+      if (!carga) return;
+      carga.estado = 'regresada';
       saveData(data);
-      renderizarVista(vistaActual);
-      showToast('Carga y gastos asociados eliminados.', 'success');
+      actualizarTodo();
+      showToast('✅ Carga marcada como regresada.', 'success');
     };
 
-    // ---------- BACKUP Y RESTAURACIÓN ----------
-    document.getElementById('btnBackup').addEventListener('click', function() {
+    window.eliminarEntrega = function(id) {
+      if (!confirm('¿Eliminar esta entrega?')) return;
       const data = loadData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `GasGuaribe_Backup_${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('✅ Datos exportados correctamente.', 'success');
-    });
+      data.entregas = data.entregas.filter(e => e.id !== id);
+      saveData(data);
+      actualizarTodo();
+      showToast('Entrega eliminada.', 'success');
+    };
 
-    document.getElementById('btnRestore').addEventListener('click', function() {
-      document.getElementById('fileInput').click();
-    });
-
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        try {
-          const data = JSON.parse(ev.target.result);
-          // Validar estructura mínima
-          if (!data.config || !data.recogidas || !data.cargas || !data.entregas) {
-            showToast('❌ Archivo inválido. No se pudo restaurar.', 'error');
-            return;
-          }
-          if (!confirm('⚠️ Esto sobrescribirá todos los datos actuales. ¿Continuar?')) return;
-          saveData(data);
-          renderizarVista(vistaActual);
-          showToast('✅ Datos restaurados correctamente.', 'success');
-        } catch (err) {
-          showToast('❌ Error al leer el archivo.', 'error');
-        }
-      };
-      reader.readAsText(file);
-      this.value = '';
-    });
-
-    // ========== INICIALIZACIÓN ==========
-    function init() {
-      // Cargar datos y renderizar vista inicial
-      renderizarVista('dashboard');
-
-      // Navegación
-      document.getElementById('navPrincipal').addEventListener('click', function(e) {
-        const btn = e.target.closest('button');
-        if (!btn || !btn.dataset.vista) return;
-        navegarA(btn.dataset.vista);
-      });
-      document.getElementById('resumenStats').addEventListener('click', function(e) {
-        const stat = e.target.closest('.stat');
-        if (!stat || !stat.dataset.vista) return;
-        navegarA(stat.dataset.vista);
-      });
-
-      // Configurar formularios
-      setupFormRecogida();
-      setupFormEntrega();
-      setupFormCobro();
-      setupFormGasto();
-      setupConfiguracion();
-      setupArmarCarga();
-      setupCapacidad();
-      setupReportes();
-      setupEntregaCalculo();
-
-      // Eventos de carga rápida
-      document.getElementById('btnCargaRapida').addEventListener('click', cargarRapido);
-      document.getElementById('btnLimpiarSeleccion').addEventListener('click', limpiarSeleccion);
-      document.getElementById('selectPlanta').addEventListener('change', actualizarCostosPlanta);
-      document.getElementById('filtroComunidad').addEventListener('change', function() {
-        const data = loadData();
-        renderListaCarga(data);
-        calcularResumenCarga();
-      });
-      document.getElementById('gastosAdicionales').addEventListener('input', calcularResumenCarga);
-
-      // Observador para recalcular subtotales al mostrar recogida
-      const observer = new MutationObserver(() => {
-        if (document.getElementById('recogida').classList.contains('activa')) {
-          calcularSubtotalesRecogida();
-        }
-      });
-      document.querySelectorAll('.vista').forEach(el => {
-        observer.observe(el, { attributes: true, attributeFilter: ['class'] });
-      });
-
-      // Actualizar listas de comunidades en los datalists
-      actualizarDatalists();
-
-      showToast('🚀 Sistema listo. Todas las mejoras incorporadas.', 'success', 4000);
-    }
-
-    function actualizarDatalists() {
+    window.eliminarCobro = function(id) {
+      if (!confirm('¿Eliminar este cobro?')) return;
       const data = loadData();
+      data.cobros = data.cobros.filter(c => c.id !== id);
+      saveData(data);
+      actualizarTodo();
+      showToast('Cobro eliminado.', 'success');
+    };
+
+    window.eliminarGasto = function(id) {
+      if (!confirm('¿Eliminar este gasto?')) return;
+      const data = loadData();
+      data.gastos = data.gastos.filter(g => g.id !== id);
+      saveData(data);
+      actualizarTodo();
+      showToast('Gasto eliminado.', 'success');
+    };
+
+    // Reportes adicionales
+    function renderReporteComunidades(data) {
+      const mapa = {};
       const todas = obtenerTodasLasComunidades(data);
-      ['rComunidadList', 'eComunidadList'].forEach(id => {
-        const datalist = document.getElementById(id);
-        if (!datalist) return;
-        datalist.innerHTML = '';
-        todas.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c;
-          datalist.appendChild(opt);
-        });
+      todas.forEach(nom => mapa[nom] = { p:0, m:0, g:0, cobro:0 });
+      data.recogidas.forEach(r => {
+        const nom = r.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { p:0, m:0, g:0, cobro:0 };
+        mapa[nom].p += (r.pequenos||0); mapa[nom].m += (r.medianos||0); mapa[nom].g += (r.grandes||0);
+        mapa[nom].cobro += (r.cobro||0);
       });
-      // Actualizar filtro de comunidad en carga
-      const filtro = document.getElementById('filtroComunidad');
-      const currentVal = filtro.value;
-      filtro.innerHTML = '<option value="">Todas las comunidades</option>';
-      todas.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        filtro.appendChild(opt);
+      data.entregas.forEach(e => {
+        const nom = e.comunidad || 'Sin comunidad';
+        if (!mapa[nom]) mapa[nom] = { p:0, m:0, g:0, cobro:0 };
+        mapa[nom].p += (e.pequenos||0); mapa[nom].m += (e.medianos||0); mapa[nom].g += (e.grandes||0);
+        mapa[nom].cobro += (e.monto_cobrado||0);
       });
-      filtro.value = currentVal;
+      const claves = Object.keys(mapa).sort();
+      if (claves.length === 0) return '<p class="text-muted">No hay datos.</p>';
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;"><tr><th>Comunidad</th><th>P</th><th>M</th><th>G</th><th>Total</th><th>Cobro</th></tr>`;
+      claves.forEach(nom => {
+        const d = mapa[nom];
+        const total = d.p + d.m + d.g;
+        html += `<tr><td><strong>${nom}</strong></td><td>${d.p}</td><td>${d.m}</td><td>${d.g}</td><td>${total}</td><td>${d.cobro.toFixed(2)}</td></tr>`;
+      });
+      html += '</table>';
+      return html;
     }
 
-    // ========== FUNCIONES RESTANTES (se mantienen) ==========
-    // (setupFormEntrega, setupFormCobro, setupFormGasto, setupConfiguracion, setupCapacidad, setupReportes, setupEntregaCalculo,
-    //  renderListaCarga, renderListaCargas, renderListaEntregas, renderListaCobros, renderListaGastos, renderListaComunidades,
-    //  cargarPreciosUI, actualizarAnalisisPrecios, actualizarCostosPlanta, limpiarSeleccion,
-    //  renderReporteResumen, renderReporteComunidades, renderReporteExoneraciones, renderReporteGastos, renderReportePlantas, renderReporteRentabilidad,
-    //  exportarExcel, exportarPDF)
-    // Estas funciones ya están probadas y funcionan. Se mantienen sin cambios.
+    function renderReporteExoneraciones(data) {
+      const lista = [];
+      data.recogidas.forEach(r => {
+        if (r.exonerados && r.exonerados.length) {
+          r.exonerados.forEach(ex => {
+            lista.push({ comunidad: r.comunidad, nombre: ex.nombre, cantidad: ex.cantidad, tamanio: ex.tamanio, fecha: r.fecha });
+          });
+        }
+      });
+      if (lista.length === 0) return '<p class="text-muted">No hay exoneraciones.</p>';
+      return `<ul style="list-style:none; padding:0;">${lista.map(ex =>
+        `<li style="padding:6px 0; border-bottom:1px solid #e2e8f0;">${ex.nombre} (${ex.tamanio.toUpperCase()} - ${ex.cantidad}) - ${ex.comunidad} <span class="text-muted">${formatearFecha(ex.fecha)}</span></li>`
+      ).join('')}</ul>`;
+    }
+
+    function renderReporteGastos(data) {
+      const categorias = {};
+      data.gastos.forEach(g => {
+        const cat = g.categoria || 'otro';
+        if (!categorias[cat]) categorias[cat] = 0;
+        categorias[cat] += (g.monto||0);
+      });
+      const total = data.gastos.reduce((acc, g) => acc + (g.monto||0), 0);
+      let html = `<p><strong>Total gastos:</strong> Bs ${total.toFixed(2)}</p><ul style="list-style:none; padding:0;">`;
+      for (let cat in categorias) {
+        html += `<li style="padding:4px 0;">${cat}: Bs ${categorias[cat].toFixed(2)}</li>`;
+      }
+      html += '</ul>';
+      return html;
+    }
+
+    function renderReportePlantas(data) {
+      const mapa = {};
+      data.cargas.forEach(c => {
+        const planta = c.plantaDestino || 'sin_definir';
+        if (!mapa[planta]) mapa[planta] = { cilindros: 0, costo_llenado: 0, costo_logistico: 0, costos_adicionales: 0, cargas: 0 };
+        const costos = c.costos || { llenado: { total: 0 }, logistico: 0, adicionales: 0 };
+        mapa[planta].cilindros += (c.total_cilindros || 0);
+        mapa[planta].costo_llenado += (costos.llenado.total || 0);
+        mapa[planta].costo_logistico += (costos.logistico || 0);
+        mapa[planta].costos_adicionales += (costos.adicionales || 0);
+        mapa[planta].cargas += 1;
+      });
+      data.gastos.forEach(g => {
+        if (g.planta && g.categoria === 'logistico') {
+          if (!mapa[g.planta]) mapa[g.planta] = { cilindros: 0, costo_llenado: 0, costo_logistico: 0, costos_adicionales: 0, cargas: 0 };
+          mapa[g.planta].costo_logistico += (g.monto || 0);
+        }
+      });
+      const claves = Object.keys(mapa);
+      if (claves.length === 0) return '<p class="text-muted">No hay datos de plantas.</p>';
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;"><tr><th>Planta</th><th>Cargas</th><th>Cilindros</th><th>Llenado</th><th>Logístico</th><th>Adicionales</th><th>Total</th></tr>`;
+      claves.forEach(key => {
+        const d = mapa[key];
+        const total = d.costo_llenado + d.costo_logistico + d.costos_adicionales;
+        html += `<tr><td><strong>${nombrePlanta(key)}</strong></td><td>${d.cargas}</td><td>${d.cilindros}</td><td>${d.costo_llenado.toFixed(2)}</td><td>${d.costo_logistico.toFixed(2)}</td><td>${d.costos_adicionales.toFixed(2)}</td><td>${total.toFixed(2)}</td></tr>`;
+      });
+      html += '</table>';
+      return html;
+    }
+
+    function renderReporteRentabilidad(data) {
+      const comunidades = {};
+      const todas = obtenerTodasLasComunidades(data);
+      todas.forEach(c => comunidades[c] = { ingresos: 0, costos: 0 });
+      data.entregas.forEach(e => {
+        const nom = e.comunidad || 'Sin comunidad';
+        if (!comunidades[nom]) comunidades[nom] = { ingresos: 0, costos: 0 };
+        comunidades[nom].ingresos += (e.monto_cobrado || 0);
+      });
+      data.cargas.forEach(c => {
+        if (c.estado === 'regresada' || c.estado === 'enviada') {
+          const costos = c.costos || { llenado: { total: 0 }, logistico: 0, adicionales: 0 };
+          const totalCosto = costos.llenado.total + costos.logistico + costos.adicionales;
+          const origen = c.origen || [];
+          const totalCilCarga = c.total_cilindros || 1;
+          origen.forEach(o => {
+            const rec = data.recogidas.find(r => r.id === o.recogidaId);
+            if (rec) {
+              const nom = rec.comunidad || 'Sin comunidad';
+              if (!comunidades[nom]) comunidades[nom] = { ingresos: 0, costos: 0 };
+              const proporcion = (o.p + o.m + o.g) / totalCilCarga;
+              comunidades[nom].costos += totalCosto * proporcion;
+            }
+          });
+        }
+      });
+      const claves = Object.keys(comunidades).sort();
+      if (claves.length === 0) return '<p class="text-muted">No hay datos para rentabilidad.</p>';
+      let html = `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;"><tr><th>Comunidad</th><th>Ingresos</th><th>Costos</th><th>Margen</th><th>%</th></tr>`;
+      claves.forEach(nom => {
+        const d = comunidades[nom];
+        const margen = d.ingresos - d.costos;
+        const porcentaje = d.ingresos > 0 ? (margen / d.ingresos * 100) : 0;
+        html += `<tr><td><strong>${nom}</strong></td><td>${d.ingresos.toFixed(2)}</td><td>${d.costos.toFixed(2)}</td><td class="${margen >= 0 ? 'text-success' : 'text-danger'}">${margen.toFixed(2)}</td><td>${porcentaje.toFixed(1)}%</td></tr>`;
+      });
+      html += '</table>';
+      return html;
+    }
 
     // ========== ARRANQUE ==========
     if (document.readyState === 'loading') {
